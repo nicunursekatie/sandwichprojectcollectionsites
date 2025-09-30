@@ -185,41 +185,64 @@ This is safe because your API key is already restricted to only the Geocoding AP
       ]
     });
 
+    // Create user location marker content (blue)
+    const userMarkerContent = document.createElement('div');
+    userMarkerContent.innerHTML = `
+      <div style="
+        width: 24px; 
+        height: 24px; 
+        background: #3B82F6; 
+        border: 3px solid white; 
+        border-radius: 50%; 
+        position: relative;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      ">
+        <div style="
+          width: 8px; 
+          height: 8px; 
+          background: white; 
+          border-radius: 50%; 
+          position: absolute; 
+          top: 50%; 
+          left: 50%; 
+          transform: translate(-50%, -50%);
+        "></div>
+      </div>
+    `;
+
     // Add user location marker (blue)
-    new window.google.maps.Marker({
+    new google.maps.marker.AdvancedMarkerElement({
       position: userCoords,
       map: mapInstance,
       title: 'Your Location',
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="8" fill="#3B82F6" stroke="white" stroke-width="2"/>
-            <circle cx="12" cy="12" r="3" fill="white"/>
-          </svg>
-        `),
-        scaledSize: new window.google.maps.Size(24, 24),
-        anchor: new window.google.maps.Point(12, 12)
-      }
+      content: userMarkerContent
     });
 
     // Add host markers (red)
     availableHosts.forEach(host => {
       const distance = calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng);
       
-      const marker = new window.google.maps.Marker({
+      // Create host marker content (red pin)
+      const hostMarkerContent = document.createElement('div');
+      hostMarkerContent.innerHTML = `
+        <div style="
+          width: 24px; 
+          height: 32px; 
+          position: relative;
+          cursor: pointer;
+        ">
+          <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 21 7 21s7-15.75 7-21c0-3.87-3.13-7-7-7z" fill="#EF4444" stroke="white" stroke-width="1"/>
+            <circle cx="12" cy="9" r="3" fill="white"/>
+          </svg>
+        </div>
+      `;
+
+      const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
         map: mapInstance,
         title: `${host.name} - ${distance} miles away`,
-        icon: {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EF4444" stroke="white" stroke-width="1"/>
-              <circle cx="12" cy="9" r="2.5" fill="white"/>
-            </svg>
-          `),
-          scaledSize: new window.google.maps.Size(24, 24),
-          anchor: new window.google.maps.Point(12, 24)
-        }
+        content: hostMarkerContent
       });
 
       // Add click listener to show host info
@@ -236,7 +259,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     if (mapLoaded || !showMap) return;
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=marker,geometry`;
     script.onload = () => {
       setMapLoaded(true);
     };

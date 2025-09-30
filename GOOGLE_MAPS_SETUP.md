@@ -4,10 +4,10 @@
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select an existing one
-3. Enable the **Geocoding API**:
+3. Enable the required APIs:
    - Go to "APIs & Services" > "Library"
-   - Search for "Geocoding API"
-   - Click on it and press "Enable"
+   - Search for and enable **"Geocoding API"**
+   - Search for and enable **"Maps JavaScript API"** (needed for the map view)
 4. Create an API key:
    - Go to "APIs & Services" > "Credentials"
    - Click "Create Credentials" > "API key"
@@ -32,8 +32,10 @@
 2. Add restrictions:
    - **Application restrictions**: Select "None"
      - ⚠️ **Note**: The Geocoding API doesn't support HTTP referrer restrictions when called from JavaScript
-   - **API restrictions**: Select "Restrict key" and choose "Geocoding API" only
-     - ✅ **This is the main security protection** - your key can only be used for geocoding
+   - **API restrictions**: Select "Restrict key" and choose:
+     - **Geocoding API** (for address lookup)
+     - **Maps JavaScript API** (for the interactive map view)
+     - ✅ **This is the main security protection** - your key can only be used for these specific APIs
 
 ## Step 4: Pricing Information
 
@@ -55,9 +57,9 @@
 **"API key not configured" error**: Make sure you've replaced `YOUR_API_KEY_HERE` with your actual key
 
 **"REQUEST_DENIED" error**: Check that:
-- The Geocoding API is enabled in your Google Cloud project
+- Both Geocoding API and Maps JavaScript API are enabled in your Google Cloud project
 - Application restrictions are set to "None" (Geocoding API doesn't support referrer restrictions)
-- API restrictions are set to "Geocoding API" only
+- API restrictions include both "Geocoding API" and "Maps JavaScript API"
 - Billing is set up in Google Cloud Console
 
 **"OVER_QUERY_LIMIT" error**: You've exceeded the free tier limits
