@@ -288,13 +288,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Sandwich Drop-Off Locations</h1>
-          <p className="text-gray-600 mb-6">October 1, 2025 • {availableHosts.length} hosts available</p>
+          <p className="text-gray-600 mb-6">
+            <span className="font-medium">Tuesday, October 1, 2025</span> • {availableHosts.length} hosts available for sandwich drop-offs
+          </p>
           
           {/* Address Search */}
           <div className="bg-blue-50 p-4 rounded-lg mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Find hosts near you
+              Find sandwich drop-off locations near you
             </label>
+            <p className="text-xs text-gray-600 mb-3">Enter your address to see hosts sorted by distance</p>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
@@ -372,8 +375,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {showMap && userCoords && (
           <div className="bg-white rounded-lg shadow-sm mb-6">
             <div className="p-4 border-b">
-              <h2 className="text-lg font-semibold">Host Locations Map</h2>
-              <p className="text-sm text-gray-600">Your location (blue) and sandwich hosts (red)</p>
+              <h2 className="text-lg font-semibold">Drop-Off Locations Map</h2>
+              <p className="text-sm text-gray-600">
+                <span className="inline-flex items-center mr-4">
+                  <span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>
+                  Your location
+                </span>
+                <span className="inline-flex items-center">
+                  <span className="w-3 h-3 bg-red-500 rounded-full mr-1"></span>
+                  Sandwich drop-off hosts
+                </span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Click any red marker to see host details</p>
             </div>
             <div id="map" className="h-96 rounded-b-lg"></div>
           </div>
@@ -423,8 +436,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600">
-                      {host.area}
+                    <p className="text-sm text-gray-600 mb-3">
+                      <span className="font-medium">Location:</span> {host.area}
                     </p>
                   </div>
                   <button 
@@ -436,23 +449,39 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center text-gray-700">
-                    <i className="lucide-clock w-4 h-4 mr-2 text-gray-400"></i>
-                    {host.hours}
+                <div className="space-y-2 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-start">
+                      <i className="lucide-clock w-4 h-4 mr-2 text-gray-500 mt-0.5"></i>
+                      <div>
+                        <div className="font-medium text-gray-700 mb-1">Drop-off Hours - Tuesday, Oct 1st</div>
+                        <div className="text-gray-600">{host.hours}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center text-gray-700">
-                    <i className="lucide-phone w-4 h-4 mr-2 text-gray-400"></i>
-                    <a href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} className="text-blue-600 hover:underline">
-                      {host.phone}
-                    </a>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center">
+                      <i className="lucide-phone w-4 h-4 mr-2 text-gray-500"></i>
+                      <div>
+                        <span className="font-medium text-gray-700">Contact: </span>
+                        <a href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} className="text-blue-600 hover:underline font-medium">
+                          {host.phone}
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
                 {host.notes && (
-                  <div className="mt-3 p-2 bg-amber-50 rounded text-sm text-gray-700 flex items-start">
-                    <i className="lucide-alert-circle w-4 h-4 mr-2 text-amber-600 flex-shrink-0 mt-0.5"></i>
-                    {host.notes}
+                  <div className="mt-2 bg-amber-50 rounded-lg p-3">
+                    <div className="flex items-start">
+                      <i className="lucide-alert-circle w-4 h-4 mr-2 text-amber-600 flex-shrink-0 mt-0.5"></i>
+                      <div>
+                        <div className="font-medium text-amber-800 mb-1">Special Instructions</div>
+                        <div className="text-amber-700 text-sm">{host.notes}</div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
