@@ -52,12 +52,12 @@
 
 /* Accessibility improvements */
 a:focus, button:focus {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #236383;
   outline-offset: 2px;
 }
 
 /* Better contrast for notes */
 .bg-amber-50 {
   background-color: #fffbeb;
-  border: 1px solid #fbbf24;
+  border: 1px solid #fbad3f;
 }
