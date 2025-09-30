@@ -57,27 +57,48 @@ const HostAvailabilityApp = () => {
     return distance.toFixed(1);
   };
 
-  // Geocode address using free service
+  // Get Google Maps API key from config
+  const GOOGLE_MAPS_API_KEY = window.CONFIG?.GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
+  
+  // Geocode address using Google Maps Geocoding API
   const geocodeAddress = async (address) => {
     setGeocoding(true);
     try {
-      // Using OpenStreetMap's Nominatim service (free, no API key required)
+      // Check if API key is set
+      if (GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE') {
+        alert('Google Maps API key not configured. Please add your API key to use address lookup.');
+        return false;
+      }
+      
+      // Using Google Maps Geocoding API
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Atlanta, GA')}&limit=1`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=us&bounds=33.4734,-84.8882|34.1620,-83.9937&key=${GOOGLE_MAPS_API_KEY}`
       );
       const data = await response.json();
-      if (data && data.length > 0) {
+      
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        const location = data.results[0].geometry.location;
         setUserCoords({
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon)
+          lat: location.lat,
+          lng: location.lng
         });
         return true;
+      } else if (data.status === 'ZERO_RESULTS') {
+        alert('Could not find that address. Please check the spelling and try again.');
+        return false;
+      } else if (data.status === 'OVER_QUERY_LIMIT') {
+        alert('Too many requests. Please try again in a moment.');
+        return false;
+      } else if (data.status === 'REQUEST_DENIED') {
+        alert('API key error. Please check your Google Maps API configuration.');
+        return false;
+      } else {
+        alert('Could not find that address. Please try a different format.');
+        return false;
       }
-      alert('Could not find that address. Try adding more detail or a ZIP code.');
-      return false;
     } catch (error) {
       console.error('Geocoding error:', error);
-      alert('Error looking up address. Please try again.');
+      alert('Error looking up address. Please check your internet connection and try again.');
       return false;
     } finally {
       setGeocoding(false);
