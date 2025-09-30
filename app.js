@@ -76,6 +76,9 @@ const HostAvailabilityApp = () => {
       );
       const data = await response.json();
       
+      // Debug logging
+      console.log('Geocoding API response:', data);
+      
       if (data.status === 'OK' && data.results && data.results.length > 0) {
         const location = data.results[0].geometry.location;
         setUserCoords({
@@ -90,10 +93,15 @@ const HostAvailabilityApp = () => {
         alert('Too many requests. Please try again in a moment.');
         return false;
       } else if (data.status === 'REQUEST_DENIED') {
-        alert('API key error. Please check your Google Maps API configuration.');
+        alert(`API key error: ${data.error_message || 'Please check your Google Maps API configuration.'}
+        
+Common fixes:
+1. Make sure Geocoding API is enabled
+2. Check HTTP referrer restrictions
+3. Ensure billing is set up in Google Cloud`);
         return false;
       } else {
-        alert('Could not find that address. Please try a different format.');
+        alert(`Geocoding failed: ${data.status} - ${data.error_message || 'Unknown error'}`);
         return false;
       }
     } catch (error) {
