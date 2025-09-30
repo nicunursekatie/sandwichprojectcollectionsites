@@ -359,26 +359,47 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {/* Host List */}
         {!showMap && (
           <div className="space-y-3">
+            {userCoords && viewMode === 'proximity' && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center">
+                  <i className="lucide-map-pin w-4 h-4 text-green-600 mr-2"></i>
+                  <span className="text-sm font-medium text-green-800">
+                    Hosts sorted by distance from your location
+                  </span>
+                </div>
+              </div>
+            )}
           {filteredHosts.length === 0 ? (
             <div className="bg-white rounded-lg p-8 text-center text-gray-500">
               No hosts found in this area.
             </div>
           ) : (
-            filteredHosts.map(host => (
+            filteredHosts.map((host, index) => (
               <div 
                 key={host.id} 
-                className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow"
+                className={`bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow ${
+                  userCoords && viewMode === 'proximity' && index < 3 
+                    ? 'ring-2 ring-blue-200 bg-blue-50' 
+                    : ''
+                }`}
               >
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg">
-                      {host.name}
-                      {host.distance && (
-                        <span className="ml-2 text-sm font-normal text-blue-600">
-                          {host.distance} miles away
+                    <div className="flex items-center gap-2 mb-1">
+                      {userCoords && viewMode === 'proximity' && index < 3 && (
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                          index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                        }`}>
+                          {index + 1}
                         </span>
                       )}
-                    </h3>
+                      <h3 className="font-semibold text-lg">{host.name}</h3>
+                      {host.distance && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                          {host.distance} mi
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600">
                       {host.area}
                     </p>
@@ -414,7 +435,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
             ))
           )}
-        </div>
+          </div>
         )}
 
         {/* Directions Modal */}
