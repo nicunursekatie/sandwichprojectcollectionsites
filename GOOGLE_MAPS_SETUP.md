@@ -30,10 +30,10 @@
 
 1. In Google Cloud Console, go to your API key settings
 2. Add restrictions:
-   - **HTTP referrers**: Add your domain(s):
-     - `https://nicunursekatie.github.io/sandwichprojectcollectionsites/*`
-     - `http://localhost:*` (for local testing)
-   - **API restrictions**: Select "Restrict key" and choose "Geocoding API"
+   - **Application restrictions**: Select "None"
+     - ⚠️ **Note**: The Geocoding API doesn't support HTTP referrer restrictions when called from JavaScript
+   - **API restrictions**: Select "Restrict key" and choose "Geocoding API" only
+     - ✅ **This is the main security protection** - your key can only be used for geocoding
 
 ## Step 4: Pricing Information
 
@@ -56,8 +56,9 @@
 
 **"REQUEST_DENIED" error**: Check that:
 - The Geocoding API is enabled in your Google Cloud project
-- Your API key has the correct restrictions
-- Your domain is in the allowed referrers list
+- Application restrictions are set to "None" (Geocoding API doesn't support referrer restrictions)
+- API restrictions are set to "Geocoding API" only
+- Billing is set up in Google Cloud Console
 
 **"OVER_QUERY_LIMIT" error**: You've exceeded the free tier limits
 - Check your usage in Google Cloud Console

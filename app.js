@@ -93,12 +93,20 @@ const HostAvailabilityApp = () => {
         alert('Too many requests. Please try again in a moment.');
         return false;
       } else if (data.status === 'REQUEST_DENIED') {
-        alert(`API key error: ${data.error_message || 'Please check your Google Maps API configuration.'}
-        
-Common fixes:
-1. Make sure Geocoding API is enabled
-2. Check HTTP referrer restrictions
-3. Ensure billing is set up in Google Cloud`);
+        if (data.error_message && data.error_message.includes('referer restrictions')) {
+          alert(`API Key Issue: The Geocoding API doesn't support HTTP referrer restrictions.
+          
+To fix this:
+1. Go to Google Cloud Console → Credentials
+2. Edit your API key
+3. Under "Application restrictions", select "None"
+4. Keep "API restrictions" set to "Geocoding API" only
+5. Save the changes
+
+This is safe because your API key is already restricted to only the Geocoding API.`);
+        } else {
+          alert(`API key error: ${data.error_message || 'Please check your Google Maps API configuration.'}`);
+        }
         return false;
       } else {
         alert(`Geocoding failed: ${data.status} - ${data.error_message || 'Unknown error'}`);
