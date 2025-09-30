@@ -6,6 +6,9 @@ const HostAvailabilityApp = () => {
   const [filterArea, setFilterArea] = React.useState('all');
   const [selectedHost, setSelectedHost] = React.useState(null);
   const [geocoding, setGeocoding] = React.useState(false);
+  const [showMap, setShowMap] = React.useState(false);
+  const [map, setMap] = React.useState(null);
+  const [mapLoaded, setMapLoaded] = React.useState(false);
   
   // Real host data with actual coordinates from your spreadsheet
   // October 1st availability merged with coordinate data
@@ -76,17 +79,12 @@ const HostAvailabilityApp = () => {
       );
       const data = await response.json();
       
-      // Debug logging
-      console.log('Geocoding API response:', data);
-      
       if (data.status === 'OK' && data.results && data.results.length > 0) {
         const location = data.results[0].geometry.location;
-        const coords = {
+        setUserCoords({
           lat: location.lat,
           lng: location.lng
-        };
-        console.log('Setting user coordinates:', coords);
-        setUserCoords(coords);
+        });
         return true;
       } else if (data.status === 'ZERO_RESULTS') {
         alert('Could not find that address. Please check the spelling and try again.');
@@ -145,21 +143,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
   };
 
   const sortedHosts = React.useMemo(() => {
-    console.log('sortedHosts calculation:', { userCoords, viewMode, availableHostsCount: availableHosts.length });
-    
     if (!userCoords || viewMode !== 'proximity') return availableHosts;
     
-    const hostsWithDistance = availableHosts.map(host => {
-      const distance = calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng);
-      console.log(`Distance to ${host.name}: ${distance} miles`);
-      return {
-        ...host,
-        distance: distance
-      };
-    }).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-    
-    console.log('Sorted hosts:', hostsWithDistance.slice(0, 3).map(h => `${h.name}: ${h.distance}mi`));
-    return hostsWithDistance;
+    return availableHosts.map(host => ({
+      ...host,
+      distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
+    })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
   }, [userCoords, viewMode, availableHosts]);
 
   const filteredHosts = React.useMemo(() => {
@@ -174,16 +163,101 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
-    console.log('Starting search for:', searchInput);
     const success = await geocodeAddress(searchInput);
     if (success) {
       setUserAddress(searchInput);
-      console.log('Search successful, setting view mode to proximity');
       setViewMode('proximity');
-    } else {
-      console.log('Search failed');
     }
   };
+
+  // Initialize Google Map
+  const initializeMap = React.useCallback(() => {
+    if (!userCoords || !window.google || map) return;
+
+    const mapInstance = new window.google.maps.Map(document.getElementById('map'), {
+      center: userCoords,
+      zoom: 11,
+      styles: [
+        {
+          featureType: 'poi',
+          stylers: [{ visibility: 'off' }]
+        }
+      ]
+    });
+
+    // Add user location marker (blue)
+    new window.google.maps.Marker({
+      position: userCoords,
+      map: mapInstance,
+      title: 'Your Location',
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="8" fill="#3B82F6" stroke="white" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" fill="white"/>
+          </svg>
+        `),
+        scaledSize: new window.google.maps.Size(24, 24),
+        anchor: new window.google.maps.Point(12, 12)
+      }
+    });
+
+    // Add host markers (red)
+    availableHosts.forEach(host => {
+      const distance = calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng);
+      
+      const marker = new window.google.maps.Marker({
+        position: { lat: host.lat, lng: host.lng },
+        map: mapInstance,
+        title: `${host.name} - ${distance} miles away`,
+        icon: {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EF4444" stroke="white" stroke-width="1"/>
+              <circle cx="12" cy="9" r="2.5" fill="white"/>
+            </svg>
+          `),
+          scaledSize: new window.google.maps.Size(24, 24),
+          anchor: new window.google.maps.Point(12, 24)
+        }
+      });
+
+      // Add click listener to show host info
+      marker.addListener('click', () => {
+        setSelectedHost(host);
+      });
+    });
+
+    setMap(mapInstance);
+  }, [userCoords, availableHosts, map]);
+
+  // Load Google Maps API
+  React.useEffect(() => {
+    if (mapLoaded || !showMap) return;
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
+    script.onload = () => {
+      setMapLoaded(true);
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      // Clean up script if component unmounts
+      const existingScript = document.querySelector(`script[src*="maps.googleapis.com"]`);
+      if (existingScript) {
+        document.head.removeChild(existingScript);
+      }
+    };
+  }, [showMap, GOOGLE_MAPS_API_KEY]);
+
+  // Initialize map when API is loaded and map view is shown
+  React.useEffect(() => {
+    if (mapLoaded && showMap && userCoords) {
+      // Small delay to ensure DOM element exists
+      setTimeout(initializeMap, 100);
+    }
+  }, [mapLoaded, showMap, userCoords, initializeMap]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -234,17 +308,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
           {/* View Toggle */}
           <div className="flex gap-2">
             <button
-              onClick={() => setViewMode('proximity')}
-              className={`px-4 py-2 rounded-lg ${viewMode === 'proximity' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              onClick={() => { setShowMap(false); setViewMode('proximity'); }}
+              className={`px-4 py-2 rounded-lg ${!showMap && viewMode === 'proximity' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
             >
               {userCoords ? 'Nearest First' : 'All Hosts'}
             </button>
             <button
-              onClick={() => setViewMode('area')}
-              className={`px-4 py-2 rounded-lg ${viewMode === 'area' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              onClick={() => { setShowMap(false); setViewMode('area'); }}
+              className={`px-4 py-2 rounded-lg ${!showMap && viewMode === 'area' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
             >
               By Area
             </button>
+            {userCoords && (
+              <button
+                onClick={() => setShowMap(true)}
+                className={`px-4 py-2 rounded-lg ${showMap ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} flex items-center`}
+              >
+                <i className="lucide-map w-4 h-4 mr-2"></i>
+                Map View
+              </button>
+            )}
           </div>
 
           {/* Area Filter (only show in area view) */}
@@ -262,8 +345,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
           )}
         </div>
 
+        {/* Map View */}
+        {showMap && userCoords && (
+          <div className="bg-white rounded-lg shadow-sm mb-6">
+            <div className="p-4 border-b">
+              <h2 className="text-lg font-semibold">Host Locations Map</h2>
+              <p className="text-sm text-gray-600">Your location (blue) and sandwich hosts (red)</p>
+            </div>
+            <div id="map" className="h-96 rounded-b-lg"></div>
+          </div>
+        )}
+
         {/* Host List */}
-        <div className="space-y-3">
+        {!showMap && (
+          <div className="space-y-3">
           {filteredHosts.length === 0 ? (
             <div className="bg-white rounded-lg p-8 text-center text-gray-500">
               No hosts found in this area.
@@ -320,6 +415,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             ))
           )}
         </div>
+        )}
 
         {/* Directions Modal */}
         {selectedHost && (
