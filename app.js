@@ -81,10 +81,12 @@ const HostAvailabilityApp = () => {
       
       if (data.status === 'OK' && data.results && data.results.length > 0) {
         const location = data.results[0].geometry.location;
-        setUserCoords({
+        const coords = {
           lat: location.lat,
           lng: location.lng
-        });
+        };
+        console.log('Setting user coordinates:', coords);
+        setUserCoords(coords);
         return true;
       } else if (data.status === 'ZERO_RESULTS') {
         alert('Could not find that address. Please check the spelling and try again.');
@@ -143,12 +145,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
   };
 
   const sortedHosts = React.useMemo(() => {
+    console.log('sortedHosts calculation:', { userCoords, viewMode, availableHostsCount: availableHosts.length });
+    
     if (!userCoords || viewMode !== 'proximity') return availableHosts;
     
-    return availableHosts.map(host => ({
-      ...host,
-      distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
-    })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+    const hostsWithDistance = availableHosts.map(host => {
+      const distance = calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng);
+      console.log(`Distance to ${host.name}: ${distance} miles`);
+      return {
+        ...host,
+        distance: distance
+      };
+    }).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+    
+    console.log('Sorted hosts:', hostsWithDistance.slice(0, 3).map(h => `${h.name}: ${h.distance}mi`));
+    return hostsWithDistance;
   }, [userCoords, viewMode, availableHosts]);
 
   const filteredHosts = React.useMemo(() => {
@@ -163,10 +174,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
+    console.log('Starting search for:', searchInput);
     const success = await geocodeAddress(searchInput);
     if (success) {
       setUserAddress(searchInput);
+      console.log('Search successful, setting view mode to proximity');
       setViewMode('proximity');
+    } else {
+      console.log('Search failed');
     }
   };
 
