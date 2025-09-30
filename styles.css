@@ -1,0 +1,63 @@
+/* Custom styles for Sandwich Host Availability */
+
+/* Override Tailwind defaults if needed */
+.lucide-search::before { content: '🔍'; }
+.lucide-locate::before { content: '📍'; }
+.lucide-navigation::before { content: '🧭'; }
+.lucide-clock::before { content: '🕐'; }
+.lucide-phone::before { content: '📞'; }
+.lucide-alert-circle::before { content: '⚠️'; }
+
+/* Smooth transitions */
+.transition-shadow {
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+/* Better mobile tap targets */
+@media (max-width: 640px) {
+  button, a {
+    min-height: 44px;
+  }
+}
+
+/* Loading spinner for geocoding */
+.geocoding-spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Print styles - hide unnecessary elements */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .bg-gray-50 {
+    background: white !important;
+  }
+  
+  .shadow-sm, .shadow-md {
+    box-shadow: none !important;
+  }
+}
+
+/* Accessibility improvements */
+a:focus, button:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Better contrast for notes */
+.bg-amber-50 {
+  background-color: #fffbeb;
+  border: 1px solid #fbbf24;
+}
