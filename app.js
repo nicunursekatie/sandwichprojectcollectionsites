@@ -12,6 +12,7 @@ const HostAvailabilityApp = () => {
   const [directionsService, setDirectionsService] = React.useState(null);
   const [directionsRenderer, setDirectionsRenderer] = React.useState(null);
   const [showingDirections, setShowingDirections] = React.useState(null);
+  const [routeInfo, setRouteInfo] = React.useState(null);
   
   // Real host data with actual coordinates from your spreadsheet
   // October 1st availability merged with coordinate data
@@ -340,6 +341,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
       if (status === 'OK') {
         directionsRenderer.setDirections(result);
         setShowingDirections(host.id);
+        
+        // Extract route information
+        const route = result.routes[0];
+        const leg = route.legs[0];
+        setRouteInfo({
+          hostId: host.id,
+          duration: leg.duration.text,
+          distance: leg.distance.text,
+          hostName: host.name
+        });
       } else {
         alert('Could not calculate driving directions. Please use the external map links instead.');
       }
@@ -351,6 +362,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
     if (directionsRenderer) {
       directionsRenderer.setDirections({ routes: [] });
       setShowingDirections(null);
+      setRouteInfo(null);
+    }
+  };
+
+  // Open Google Maps with directions
+  const openGoogleMapsDirections = (host) => {
+    if (userCoords) {
+      const url = `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}`;
+      window.open(url, '_blank');
+    } else {
+      // Fallback to destination only
+      const url = `https://www.google.com/maps/search/?api=1&query=${host.lat},${host.lng}`;
+      window.open(url, '_blank');
     }
   };
 
@@ -474,18 +498,33 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </p>
               <p className="text-xs mt-1" style={{color: '#007E8C'}}>Click any red marker to see host details and get directions</p>
               
-              {showingDirections && (
-                <div className="mt-3 p-2 rounded-lg flex items-center justify-between" style={{backgroundColor: '#E6F7FF', borderColor: '#007E8C', border: '1px solid'}}>
-                  <span className="text-sm font-medium" style={{color: '#007E8C'}}>
-                    Showing directions to {availableHosts.find(h => h.id === showingDirections)?.name}
-                  </span>
-                  <button
-                    onClick={clearDirections}
-                    className="text-xs px-2 py-1 rounded" 
-                    style={{backgroundColor: '#FBAD3F', color: 'white'}}
-                  >
-                    Clear Route
-                  </button>
+              {showingDirections && routeInfo && (
+                <div className="mt-3 p-3 rounded-lg" style={{backgroundColor: '#E6F7FF', borderColor: '#007E8C', border: '1px solid'}}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium" style={{color: '#007E8C'}}>
+                      Route to {routeInfo.hostName}
+                    </span>
+                    <button
+                      onClick={clearDirections}
+                      className="text-xs px-2 py-1 rounded" 
+                      style={{backgroundColor: '#FBAD3F', color: 'white'}}
+                    >
+                      Clear Route
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs" style={{color: '#236383'}}>
+                      <span className="font-medium">{routeInfo.duration}</span> • {routeInfo.distance}
+                    </div>
+                    <button
+                      onClick={() => openGoogleMapsDirections(availableHosts.find(h => h.id === showingDirections))}
+                      className="text-xs px-3 py-1 rounded flex items-center"
+                      style={{backgroundColor: '#007E8C', color: 'white'}}
+                    >
+                      <i className="lucide-external-link w-3 h-3 mr-1"></i>
+                      Open in Google Maps
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -591,6 +630,31 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     </div>
                   </div>
+                  
+                  {userCoords && (
+                    <div className="rounded-lg p-3" style={{backgroundColor: '#E6F7FF'}}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <i className="lucide-car w-4 h-4 mr-2" style={{color: '#007E8C'}}></i>
+                          <div>
+                            <span className="font-medium" style={{color: '#236383'}}>Distance: </span>
+                            <span style={{color: '#007E8C'}}>{host.distance} miles</span>
+                            {routeInfo && routeInfo.hostId === host.id && (
+                              <span style={{color: '#007E8C'}}> • {routeInfo.duration}</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => openGoogleMapsDirections(host)}
+                          className="text-xs px-2 py-1 rounded flex items-center hover:opacity-80"
+                          style={{backgroundColor: '#007E8C', color: 'white'}}
+                        >
+                          <i className="lucide-external-link w-3 h-3 mr-1"></i>
+                          Maps
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 {host.notes && (
@@ -614,8 +678,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {selectedHost && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedHost(null)}>
             <div className="bg-white rounded-lg p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold mb-4">{selectedHost.name}</h3>
-              <p className="text-sm mb-4" style={{color: '#236383'}}>{selectedHost.area}</p>
+              <h3 className="text-lg font-semibold mb-2">{selectedHost.name}</h3>
+              <p className="text-sm mb-2" style={{color: '#236383'}}>{selectedHost.area}</p>
+              {selectedHost.distance && (
+                <p className="text-sm mb-4" style={{color: '#007E8C'}}>
+                  <i className="lucide-map-pin w-3 h-3 mr-1 inline"></i>
+                  {selectedHost.distance} miles away
+                  {routeInfo && routeInfo.hostId === selectedHost.id && (
+                    <span> • {routeInfo.duration} drive</span>
+                  )}
+                </p>
+              )}
               <div className="space-y-3">
                 {userCoords && (
                   <button 
@@ -639,15 +712,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 >
                   Open in Apple Maps
                 </a>
-                <a 
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${selectedHost.lat},${selectedHost.lng}`}
+                <button 
+                  onClick={() => openGoogleMapsDirections(selectedHost)}
                   className="block w-full px-4 py-2 text-white rounded hover:opacity-80 text-center"
                   style={{backgroundColor: '#A31C41'}}
-                  target="_blank"
-                  rel="noopener noreferrer"
                 >
                   Open in Google Maps
-                </a>
+                </button>
                 <button 
                   onClick={() => setSelectedHost(null)}
                   className="block w-full px-4 py-2 rounded hover:opacity-80 text-center"
