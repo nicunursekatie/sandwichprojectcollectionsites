@@ -9,6 +9,9 @@ const HostAvailabilityApp = () => {
   const [showMap, setShowMap] = React.useState(false);
   const [map, setMap] = React.useState(null);
   const [mapLoaded, setMapLoaded] = React.useState(false);
+  const [directionsService, setDirectionsService] = React.useState(null);
+  const [directionsRenderer, setDirectionsRenderer] = React.useState(null);
+  const [showingDirections, setShowingDirections] = React.useState(null);
   
   // Real host data with actual coordinates from your spreadsheet
   // October 1st availability merged with coordinate data
@@ -219,23 +222,45 @@ This is safe because your API key is already restricted to only the Geocoding AP
       content: userMarkerContent
     });
 
-    // Add host markers (red)
+    // Add host markers with labels
     availableHosts.forEach(host => {
       const distance = calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng);
       
-      // Create host marker content (red pin)
+      // Create host marker content with label
       const hostMarkerContent = document.createElement('div');
       hostMarkerContent.innerHTML = `
         <div style="
-          width: 24px; 
-          height: 32px; 
-          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           cursor: pointer;
         ">
-          <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 21 7 21s7-15.75 7-21c0-3.87-3.13-7-7-7z" fill="#A31C41" stroke="white" stroke-width="1"/>
-            <circle cx="12" cy="9" r="3" fill="white"/>
-          </svg>
+          <!-- Pin marker -->
+          <div style="
+            width: 24px; 
+            height: 32px; 
+            position: relative;
+            margin-bottom: 2px;
+          ">
+            <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 21 7 21s7-15.75 7-21c0-3.87-3.13-7-7-7z" fill="#A31C41" stroke="white" stroke-width="1"/>
+              <circle cx="12" cy="9" r="3" fill="white"/>
+            </svg>
+          </div>
+          <!-- Label -->
+          <div style="
+            background: white;
+            border: 1px solid #236383;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #236383;
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          ">
+            ${host.name.split(' ')[0]} - ${distance}mi
+          </div>
         </div>
       `;
 
@@ -251,6 +276,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
         setSelectedHost(host);
       });
     });
+
+    // Initialize directions service and renderer
+    const directionsServiceInstance = new google.maps.DirectionsService();
+    const directionsRendererInstance = new google.maps.DirectionsRenderer({
+      map: mapInstance,
+      panel: null, // We'll handle this ourselves
+      polylineOptions: {
+        strokeColor: '#007E8C',
+        strokeWeight: 4,
+        strokeOpacity: 0.8
+      },
+      markerOptions: {
+        visible: false // Hide default markers since we have custom ones
+      }
+    });
+    
+    setDirectionsService(directionsServiceInstance);
+    setDirectionsRenderer(directionsRendererInstance);
 
     setMap(mapInstance);
   }, [userCoords, availableHosts, map]);
@@ -282,6 +325,34 @@ This is safe because your API key is already restricted to only the Geocoding AP
       setTimeout(initializeMap, 100);
     }
   }, [mapLoaded, showMap, userCoords, initializeMap]);
+
+  // Show driving directions on map
+  const showDirections = (host) => {
+    if (!directionsService || !directionsRenderer || !userCoords) return;
+
+    const request = {
+      origin: userCoords,
+      destination: { lat: host.lat, lng: host.lng },
+      travelMode: google.maps.TravelMode.DRIVING,
+    };
+
+    directionsService.route(request, (result, status) => {
+      if (status === 'OK') {
+        directionsRenderer.setDirections(result);
+        setShowingDirections(host.id);
+      } else {
+        alert('Could not calculate driving directions. Please use the external map links instead.');
+      }
+    });
+  };
+
+  // Clear directions from map
+  const clearDirections = () => {
+    if (directionsRenderer) {
+      directionsRenderer.setDirections({ routes: [] });
+      setShowingDirections(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-blue-50 p-4" style={{backgroundColor: '#E6F7FF'}}>
@@ -401,7 +472,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   Sandwich drop-off hosts
                 </span>
               </p>
-              <p className="text-xs mt-1" style={{color: '#007E8C'}}>Click any red marker to see host details</p>
+              <p className="text-xs mt-1" style={{color: '#007E8C'}}>Click any red marker to see host details and get directions</p>
+              
+              {showingDirections && (
+                <div className="mt-3 p-2 rounded-lg flex items-center justify-between" style={{backgroundColor: '#E6F7FF', borderColor: '#007E8C', border: '1px solid'}}>
+                  <span className="text-sm font-medium" style={{color: '#007E8C'}}>
+                    Showing directions to {availableHosts.find(h => h.id === showingDirections)?.name}
+                  </span>
+                  <button
+                    onClick={clearDirections}
+                    className="text-xs px-2 py-1 rounded" 
+                    style={{backgroundColor: '#FBAD3F', color: 'white'}}
+                  >
+                    Clear Route
+                  </button>
+                </div>
+              )}
             </div>
             <div id="map" className="h-96 rounded-b-lg"></div>
           </div>
@@ -461,14 +547,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <span className="font-medium">Location:</span> {host.area}
                     </p>
                   </div>
-                  <button 
-                    onClick={() => setSelectedHost(host)}
-                    className="px-3 py-1 text-white text-sm rounded hover:opacity-80 flex items-center"
-                    style={{backgroundColor: '#007E8C'}}
-                  >
-                    <i className="lucide-navigation w-3 h-3 mr-1"></i>
-                    Directions
-                  </button>
+                  <div className="flex gap-2">
+                    {userCoords && showMap && (
+                      <button 
+                        onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
+                        className="px-3 py-1 text-white text-xs rounded hover:opacity-80 flex items-center"
+                        style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
+                      >
+                        <i className="lucide-route w-3 h-3 mr-1"></i>
+                        {showingDirections === host.id ? 'Clear Route' : 'Show Route'}
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => setSelectedHost(host)}
+                      className="px-3 py-1 text-white text-sm rounded hover:opacity-80 flex items-center"
+                      style={{backgroundColor: '#007E8C'}}
+                    >
+                      <i className="lucide-navigation w-3 h-3 mr-1"></i>
+                      Directions
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="space-y-2 text-sm">
@@ -519,6 +617,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <h3 className="text-lg font-semibold mb-4">{selectedHost.name}</h3>
               <p className="text-sm mb-4" style={{color: '#236383'}}>{selectedHost.area}</p>
               <div className="space-y-3">
+                {userCoords && (
+                  <button 
+                    onClick={() => {
+                      setShowMap(true);
+                      showDirections(selectedHost);
+                      setSelectedHost(null);
+                    }}
+                    className="block w-full px-4 py-2 text-white rounded hover:opacity-80 text-center"
+                    style={{backgroundColor: '#FBAD3F'}}
+                  >
+                    Show Route on Map
+                  </button>
+                )}
                 <a 
                   href={`https://maps.apple.com/?daddr=${selectedHost.lat},${selectedHost.lng}`}
                   className="block w-full px-4 py-2 text-white rounded hover:opacity-80 text-center"
