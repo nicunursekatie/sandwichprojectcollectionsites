@@ -8,7 +8,15 @@
    - Go to "APIs & Services" > "Library"
    - Search for and enable **"Geocoding API"**
    - Search for and enable **"Maps JavaScript API"** (needed for the map view)
-4. Create an API key:
+4. Create a Map ID (for Advanced Markers):
+   - Go to "Map Management" in the left menu
+   - Click "Create Map ID"
+   - Give it a name (e.g., "Sandwich Drop-Off Map")
+   - Select "Vector" as the map type
+   - Click "Save"
+   - Copy the Map ID (it will look like a long alphanumeric string)
+   - **Note**: The app uses `SANDWICH_DROP_OFF_MAP` as the Map ID by default
+5. Create an API key:
    - Go to "APIs & Services" > "Credentials"
    - Click "Create Credentials" > "API key"
    - Copy the generated API key

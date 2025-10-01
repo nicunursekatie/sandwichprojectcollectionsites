@@ -177,6 +177,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     const mapInstance = new window.google.maps.Map(document.getElementById('map'), {
       center: userCoords,
       zoom: 11,
+      mapId: 'SANDWICH_DROP_OFF_MAP',
       styles: [
         {
           featureType: 'poi',
@@ -191,7 +192,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
       <div style="
         width: 24px; 
         height: 24px; 
-        background: #3B82F6; 
+        background: #47B3CB; 
         border: 3px solid white; 
         border-radius: 50%; 
         position: relative;
@@ -232,7 +233,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
           cursor: pointer;
         ">
           <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 21 7 21s7-15.75 7-21c0-3.87-3.13-7-7-7z" fill="#EF4444" stroke="white" stroke-width="1"/>
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 21 7 21s7-15.75 7-21c0-3.87-3.13-7-7-7z" fill="#A31C41" stroke="white" stroke-width="1"/>
             <circle cx="12" cy="9" r="3" fill="white"/>
           </svg>
         </div>
@@ -283,21 +284,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
   }, [mapLoaded, showMap, userCoords, initializeMap]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-blue-50 p-4" style={{backgroundColor: '#E6F7FF'}}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Sandwich Drop-Off Locations</h1>
-          <p className="text-gray-600 mb-6">
+          <p className="mb-6" style={{color: '#236383'}}>
             <span className="font-medium">Tuesday, October 1, 2025</span> • {availableHosts.length} hosts available for sandwich drop-offs
           </p>
           
           {/* Address Search */}
           <div className="bg-blue-50 p-4 rounded-lg mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium mb-2" style={{color: '#236383'}}>
               Find sandwich drop-off locations near you
             </label>
-            <p className="text-xs text-gray-600 mb-3">Enter your address to see hosts sorted by distance</p>
+            <p className="text-xs mb-3" style={{color: '#007E8C'}}>Enter your address to see hosts sorted by distance</p>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
@@ -311,7 +312,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <button
                 onClick={handleSearch}
                 disabled={geocoding}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center disabled:opacity-50"
+                className="px-6 py-2 text-white rounded-lg hover:opacity-80 flex items-center disabled:opacity-50"
+                style={{backgroundColor: '#007E8C'}}
               >
                 <i className="lucide-search w-4 h-4 mr-2"></i>
                 {geocoding ? 'Searching...' : 'Search'}
@@ -319,7 +321,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
             <button
               onClick={getCurrentLocation}
-              className="text-sm text-blue-600 hover:underline flex items-center"
+              className="text-sm hover:underline flex items-center"
+              style={{color: '#007E8C'}}
             >
               <i className="lucide-locate w-3 h-3 mr-1"></i>
               Use my current location
@@ -335,20 +338,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <div className="flex gap-2">
             <button
               onClick={() => { setShowMap(false); setViewMode('proximity'); }}
-              className={`px-4 py-2 rounded-lg ${!showMap && viewMode === 'proximity' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-4 py-2 rounded-lg ${!showMap && viewMode === 'proximity' ? 'text-white' : ''}`}
+              style={{
+                backgroundColor: !showMap && viewMode === 'proximity' ? '#007E8C' : '#47B3CB',
+                color: !showMap && viewMode === 'proximity' ? 'white' : '#236383'
+              }}
             >
               {userCoords ? 'Nearest First' : 'All Hosts'}
             </button>
             <button
               onClick={() => { setShowMap(false); setViewMode('area'); }}
-              className={`px-4 py-2 rounded-lg ${!showMap && viewMode === 'area' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-4 py-2 rounded-lg ${!showMap && viewMode === 'area' ? 'text-white' : ''}`}
+              style={{
+                backgroundColor: !showMap && viewMode === 'area' ? '#007E8C' : '#47B3CB',
+                color: !showMap && viewMode === 'area' ? 'white' : '#236383'
+              }}
             >
               By Area
             </button>
             {userCoords && (
               <button
                 onClick={() => setShowMap(true)}
-                className={`px-4 py-2 rounded-lg ${showMap ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} flex items-center`}
+                className={`px-4 py-2 rounded-lg ${showMap ? 'text-white' : ''} flex items-center`}
+                style={{
+                  backgroundColor: showMap ? '#007E8C' : '#47B3CB',
+                  color: showMap ? 'white' : '#236383'
+                }}
               >
                 <i className="lucide-map w-4 h-4 mr-2"></i>
                 Map View
@@ -376,17 +391,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <div className="bg-white rounded-lg shadow-sm mb-6">
             <div className="p-4 border-b">
               <h2 className="text-lg font-semibold">Drop-Off Locations Map</h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm" style={{color: '#236383'}}>
                 <span className="inline-flex items-center mr-4">
-                  <span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>
+                  <span className="w-3 h-3 rounded-full mr-1" style={{backgroundColor: '#47B3CB'}}></span>
                   Your location
                 </span>
                 <span className="inline-flex items-center">
-                  <span className="w-3 h-3 bg-red-500 rounded-full mr-1"></span>
+                  <span className="w-3 h-3 rounded-full mr-1" style={{backgroundColor: '#A31C41'}}></span>
                   Sandwich drop-off hosts
                 </span>
               </p>
-              <p className="text-xs text-gray-500 mt-1">Click any red marker to see host details</p>
+              <p className="text-xs mt-1" style={{color: '#007E8C'}}>Click any red marker to see host details</p>
             </div>
             <div id="map" className="h-96 rounded-b-lg"></div>
           </div>
@@ -396,10 +411,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {!showMap && (
           <div className="space-y-3">
             {userCoords && viewMode === 'proximity' && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+              <div className="rounded-lg p-3 mb-4" style={{backgroundColor: '#E6F7FF', borderColor: '#47B3CB', border: '1px solid'}}>
                 <div className="flex items-center">
-                  <i className="lucide-map-pin w-4 h-4 text-green-600 mr-2"></i>
-                  <span className="text-sm font-medium text-green-800">
+                  <i className="lucide-map-pin w-4 h-4 mr-2" style={{color: '#007E8C'}}></i>
+                  <span className="text-sm font-medium" style={{color: '#236383'}}>
                     Hosts sorted by distance from your location
                   </span>
                 </div>
@@ -415,9 +430,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 key={host.id} 
                 className={`bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow ${
                   userCoords && viewMode === 'proximity' && index < 3 
-                    ? 'ring-2 ring-blue-200 bg-blue-50' 
+                    ? 'ring-2' 
                     : ''
                 }`}
+                style={{
+                  ...(userCoords && viewMode === 'proximity' && index < 3 ? {
+                    ringColor: '#47B3CB',
+                    backgroundColor: '#E6F7FF'
+                  } : {})
+                }}
               >
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1">
@@ -431,18 +452,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       )}
                       <h3 className="font-semibold text-lg">{host.name}</h3>
                       {host.distance && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                        <span className="px-2 py-1 text-sm font-medium rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
                           {host.distance} mi
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className="text-sm mb-3" style={{color: '#236383'}}>
                       <span className="font-medium">Location:</span> {host.area}
                     </p>
                   </div>
                   <button 
                     onClick={() => setSelectedHost(host)}
-                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center"
+                    className="px-3 py-1 text-white text-sm rounded hover:opacity-80 flex items-center"
+                    style={{backgroundColor: '#007E8C'}}
                   >
                     <i className="lucide-navigation w-3 h-3 mr-1"></i>
                     Directions
@@ -450,22 +472,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
                 
                 <div className="space-y-2 text-sm">
-                  <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="rounded-lg p-3" style={{backgroundColor: '#E6F7FF'}}>
                     <div className="flex items-start">
-                      <i className="lucide-clock w-4 h-4 mr-2 text-gray-500 mt-0.5"></i>
+                      <i className="lucide-clock w-4 h-4 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
                       <div>
-                        <div className="font-medium text-gray-700 mb-1">Drop-off Hours - Tuesday, Oct 1st</div>
-                        <div className="text-gray-600">{host.hours}</div>
+                        <div className="font-medium mb-1" style={{color: '#236383'}}>Drop-off Hours - Tuesday, Oct 1st</div>
+                        <div style={{color: '#007E8C'}}>{host.hours}</div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="rounded-lg p-3" style={{backgroundColor: '#E6F7FF'}}>
                     <div className="flex items-center">
-                      <i className="lucide-phone w-4 h-4 mr-2 text-gray-500"></i>
+                      <i className="lucide-phone w-4 h-4 mr-2" style={{color: '#007E8C'}}></i>
                       <div>
-                        <span className="font-medium text-gray-700">Contact: </span>
-                        <a href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} className="text-blue-600 hover:underline font-medium">
+                        <span className="font-medium" style={{color: '#236383'}}>Contact: </span>
+                        <a href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} className="hover:underline font-medium" style={{color: '#007E8C'}}>
                           {host.phone}
                         </a>
                       </div>
@@ -474,12 +496,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
                 
                 {host.notes && (
-                  <div className="mt-2 bg-amber-50 rounded-lg p-3">
+                  <div className="mt-2 rounded-lg p-3" style={{backgroundColor: '#FFF4E6'}}>
                     <div className="flex items-start">
-                      <i className="lucide-alert-circle w-4 h-4 mr-2 text-amber-600 flex-shrink-0 mt-0.5"></i>
+                      <i className="lucide-alert-circle w-4 h-4 mr-2 flex-shrink-0 mt-0.5" style={{color: '#FBAD3F'}}></i>
                       <div>
-                        <div className="font-medium text-amber-800 mb-1">Special Instructions</div>
-                        <div className="text-amber-700 text-sm">{host.notes}</div>
+                        <div className="font-medium mb-1" style={{color: '#A31C41'}}>Special Instructions</div>
+                        <div className="text-sm" style={{color: '#236383'}}>{host.notes}</div>
                       </div>
                     </div>
                   </div>
@@ -495,11 +517,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedHost(null)}>
             <div className="bg-white rounded-lg p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-semibold mb-4">{selectedHost.name}</h3>
-              <p className="text-sm text-gray-600 mb-4">{selectedHost.area}</p>
+              <p className="text-sm mb-4" style={{color: '#236383'}}>{selectedHost.area}</p>
               <div className="space-y-3">
                 <a 
                   href={`https://maps.apple.com/?daddr=${selectedHost.lat},${selectedHost.lng}`}
-                  className="block w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-center"
+                  className="block w-full px-4 py-2 text-white rounded hover:opacity-80 text-center"
+                  style={{backgroundColor: '#007E8C'}}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -507,7 +530,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </a>
                 <a 
                   href={`https://www.google.com/maps/dir/?api=1&destination=${selectedHost.lat},${selectedHost.lng}`}
-                  className="block w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-center"
+                  className="block w-full px-4 py-2 text-white rounded hover:opacity-80 text-center"
+                  style={{backgroundColor: '#A31C41'}}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -515,7 +539,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </a>
                 <button 
                   onClick={() => setSelectedHost(null)}
-                  className="block w-full px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-center"
+                  className="block w-full px-4 py-2 rounded hover:opacity-80 text-center"
+                  style={{backgroundColor: '#47B3CB', color: '#236383'}}
                 >
                   Close
                 </button>
