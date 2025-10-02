@@ -230,7 +230,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
       distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
     })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
 
-    const hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 4);
+    const hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
 
     // Add host markers with numbered labels
     hostsToShowOnMap.forEach((host, index) => {
@@ -567,14 +567,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     border: `2px solid ${showAllHostsOnMap ? '#007E8C' : 'rgba(0, 126, 140, 0.3)'}`
                   }}
                 >
-                  {showAllHostsOnMap ? `Showing All ${availableHosts.length} Hosts` : 'Showing Closest 4 Hosts'}
+                  {showAllHostsOnMap ? `Showing All ${availableHosts.length} Hosts` : 'Showing Closest 3 Hosts'}
                 </button>
                 <button
                   onClick={() => setShowAllHostsOnMap(!showAllHostsOnMap)}
                   className="text-xs font-semibold hover:underline transition-all"
                   style={{color: '#007E8C'}}
                 >
-                  {showAllHostsOnMap ? '← Show Only Closest 4' : 'Show All Hosts →'}
+                  {showAllHostsOnMap ? '← Show Only Closest 3' : 'Show All Hosts →'}
                 </button>
               </div>
 
