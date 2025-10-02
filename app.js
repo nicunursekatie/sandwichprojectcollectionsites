@@ -14,10 +14,17 @@ const HostAvailabilityApp = () => {
   const [showingDirections, setShowingDirections] = React.useState(null);
   const [routeInfo, setRouteInfo] = React.useState(null);
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
+  const [showAdmin, setShowAdmin] = React.useState(false);
+  const [editingHost, setEditingHost] = React.useState(null);
   
-  // Real host data with actual coordinates from your spreadsheet
-  // October 1st availability merged with coordinate data
-  const allHosts = [
+  // Initialize hosts from localStorage or use default data
+  const getInitialHosts = () => {
+    const savedHosts = localStorage.getItem('sandwichHosts');
+    if (savedHosts) {
+      return JSON.parse(savedHosts);
+    }
+    // Default host data with actual coordinates from your spreadsheet
+    return [
     // Available October 1st
     { id: 1, name: 'Karen C.', area: 'Johns Creek', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', notes: '', available: true },
     { id: 2, name: 'Nancy M.', area: 'Johns Creek', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', notes: '', available: true },
@@ -44,8 +51,73 @@ const HostAvailabilityApp = () => {
     { id: 23, name: 'Allison T.', area: 'Sandy Springs', lat: 33.91549, lng: -84.3968077, phone: '770.355.8876', hours: '9:30 am to 7 pm', notes: '', available: true },
     { id: 24, name: 'Cynthia C.', area: 'Southwest Atlanta', lat: 33.7286854, lng: -84.5622846, phone: '678.860.6442', hours: '8 am to 7 pm', notes: '', available: true },
     { id: 25, name: 'Jason S.', area: 'Suwanee/Johns Creek', lat: 34.065908, lng: -84.160894, phone: '678.245.2110', hours: '7 am to 6 pm', notes: 'Business location', available: true },
-    { id: 26, name: 'Stacey & Jack G.', area: 'Virginia Highland', lat: 33.77723595, lng: -84.362274174978, phone: '404.451.7648', hours: '8am-noon / 5-8pm', notes: '', available: true },
-  ];
+      { id: 26, name: 'Stacey & Jack G.', area: 'Virginia Highland', lat: 33.77723595, lng: -84.362274174978, phone: '404.451.7648', hours: '8am-noon / 5-8pm', notes: '', available: true },
+    ];
+  };
+
+  const [allHosts, setAllHosts] = React.useState(getInitialHosts);
+
+  // Save hosts to localStorage whenever they change
+  React.useEffect(() => {
+    localStorage.setItem('sandwichHosts', JSON.stringify(allHosts));
+  }, [allHosts]);
+
+  // Admin functions
+  const addHost = (hostData) => {
+    const newHost = {
+      ...hostData,
+      id: Math.max(...allHosts.map(h => h.id)) + 1,
+      lat: parseFloat(hostData.lat),
+      lng: parseFloat(hostData.lng)
+    };
+    setAllHosts([...allHosts, newHost]);
+  };
+
+  const updateHost = (hostId, hostData) => {
+    setAllHosts(allHosts.map(host => 
+      host.id === hostId 
+        ? { ...hostData, id: hostId, lat: parseFloat(hostData.lat), lng: parseFloat(hostData.lng) }
+        : host
+    ));
+  };
+
+  const deleteHost = (hostId) => {
+    setAllHosts(allHosts.filter(host => host.id !== hostId));
+  };
+
+  const toggleHostAvailability = (hostId) => {
+    setAllHosts(allHosts.map(host => 
+      host.id === hostId ? { ...host, available: !host.available } : host
+    ));
+  };
+
+  const exportHosts = () => {
+    const dataStr = JSON.stringify(allHosts, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `sandwich-hosts-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  const importHosts = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedHosts = JSON.parse(e.target.result);
+          setAllHosts(importedHosts);
+          alert('Hosts imported successfully!');
+        } catch (error) {
+          alert('Error importing file. Please check the format.');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
 
   // Only show available hosts
   const availableHosts = allHosts.filter(h => h.available);
@@ -427,11 +499,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
             Sandwich Drop-Off Locations
           </h1>
-          <p className="text-lg mb-8" style={{color: '#236383'}}>
-            <span className="font-semibold">Tuesday, October 1, 2025</span>
-            <span className="mx-2">•</span>
-            <span className="font-medium">{availableHosts.length} hosts available</span>
-          </p>
+          <div className="flex justify-between items-center mb-8">
+            <p className="text-lg" style={{color: '#236383'}}>
+              <span className="font-semibold">Tuesday, October 1, 2025</span>
+              <span className="mx-2">•</span>
+              <span className="font-medium">{availableHosts.length} hosts available</span>
+            </p>
+            <button
+              onClick={() => setShowAdmin(true)}
+              className="text-sm px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
+              style={{backgroundColor: '#A31C41', color: 'white'}}
+              title="Admin: Manage hosts for next week"
+            >
+              🔧 Manage Hosts
+            </button>
+          </div>
           
           {/* Address Search */}
           <div className="info-box p-6 mb-6">
@@ -819,6 +901,267 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Admin Modal */}
+        {showAdmin && (
+          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowAdmin(false)}>
+            <div className="modal-content bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto premium-card-header" onClick={e => e.stopPropagation()}>
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold" style={{color: '#236383'}}>🔧 Admin: Manage Hosts</h2>
+                  <button
+                    onClick={() => setShowAdmin(false)}
+                    className="text-2xl px-3 py-1 rounded-lg hover:bg-gray-100"
+                    style={{color: '#A31C41'}}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Import/Export Controls */}
+                <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                  <h3 className="font-semibold mb-3" style={{color: '#236383'}}>📁 Backup & Restore</h3>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={exportHosts}
+                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      style={{backgroundColor: '#007E8C'}}
+                    >
+                      📤 Export Data
+                    </button>
+                    <label className="px-4 py-2 rounded-lg font-medium text-white cursor-pointer" style={{backgroundColor: '#FBAD3F'}}>
+                      📥 Import Data
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={importHosts}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Add New Host Button */}
+                <div className="mb-6">
+                  <button
+                    onClick={() => setEditingHost({ id: 'new', name: '', area: '', lat: '', lng: '', phone: '', hours: '', notes: '', available: true })}
+                    className="px-6 py-3 rounded-xl font-semibold text-white"
+                    style={{backgroundColor: '#007E8C'}}
+                  >
+                    ➕ Add New Host
+                  </button>
+                </div>
+
+                {/* Hosts List */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg mb-3" style={{color: '#236383'}}>All Hosts ({allHosts.length})</h3>
+                  {allHosts.map(host => (
+                    <div key={host.id} className={`p-4 rounded-xl border-2 ${host.available ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-bold text-lg">{host.name}</h4>
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                              host.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {host.available ? '✅ Available' : '❌ Unavailable'}
+                            </span>
+                          </div>
+                          <div className="text-sm space-y-1" style={{color: '#236383'}}>
+                            <p><strong>Area:</strong> {host.area}</p>
+                            <p><strong>Phone:</strong> {host.phone}</p>
+                            <p><strong>Hours:</strong> {host.hours}</p>
+                            <p><strong>Location:</strong> {host.lat}, {host.lng}</p>
+                            {host.notes && <p><strong>Notes:</strong> {host.notes}</p>}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => toggleHostAvailability(host.id)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium text-white ${
+                              host.available ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'
+                            }`}
+                          >
+                            {host.available ? '💤 Disable' : '✅ Enable'}
+                          </button>
+                          <button
+                            onClick={() => setEditingHost(host)}
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-white"
+                            style={{backgroundColor: '#FBAD3F'}}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete ${host.name}? This cannot be undone.`)) {
+                                deleteHost(host.id);
+                              }
+                            }}
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-white"
+                            style={{backgroundColor: '#A31C41'}}
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Host Modal */}
+        {editingHost && (
+          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setEditingHost(null)}>
+            <div className="modal-content bg-white rounded-2xl max-w-2xl w-full premium-card-header" onClick={e => e.stopPropagation()}>
+              <div className="p-8">
+                <h3 className="text-2xl font-bold mb-6" style={{color: '#236383'}}>
+                  {editingHost.id === 'new' ? '➕ Add New Host' : `✏️ Edit ${editingHost.name}`}
+                </h3>
+                
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const hostData = {
+                    name: formData.get('name'),
+                    area: formData.get('area'),
+                    lat: formData.get('lat'),
+                    lng: formData.get('lng'),
+                    phone: formData.get('phone'),
+                    hours: formData.get('hours'),
+                    notes: formData.get('notes'),
+                    available: formData.get('available') === 'on'
+                  };
+                  
+                  if (editingHost.id === 'new') {
+                    addHost(hostData);
+                  } else {
+                    updateHost(editingHost.id, hostData);
+                  }
+                  setEditingHost(null);
+                }}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Name</label>
+                      <input
+                        type="text"
+                        name="name"
+                        defaultValue={editingHost.name}
+                        required
+                        className="w-full px-4 py-3 premium-input rounded-xl"
+                        placeholder="e.g., Karen C."
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Area/Neighborhood</label>
+                      <input
+                        type="text"
+                        name="area"
+                        defaultValue={editingHost.area}
+                        required
+                        className="w-full px-4 py-3 premium-input rounded-xl"
+                        placeholder="e.g., Johns Creek"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Latitude</label>
+                        <input
+                          type="number"
+                          step="any"
+                          name="lat"
+                          defaultValue={editingHost.lat}
+                          required
+                          className="w-full px-4 py-3 premium-input rounded-xl"
+                          placeholder="34.0562454"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Longitude</label>
+                        <input
+                          type="number"
+                          step="any"
+                          name="lng"
+                          defaultValue={editingHost.lng}
+                          required
+                          className="w-full px-4 py-3 premium-input rounded-xl"
+                          placeholder="-84.2510305"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Phone</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        defaultValue={editingHost.phone}
+                        required
+                        className="w-full px-4 py-3 premium-input rounded-xl"
+                        placeholder="404.451.7942"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Drop-off Hours</label>
+                      <input
+                        type="text"
+                        name="hours"
+                        defaultValue={editingHost.hours}
+                        required
+                        className="w-full px-4 py-3 premium-input rounded-xl"
+                        placeholder="8 am to 8 pm"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Special Instructions (optional)</label>
+                      <textarea
+                        name="notes"
+                        defaultValue={editingHost.notes}
+                        className="w-full px-4 py-3 premium-input rounded-xl"
+                        rows="3"
+                        placeholder="Text prior to delivering, ring doorbell, etc."
+                      />
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="available"
+                        defaultChecked={editingHost.available}
+                        className="mr-3 w-5 h-5"
+                      />
+                      <label className="font-semibold" style={{color: '#236383'}}>Available this week</label>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 mt-8">
+                    <button
+                      type="submit"
+                      className="flex-1 px-6 py-3 rounded-xl font-semibold text-white"
+                      style={{backgroundColor: '#007E8C'}}
+                    >
+                      {editingHost.id === 'new' ? '➕ Add Host' : '💾 Save Changes'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingHost(null)}
+                      className="px-6 py-3 rounded-xl font-semibold"
+                      style={{backgroundColor: 'white', color: '#236383', border: '2px solid rgba(71, 179, 203, 0.3)'}}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
