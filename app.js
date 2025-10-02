@@ -55,8 +55,8 @@ const HostAvailabilityApp = () => {
     // Default host data with actual coordinates from your spreadsheet
     return [
     // Available October 1st
-    { id: 1, name: 'Karen C.', area: 'Johns Creek', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', notes: '', available: true },
-    { id: 2, name: 'Nancy M.', area: 'Johns Creek', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', notes: '', available: true },
+    { id: 1, name: 'Karen C.', area: 'Alpharetta', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', notes: '', available: true },
+    { id: 2, name: 'Nancy M.', area: 'Alpharetta', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', notes: '', available: true },
     { id: 3, name: 'Julie B.', area: 'Buckhead', lat: 33.8543082, lng: -84.3709417, phone: '404.808.2560', hours: '8 am to 8 pm', notes: 'Pull up driveway in back. Fridge in garage.', available: true },
     { id: 4, name: 'Kate D.', area: 'Chastain Park', lat: 33.8804237, lng: -84.4067199, phone: '404.271.4352', hours: '9 am to 5 pm', notes: 'Text prior to delivering.', available: true },
     { id: 5, name: 'Jordan H.', area: 'Chamblee/Brookhaven', lat: 33.8981194, lng: -84.31290740000001, phone: '770.789.7329', hours: '9 am to 5 pm', notes: 'Text when arrive / ring doorbell.', available: true },
@@ -528,12 +528,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
             Sandwich Drop-Off Locations
           </h1>
-          <div className="flex justify-between items-center mb-8">
-            <p className="text-lg" style={{color: '#236383'}}>
-              <span className="font-semibold">{dropOffDate}</span>
-              <span className="mx-2">•</span>
-              <span className="font-medium">{availableHosts.length} hosts available</span>
+          <div className="mb-8">
+            <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
+              {dropOffDate}
             </p>
+            <p className="text-base font-medium" style={{color: '#236383'}}>
+              {availableHosts.length} hosts available
+            </p>
+          </div>
+          <div className="flex justify-end">
             <button
               onClick={() => {
                 const password = prompt('Enter admin password:');
@@ -836,7 +839,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex items-start">
                             <i className="lucide-clock w-4 h-4 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
                             <div>
-                              <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours - {dropOffDateShort}</div>
+                              <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours</div>
                               <div className="font-medium" style={{color: '#007E8C'}}>{host.hours}</div>
                             </div>
                           </div>
