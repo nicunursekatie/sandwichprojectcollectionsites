@@ -19,7 +19,7 @@ function doPost(e) {
       data.meatCheese || 0, // This will go to "# Deli Sandwiches" column
       data.pbj || 0, // This will go to "# PBJ Sandwiches" column
       data.snacksFruit || '',
-      data.date || ''
+      data.location || '' // Collection Site (column I)
     ];
     
     // Add the data to the sheet
