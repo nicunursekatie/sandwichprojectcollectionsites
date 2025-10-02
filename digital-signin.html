@@ -382,6 +382,9 @@
             
             // Add checkbox value
             data.firstTime = document.getElementById('firstTime').checked;
+            // Add location from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            data.location = urlParams.get('location') || 'Unknown';
             
             // Submit to Google Sheets
             submitToGoogleSheets(data);
