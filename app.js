@@ -16,7 +16,36 @@ const HostAvailabilityApp = () => {
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
-  
+
+  // Get next Wednesday's date
+  const getNextWednesday = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 3 = Wednesday
+    let daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
+
+    // If today is Wednesday, get next week's Wednesday
+    if (daysUntilWednesday === 0) {
+      daysUntilWednesday = 7;
+    }
+
+    const nextWednesday = new Date(today);
+    nextWednesday.setDate(today.getDate() + daysUntilWednesday);
+    return nextWednesday;
+  };
+
+  const nextWednesday = getNextWednesday();
+  const dropOffDate = nextWednesday.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  const dropOffDateShort = nextWednesday.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric'
+  });
+
   // Initialize hosts from localStorage or use default data
   const getInitialHosts = () => {
     const savedHosts = localStorage.getItem('sandwichHosts');
@@ -501,7 +530,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </h1>
           <div className="flex justify-between items-center mb-8">
             <p className="text-lg" style={{color: '#236383'}}>
-              <span className="font-semibold">Tuesday, October 1, 2025</span>
+              <span className="font-semibold">{dropOffDate}</span>
               <span className="mx-2">•</span>
               <span className="font-medium">{availableHosts.length} hosts available</span>
             </p>
@@ -800,7 +829,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex items-start">
                             <i className="lucide-clock w-4 h-4 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
                             <div>
-                              <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours - Tuesday, Oct 1st</div>
+                              <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours - {dropOffDateShort}</div>
                               <div className="font-medium" style={{color: '#007E8C'}}>{host.hours}</div>
                             </div>
                           </div>
@@ -998,9 +1027,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <div className="flex gap-2">
                           <button
                             onClick={() => toggleHostAvailability(host.id)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium text-white ${
-                              host.available ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'
-                            }`}
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-white"
+                            style={{
+                              backgroundColor: host.available ? '#FBAD3F' : '#007E8C'
+                            }}
                           >
                             {host.available ? '💤 Disable' : '✅ Enable'}
                           </button>
