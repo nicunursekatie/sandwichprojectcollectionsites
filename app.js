@@ -535,7 +535,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <span className="font-medium">{availableHosts.length} hosts available</span>
             </p>
             <button
-              onClick={() => setShowAdmin(true)}
+              onClick={() => {
+                const password = prompt('Enter admin password:');
+                if (password === 'sandwich2024') {  // Change this password
+                  setShowAdmin(true);
+                } else if (password !== null) {
+                  alert('Incorrect password');
+                }
+              }}
               className="text-sm px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
               style={{backgroundColor: '#A31C41', color: 'white'}}
               title="Admin: Manage hosts for next week"
