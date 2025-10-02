@@ -1,6 +1,7 @@
 const HostAvailabilityApp = () => {
   const [userAddress, setUserAddress] = React.useState('');
   const [searchInput, setSearchInput] = React.useState('');
+  const [nameSearch, setNameSearch] = React.useState('');
   const [userCoords, setUserCoords] = React.useState(null);
   const [viewMode, setViewMode] = React.useState('proximity'); 
   const [filterArea, setFilterArea] = React.useState('all');
@@ -287,9 +288,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
       filtered = filtered.filter(h => h.area === filterArea);
     }
 
-    // Apply name search filter if search input exists (and not geocoding an address)
-    if (searchInput.trim() && !userCoords) {
-      const searchLower = searchInput.toLowerCase();
+    // Apply name search filter
+    if (nameSearch.trim()) {
+      const searchLower = nameSearch.toLowerCase();
       filtered = filtered.filter(h =>
         h.name.toLowerCase().includes(searchLower) ||
         h.area.toLowerCase().includes(searchLower) ||
@@ -298,7 +299,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
 
     return filtered;
-  }, [filterArea, viewMode, sortedHosts, availableHosts, searchInput, userCoords]);
+  }, [filterArea, viewMode, sortedHosts, availableHosts, nameSearch]);
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
@@ -587,48 +588,65 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </button>
           </div>
           
-          {/* Address Search */}
+          {/* Search Section */}
           <div className="info-box p-6 mb-6">
-            <label className="block text-base font-semibold mb-2" style={{color: '#236383'}}>
-              Find Locations
-            </label>
-            <p className="text-sm mb-4" style={{color: '#007E8C'}}>
-              Search by host name, area, neighborhood, or enter your address to see hosts sorted by distance
-            </p>
-            <div className="flex gap-3 mb-3">
+            {/* Name/Area Search */}
+            <div className="mb-6">
+              <label className="block text-base font-semibold mb-2" style={{color: '#236383'}}>
+                Search by Name or Area
+              </label>
               <input
                 type="text"
-                placeholder="Search by name, area, or enter address for distance"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="flex-1 px-5 py-3 premium-input rounded-xl text-base"
-                disabled={geocoding}
+                placeholder="Search for a host by name, area, or neighborhood..."
+                value={nameSearch}
+                onChange={(e) => setNameSearch(e.target.value)}
+                className="w-full px-5 py-3 premium-input rounded-xl text-base"
               />
-              <button
-                onClick={handleSearch}
-                disabled={geocoding}
-                className="btn-primary px-8 py-3 text-white rounded-xl font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <i className="lucide-search w-4 h-4 mr-2"></i>
-                {geocoding ? 'Searching...' : 'Search'}
-              </button>
             </div>
-            <button
-              onClick={getCurrentLocation}
-              className="text-sm font-medium hover:underline flex items-center transition-all"
-              style={{color: '#007E8C'}}
-            >
-              <i className="lucide-locate w-4 h-4 mr-1.5"></i>
-              Use my current location
-            </button>
-            {userAddress && userCoords && (
-              <div className="mt-4 p-3 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
-                <p className="text-sm font-medium" style={{color: '#236383'}}>
-                  📍 Showing hosts near: <span className="font-semibold">{userAddress}</span>
-                </p>
+
+            {/* Address Search */}
+            <div>
+              <label className="block text-base font-semibold mb-2" style={{color: '#236383'}}>
+                Find Nearest Locations
+              </label>
+              <p className="text-sm mb-3" style={{color: '#007E8C'}}>
+                Enter your address to see hosts sorted by distance
+              </p>
+              <div className="flex gap-3 mb-3">
+                <input
+                  type="text"
+                  placeholder="Enter your address, neighborhood, or ZIP code"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="flex-1 px-5 py-3 premium-input rounded-xl text-base"
+                  disabled={geocoding}
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={geocoding}
+                  className="btn-primary px-8 py-3 text-white rounded-xl font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <i className="lucide-search w-4 h-4 mr-2"></i>
+                  {geocoding ? 'Searching...' : 'Search'}
+                </button>
               </div>
-            )}
+              <button
+                onClick={getCurrentLocation}
+                className="text-sm font-medium hover:underline flex items-center transition-all"
+                style={{color: '#007E8C'}}
+              >
+                <i className="lucide-locate w-4 h-4 mr-1.5"></i>
+                Use my current location
+              </button>
+              {userAddress && userCoords && (
+                <div className="mt-4 p-3 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
+                  <p className="text-sm font-medium" style={{color: '#236383'}}>
+                    📍 Showing hosts near: <span className="font-semibold">{userAddress}</span>
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* View Toggle */}
