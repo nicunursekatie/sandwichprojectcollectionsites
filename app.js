@@ -124,11 +124,27 @@ const HostAvailabilityApp = () => {
     const dataStr = JSON.stringify(allHosts, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = `sandwich-hosts-${new Date().toISOString().split('T')[0]}.json`;
-    
+
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+  };
+
+  const copyAsCode = () => {
+    const codeStr = `    return [\n${allHosts.map(host =>
+      `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}', notes: '${host.notes}', available: ${host.available} }`
+    ).join(',\n')}\n    ];`;
+
+    navigator.clipboard.writeText(codeStr).then(() => {
+      alert('Code copied to clipboard! Paste this into app.js lines 56-85 to replace the default host data.');
+    }).catch(() => {
+      // Fallback: show in a text area
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+      modal.innerHTML = `<div style="background:white;padding:20px;border-radius:8px;max-width:90%;max-height:80%;overflow:auto;"><h3>Copy this code:</h3><textarea style="width:600px;height:400px;font-family:monospace;font-size:12px;">${codeStr}</textarea><br><button onclick="this.parentElement.parentElement.remove()" style="margin-top:10px;padding:8px 16px;background:#007E8C;color:white;border:none;border-radius:4px;cursor:pointer;">Close</button></div>`;
+      document.body.appendChild(modal);
+    });
   };
 
   const importHosts = (event) => {
@@ -990,17 +1006,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                 {/* Import/Export Controls */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                  <h3 className="font-semibold mb-3" style={{color: '#236383'}}>📁 Backup & Restore</h3>
-                  <div className="flex gap-3">
+                  <h3 className="font-semibold mb-3" style={{color: '#236383'}}>📁 Backup & Deploy</h3>
+                  <div className="flex flex-wrap gap-3">
                     <button
                       onClick={exportHosts}
                       className="px-4 py-2 rounded-lg font-medium text-white"
                       style={{backgroundColor: '#007E8C'}}
                     >
-                      📤 Export Data
+                      📤 Export JSON
                     </button>
                     <label className="px-4 py-2 rounded-lg font-medium text-white cursor-pointer" style={{backgroundColor: '#FBAD3F'}}>
-                      📥 Import Data
+                      📥 Import JSON
                       <input
                         type="file"
                         accept=".json"
@@ -1008,7 +1024,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         className="hidden"
                       />
                     </label>
+                    <button
+                      onClick={copyAsCode}
+                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      style={{backgroundColor: '#A31C41'}}
+                      title="Copy as code to paste into app.js"
+                    >
+                      📋 Copy as Code
+                    </button>
                   </div>
+                  <p className="text-xs mt-2" style={{color: '#236383'}}>
+                    Use "Copy as Code" to update the default host data in app.js
+                  </p>
                 </div>
 
                 {/* Add New Host Button */}
