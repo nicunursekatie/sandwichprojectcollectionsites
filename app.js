@@ -721,15 +721,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     : ''
                 }`}
               >
-                <div className="flex gap-4">
+                <div className="flex gap-5 items-start">
                   {/* Small map view for each host */}
-                  <div className="flex-shrink-0" style={{width: '90px'}}>
+                  <div className="flex-shrink-0" style={{width: '85px'}}>
                     {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
                       <img
-                        src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=14&size=90x90&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
+                        src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=15&size=85x85&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
                         alt={`Map of ${host.name}`}
                         className="rounded-lg border border-gray-200 shadow-sm"
-                        style={{width: '90px', height: '90px', objectFit: 'cover'}}
+                        style={{width: '85px', height: '85px', objectFit: 'cover'}}
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.nextSibling.style.display = 'flex';
@@ -739,15 +739,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <div 
                       className="rounded-lg border border-gray-200 shadow-sm flex items-center justify-center"
                       style={{
-                        width: '90px', 
-                        height: '90px', 
+                        width: '85px', 
+                        height: '85px', 
                         backgroundColor: '#f8f9fa',
                         display: GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE' ? 'flex' : 'none'
                       }}
                     >
                       <div className="text-center text-xs" style={{color: '#236383'}}>
-                        <i className="lucide-map-pin w-5 h-5 mx-auto mb-1"></i>
-                        <div className="font-semibold">{host.area}</div>
+                        <i className="lucide-map-pin w-4 h-4 mx-auto mb-1"></i>
+                        <div className="font-semibold text-xs">{host.area}</div>
                       </div>
                     </div>
                   </div>
