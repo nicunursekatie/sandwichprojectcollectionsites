@@ -374,28 +374,25 @@
         
         // Form submission handler
         document.getElementById('signinForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Collect form data
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
-            
-            // Add checkbox value
-            data.firstTime = document.getElementById('firstTime').checked;
-            
-            // Log the data (in a real app, this would be sent to a server)
-            console.log('Sign-in data:', data);
-            
-            // Show success message
-            document.getElementById('successMessage').style.display = 'block';
-            
-            // Reset form after 3 seconds
-            setTimeout(() => {
-                this.reset();
-                document.getElementById('date').valueAsDate = new Date();
-                document.getElementById('successMessage').style.display = 'none';
-            }, 3000);
-        });
+  e.preventDefault();
+  const formData = new FormData(this);
+  const data = Object.fromEntries(formData);
+  data.firstTime = document.getElementById('firstTime').checked;
+  fetch('YOUR_WEB_APP_URL', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.text())
+  .then(() => {
+    document.getElementById('successMessage').style.display = 'block';
+    setTimeout(() => {
+      this.reset();
+      document.getElementById('date').valueAsDate = new Date();
+      document.getElementById('successMessage').style.display = 'none';
+    }, 3000);
+  });
+});
         
         // Phone number formatting
         document.getElementById('phoneNumber').addEventListener('input', function(e) {
