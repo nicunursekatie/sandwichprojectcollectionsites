@@ -861,7 +861,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             ))
           )}
           </div>
-        }
+        )}
 
         {/* Directions Modal */}
         {selectedHost && (
