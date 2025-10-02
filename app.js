@@ -258,14 +258,25 @@ This is safe because your API key is already restricted to only the Geocoding AP
   }, [userCoords, viewMode, availableHosts]);
 
   const filteredHosts = React.useMemo(() => {
-    if (viewMode === 'proximity') return sortedHosts;
-    
-    let filtered = availableHosts;
-    if (filterArea !== 'all') {
+    let filtered = viewMode === 'proximity' ? sortedHosts : availableHosts;
+
+    // Apply area filter in area view mode
+    if (viewMode === 'area' && filterArea !== 'all') {
       filtered = filtered.filter(h => h.area === filterArea);
     }
+
+    // Apply name search filter if search input exists (and not geocoding an address)
+    if (searchInput.trim() && !userCoords) {
+      const searchLower = searchInput.toLowerCase();
+      filtered = filtered.filter(h =>
+        h.name.toLowerCase().includes(searchLower) ||
+        h.area.toLowerCase().includes(searchLower) ||
+        (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
+      );
+    }
+
     return filtered;
-  }, [filterArea, viewMode, sortedHosts, availableHosts]);
+  }, [filterArea, viewMode, sortedHosts, availableHosts, searchInput, userCoords]);
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
@@ -557,15 +568,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
           {/* Address Search */}
           <div className="info-box p-6 mb-6">
             <label className="block text-base font-semibold mb-2" style={{color: '#236383'}}>
-              Find Locations Near You
+              Find Locations
             </label>
             <p className="text-sm mb-4" style={{color: '#007E8C'}}>
-              Enter your address to see hosts sorted by distance
+              Search by host name, area, neighborhood, or enter your address to see hosts sorted by distance
             </p>
             <div className="flex gap-3 mb-3">
               <input
                 type="text"
-                placeholder="Enter address, neighborhood, or ZIP code"
+                placeholder="Search by name, area, or enter address for distance"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
