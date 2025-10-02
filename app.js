@@ -1003,7 +1003,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => setEditingHost({ id: 'new', name: '', area: '', lat: '', lng: '', phone: '', hours: '', notes: '', available: true })}
+                    onClick={() => setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', notes: '', available: true })}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
                     style={{backgroundColor: '#007E8C'}}
                   >
@@ -1027,7 +1027,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             </span>
                           </div>
                           <div className="text-sm space-y-1" style={{color: '#236383'}}>
-                            <p><strong>Area:</strong> {host.area}</p>
+                            <p><strong>Area:</strong> {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}</p>
                             <p><strong>Phone:</strong> {host.phone}</p>
                             <p><strong>Hours:</strong> {host.hours}</p>
                             <p><strong>Location:</strong> {host.lat}, {host.lng}</p>
@@ -1087,6 +1087,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
+                    neighborhood: formData.get('neighborhood'),
                     lat: formData.get('lat'),
                     lng: formData.get('lng'),
                     phone: formData.get('phone'),
@@ -1116,14 +1117,25 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                     
                     <div>
-                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Area/Neighborhood</label>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Area</label>
                       <input
                         type="text"
                         name="area"
                         defaultValue={editingHost.area}
                         required
                         className="w-full px-4 py-3 premium-input rounded-xl"
-                        placeholder="e.g., Johns Creek"
+                        placeholder="e.g., Alpharetta"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Neighborhood (optional)</label>
+                      <input
+                        type="text"
+                        name="neighborhood"
+                        defaultValue={editingHost.neighborhood}
+                        className="w-full px-4 py-3 premium-input rounded-xl"
+                        placeholder="e.g., Glenn Abbey"
                       />
                     </div>
                     
