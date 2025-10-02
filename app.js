@@ -794,11 +794,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-3 text-sm">
-                    {/* ...existing code... */}
-                  </div>
-                  {/* ...existing code... */}
-                </div>
 
                 <div className="space-y-3 text-sm">
                   <div className="info-box p-4">
