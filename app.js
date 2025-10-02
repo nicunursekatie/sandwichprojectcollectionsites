@@ -723,12 +723,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
               >
                 {/* Small map view for each host */}
                 <div className="flex-shrink-0 mr-6" style={{width: '120px'}}>
-                  <img
-                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=14&size=120x120&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
-                    alt={`Map of ${host.name}`}
-                    className="rounded-xl border border-gray-200 shadow-sm"
-                    style={{width: '120px', height: '120px', objectFit: 'cover'}}
-                  />
+                  {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
+                    <img
+                      src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=14&size=120x120&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
+                      alt={`Map of ${host.name}`}
+                      className="rounded-xl border border-gray-200 shadow-sm"
+                      style={{width: '120px', height: '120px', objectFit: 'cover'}}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="rounded-xl border border-gray-200 shadow-sm flex items-center justify-center"
+                    style={{
+                      width: '120px', 
+                      height: '120px', 
+                      backgroundColor: '#f8f9fa',
+                      display: GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE' ? 'flex' : 'none'
+                    }}
+                  >
+                    <div className="text-center text-xs" style={{color: '#236383'}}>
+                      <i className="lucide-map-pin w-6 h-6 mx-auto mb-1"></i>
+                      <div className="font-semibold">{host.area}</div>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-4">

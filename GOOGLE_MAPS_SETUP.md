@@ -8,6 +8,7 @@
    - Go to "APIs & Services" > "Library"
    - Search for and enable **"Geocoding API"**
    - Search for and enable **"Maps JavaScript API"** (needed for the map view)
+   - Search for and enable **"Maps Static API"** (needed for the small map images next to each host)
 4. Create a Map ID (for Advanced Markers):
    - Go to "Map Management" in the left menu
    - Click "Create Map ID"
@@ -43,6 +44,7 @@
    - **API restrictions**: Select "Restrict key" and choose:
      - **Geocoding API** (for address lookup)
      - **Maps JavaScript API** (for the interactive map view)
+     - **Maps Static API** (for the small map images next to each host)
      - ✅ **This is the main security protection** - your key can only be used for these specific APIs
 
 ## Step 4: Pricing Information
@@ -65,7 +67,8 @@
 **"API key not configured" error**: Make sure you've replaced `YOUR_API_KEY_HERE` with your actual key
 
 **"REQUEST_DENIED" error**: Check that:
-- Both Geocoding API and Maps JavaScript API are enabled in your Google Cloud project
+
+- Geocoding API, Maps JavaScript API, and Maps Static API are all enabled in your Google Cloud project
 - Application restrictions are set to "None" (Geocoding API doesn't support referrer restrictions)
 - API restrictions include both "Geocoding API" and "Maps JavaScript API"
 - Billing is set up in Google Cloud Console
