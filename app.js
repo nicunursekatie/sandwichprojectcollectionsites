@@ -556,7 +556,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   📍 Showing hosts near: <span className="font-semibold">{userAddress}</span>
                 </p>
               </div>
-              )}
             )}
           </div>
 
@@ -795,7 +794,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </button>
                     </div>
                   </div>
-                  {/* ...existing code... */}
                   <div className="space-y-3 text-sm">
                     {/* ...existing code... */}
                   </div>
@@ -868,7 +866,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             ))
           )}
           </div>
-        )
+        }
 
         {/* Directions Modal */}
         {selectedHost && (
@@ -1173,7 +1171,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       className="flex-1 px-6 py-3 rounded-xl font-semibold text-white"
                       style={{backgroundColor: '#007E8C'}}
                     >
-                      {editingHost.id === 'new' ? '➕ Add Host' : '💾 Save Changes'}
+                    {editingHost.id === 'new' ? '➕ Add Host' : '💾 Save Changes'}
                     </button>
                     <button
                       type="button"
