@@ -55,8 +55,8 @@ const HostAvailabilityApp = () => {
     // Default host data with actual coordinates from your spreadsheet
     return [
     // Available October 1st
-    { id: 1, name: 'Karen C.', area: 'Alpharetta', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', notes: '', available: true },
-    { id: 2, name: 'Nancy M.', area: 'Alpharetta', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', notes: '', available: true },
+    { id: 1, name: 'Karen C.', area: 'Alpharetta', neighborhood: 'Glenn Abbey', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', notes: '', available: true },
+    { id: 2, name: 'Nancy M.', area: 'Alpharetta', neighborhood: 'Chartwell', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', notes: '', available: true },
     { id: 3, name: 'Julie B.', area: 'Buckhead', lat: 33.8543082, lng: -84.3709417, phone: '404.808.2560', hours: '8 am to 8 pm', notes: 'Pull up driveway in back. Fridge in garage.', available: true },
     { id: 4, name: 'Kate D.', area: 'Chastain Park', lat: 33.8804237, lng: -84.4067199, phone: '404.271.4352', hours: '9 am to 5 pm', notes: 'Text prior to delivering.', available: true },
     { id: 5, name: 'Jordan H.', area: 'Chamblee/Brookhaven', lat: 33.8981194, lng: -84.31290740000001, phone: '770.789.7329', hours: '9 am to 5 pm', notes: 'Text when arrive / ring doorbell.', available: true },
@@ -809,7 +809,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             )}
                           </div>
                           <p className="text-sm font-medium mb-3" style={{color: '#236383'}}>
-                            📍 {host.area}
+                            📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -907,7 +907,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedHost(null)}>
             <div className="modal-content bg-white rounded-2xl p-8 max-w-md w-full premium-card-header" onClick={e => e.stopPropagation()}>
               <h3 className="text-2xl font-bold mb-2" style={{color: '#236383'}}>{selectedHost.name}</h3>
-              <p className="text-base font-medium mb-2" style={{color: '#007E8C'}}>📍 {selectedHost.area}</p>
+              <p className="text-base font-medium mb-2" style={{color: '#007E8C'}}>📍 {selectedHost.area}{selectedHost.neighborhood ? ` - ${selectedHost.neighborhood}` : ''}</p>
               {selectedHost.distance && (
                 <div className="premium-badge px-4 py-2 mb-6 inline-block rounded-xl">
                   <p className="text-sm font-semibold" style={{color: '#007E8C'}}>
