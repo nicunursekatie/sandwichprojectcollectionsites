@@ -536,18 +536,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl premium-card-header p-8 mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
-            Sandwich Drop-Off Locations
-          </h1>
-          <div className="mb-8">
-            <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
-              {dropOffDate}
-            </p>
-            <p className="text-base font-medium" style={{color: '#236383'}}>
-              {availableHosts.length} hosts available
-            </p>
-          </div>
-          <div className="flex justify-end">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
+                Sandwich Drop-Off Locations
+              </h1>
+              <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
+                {dropOffDate}
+              </p>
+              <p className="text-base font-medium" style={{color: '#236383'}}>
+                {availableHosts.length} hosts available
+              </p>
+            </div>
             <button
               onClick={() => {
                 const password = prompt('Enter admin password:');
