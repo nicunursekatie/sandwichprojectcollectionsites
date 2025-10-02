@@ -395,8 +395,8 @@
             try {
                 // Google Apps Script web app URL
                 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxV3jSO6NTF1oZVaAal-KiioDYcYZlk8pNJGkT5bZEGz9gUxg3Ovu9sxnu71nDf9m0aiQ/exec';
-                
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
+
+                await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors', // Required for Google Apps Script
                     headers: {
@@ -404,27 +404,16 @@
                     },
                     body: JSON.stringify(data)
                 });
-                
-                // Show success message
-                document.getElementById('successMessage').style.display = 'block';
-                document.getElementById('successMessage').textContent = 'Thank you for signing in! Your information has been recorded.';
-                
-                // Reset form after 3 seconds
-                setTimeout(() => {
-                    document.getElementById('signinForm').reset();
-                    document.getElementById('date').valueAsDate = new Date();
-                    document.getElementById('successMessage').style.display = 'none';
-                }, 3000);
-                
+
+                // Redirect to confirmation page
+                window.location.href = 'confirmation.html';
             } catch (error) {
                 console.error('Error submitting data:', error);
-                
                 // Show error message
                 document.getElementById('successMessage').style.display = 'block';
                 document.getElementById('successMessage').textContent = 'There was an error submitting your information. Please try again.';
                 document.getElementById('successMessage').style.background = '#f8d7da';
                 document.getElementById('successMessage').style.color = '#721c24';
-                
                 // Reset error message after 5 seconds
                 setTimeout(() => {
                     document.getElementById('successMessage').style.display = 'none';

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign-In Confirmation</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f8f9 0%, #e6f4f6 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .confirmation-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 48px 32px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .confirmation-icon {
+            font-size: 48px;
+            color: #47b3cb;
+            margin-bottom: 24px;
+        }
+        .confirmation-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #236383;
+            margin-bottom: 16px;
+        }
+        .confirmation-message {
+            font-size: 18px;
+            color: #007e8c;
+            margin-bottom: 32px;
+        }
+        .newsletter-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #007e8c, #236383);
+            color: white;
+            font-weight: 600;
+            padding: 14px 28px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: box-shadow 0.2s;
+        }
+        .newsletter-link:hover {
+            box-shadow: 0 8px 25px rgba(0, 126, 140, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="confirmation-container">
+        <div class="confirmation-icon">✅</div>
+        <div class="confirmation-title">Thank you for signing in!</div>
+        <div class="confirmation-message">
+            Your information has been recorded.<br>
+            If you aren't already signed up for our newsletter, please join below:
+        </div>
+        <a class="newsletter-link" href="https://www.thesandwichproject.org/get-our-newsletter" target="_blank">Sign Up for Our Newsletter</a>
+    </div>
+</body>
+</html>
