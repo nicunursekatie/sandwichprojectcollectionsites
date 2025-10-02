@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sandwich Project Weekly Newsletter</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @page {
+            size: letter;
+            margin: 0.5in;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            width: 8.5in;
+            height: 11in;
+            margin: 0 auto;
+            background: white;
+            padding: 0.5in;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #fbad3f;
+            margin-bottom: 25px;
+        }
+        
+        .logo-line {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .logo {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .org-name {
+            font-size: 28px;
+            font-weight: 700;
+            color: #007e8c;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .main-headline {
+            font-size: 42px;
+            font-weight: 900;
+            color: #236383;
+            margin-bottom: 10px;
+            line-height: 1;
+        }
+        
+        .sub-headline {
+            font-size: 20px;
+            color: #a31c41;
+            font-weight: 600;
+        }
+        
+        .monday-badge {
+            display: inline-block;
+            background: #fbad3f;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 16px;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .primary-box {
+            background: linear-gradient(135deg, #007e8c, #236383);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .primary-box h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #fbad3f;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .weekly-info {
+            background: white;
+            color: #236383;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .weekly-info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            font-size: 15px;
+        }
+        
+        .check-icon {
+            color: #47b3cb;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .plus-section {
+            background: #f0f8f9;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #47b3cb;
+        }
+        
+        .plus-section h3 {
+            color: #007e8c;
+            font-size: 18px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .plus-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .plus-item {
+            font-size: 14px;
+            color: #236383;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .plus-item::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #fbad3f;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .qr-section {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            align-items: flex-start;
+            margin: 20px 0;
+        }
+        
+        .qr-box {
+            text-align: center;
+        }
+        
+        .qr-box h4 {
+            font-size: 16px;
+            color: #a31c41;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .qr-container {
+            background: white;
+            padding: 10px;
+            border: 3px solid #fbad3f;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .qr-code {
+            width: 150px;
+            height: 150px;
+            display: block;
+        }
+        
+        .qr-label {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #236383;
+            font-weight: 600;
+        }
+        
+        .footer-note {
+            text-align: center;
+            padding: 15px;
+            background: #fff3e6;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .footer-note p {
+            font-size: 14px;
+            color: #236383;
+            line-height: 1.4;
+        }
+        
+        .website-url {
+            color: #007e8c;
+            font-weight: 700;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        
+        @media print {
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-line">
+            <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <g transform="translate(20, 30)">
+                    <rect x="0" y="10" width="60" height="8" fill="#fbad3f" rx="2"/>
+                    <rect x="0" y="22" width="60" height="8" fill="#fbad3f" rx="2"/>
+                    <rect x="0" y="34" width="60" height="8" fill="#fbad3f" rx="2"/>
+                </g>
+            </svg>
+            <div class="org-name">The Sandwich Project</div>
+        </div>
+        <h1 class="main-headline">Weekly Newsletter</h1>
+        <div class="sub-headline">Your guide to sandwich drop-off locations</div>
+        <div class="monday-badge">📧 Delivered Every Monday</div>
+    </div>
+
+    <div class="main-content">
+        <div class="primary-box">
+            <h2>What You'll Get Each Week:</h2>
+            <div class="weekly-info">
+                <div class="weekly-info-item">
+                    <span class="check-icon">✓</span>
+                    <span><strong>Which host homes are collecting</strong> sandwiches this week</span>
+                </div>
+                <div class="weekly-info-item">
+                    <span class="check-icon">✓</span>
+                    <span><strong>Collection hours</strong> for each location</span>
+                </div>
+                <div class="weekly-info-item">
+                    <span class="check-icon">✓</span>
+                    <span><strong>Special instructions</strong> or changes for each host</span>
+                </div>
+                <div class="weekly-info-item">
+                    <span class="check-icon">✓</span>
+                    <span><strong>Alternative drop-off locations</strong> if your regular host isn't available</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="plus-section">
+            <h3>PLUS: Links & Opportunities Included in Each Newsletter</h3>
+            <div class="plus-items">
+                <div class="plus-item">Volunteer driver sign-ups</div>
+                <div class="plus-item">Amazon Wish List for supplies</div>
+                <div class="plus-item">Group volunteer events</div>
+                <div class="plus-item">Social media updates</div>
+                <div class="plus-item">Special announcements</div>
+                <div class="plus-item">Impact stories & photos</div>
+            </div>
+        </div>
+
+        <div class="qr-section">
+            <div class="qr-box">
+                <h4>Sign Up for Newsletter</h4>
+                <div class="qr-container">
+                    <!-- Newsletter QR placeholder - replace with actual -->
+                    <div class="qr-code" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #999;">
+                        [Newsletter QR Code]
+                    </div>
+                </div>
+                <div class="qr-label">Scan with phone camera</div>
+            </div>
+            
+            <div class="qr-box">
+                <h4>Amazon Wish List</h4>
+                <div class="qr-container">
+                    <!-- Amazon QR placeholder - replace with actual -->
+                    <div class="qr-code" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #999;">
+                        [Amazon QR Code]
+                    </div>
+                </div>
+                <div class="qr-label">Shop for supplies</div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            <p>
+                <strong>All information is also available on our website and social media</strong><br>
+                The newsletter just makes it easy to get everything in one Monday email!
+            </p>
+            <div class="website-url">www.thesandwichproject.org</div>
+        </div>
+    </div>
+</body>
+</html>
