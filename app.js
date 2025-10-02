@@ -13,6 +13,7 @@ const HostAvailabilityApp = () => {
   const [directionsRenderer, setDirectionsRenderer] = React.useState(null);
   const [showingDirections, setShowingDirections] = React.useState(null);
   const [routeInfo, setRouteInfo] = React.useState(null);
+  const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   
   // Real host data with actual coordinates from your spreadsheet
   // October 1st availability merged with coordinate data
@@ -223,11 +224,38 @@ This is safe because your API key is already restricted to only the Geocoding AP
       content: userMarkerContent
     });
 
-    // Add host markers with labels
-    availableHosts.forEach(host => {
-      const distance = calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng);
-      
-      // Create host marker content with label
+    // Sort hosts by distance and determine which to show on map
+    const hostsWithDistance = availableHosts.map(host => ({
+      ...host,
+      distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
+    })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+
+    const hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 4);
+
+    // Add host markers with numbered labels
+    hostsToShowOnMap.forEach((host, index) => {
+      const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
+
+      // Determine marker color based on rank
+      let markerColor = '#A31C41'; // Default red
+      let badgeColor = '#FFFFFF';
+      let badgeTextColor = '#236383';
+
+      if (rank === 1) {
+        markerColor = '#FBBF24'; // Gold
+        badgeColor = '#FBBF24';
+        badgeTextColor = '#000000';
+      } else if (rank === 2) {
+        markerColor = '#9CA3AF'; // Silver
+        badgeColor = '#9CA3AF';
+        badgeTextColor = '#000000';
+      } else if (rank === 3) {
+        markerColor = '#F59E0B'; // Bronze
+        badgeColor = '#F59E0B';
+        badgeTextColor = '#000000';
+      }
+
+      // Create host marker content with numbered label
       const hostMarkerContent = document.createElement('div');
       hostMarkerContent.innerHTML = `
         <div style="
@@ -236,31 +264,37 @@ This is safe because your API key is already restricted to only the Geocoding AP
           align-items: center;
           cursor: pointer;
         ">
-          <!-- Pin marker -->
+          <!-- Numbered badge -->
           <div style="
-            width: 24px; 
-            height: 32px; 
-            position: relative;
-            margin-bottom: 2px;
+            width: 32px;
+            height: 32px;
+            background: ${badgeColor};
+            border: 3px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: ${badgeTextColor};
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            margin-bottom: 4px;
           ">
-            <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 21 7 21s7-15.75 7-21c0-3.87-3.13-7-7-7z" fill="#A31C41" stroke="white" stroke-width="1"/>
-              <circle cx="12" cy="9" r="3" fill="white"/>
-            </svg>
+            ${rank}
           </div>
-          <!-- Label -->
+          <!-- Info label -->
           <div style="
             background: white;
-            border: 1px solid #236383;
-            border-radius: 4px;
-            padding: 2px 6px;
+            border: 2px solid ${markerColor};
+            border-radius: 8px;
+            padding: 4px 8px;
             font-size: 11px;
             font-weight: bold;
             color: #236383;
             white-space: nowrap;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
           ">
-            ${host.name.split(' ')[0]} - ${distance}mi
+            ${host.distance}mi
           </div>
         </div>
       `;
@@ -268,7 +302,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
         map: mapInstance,
-        title: `${host.name} - ${distance} miles away`,
+        title: `#${rank}: ${host.name} - ${host.distance} miles away`,
         content: hostMarkerContent
       });
 
@@ -297,7 +331,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     setDirectionsRenderer(directionsRendererInstance);
 
     setMap(mapInstance);
-  }, [userCoords, availableHosts, map]);
+  }, [userCoords, availableHosts, map, showAllHostsOnMap]);
 
   // Load Google Maps API
   React.useEffect(() => {
@@ -318,6 +352,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
       }
     };
   }, [showMap, GOOGLE_MAPS_API_KEY]);
+
+  // Reset map when toggle changes
+  React.useEffect(() => {
+    if (map && showAllHostsOnMap !== undefined) {
+      setMap(null); // Force map re-initialization
+    }
+  }, [showAllHostsOnMap]);
 
   // Initialize map when API is loaded and map view is shown
   React.useEffect(() => {
@@ -511,10 +552,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   Drop-off hosts
                 </span>
               </div>
-              <p className="text-xs font-medium" style={{color: '#007E8C'}}>
+              <p className="text-xs font-medium mb-3" style={{color: '#007E8C'}}>
                 💡 Click any marker to see host details and get directions
               </p>
-              
+
+              {/* Toggle for showing all hosts on map */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowAllHostsOnMap(!showAllHostsOnMap)}
+                  className="premium-badge px-4 py-2 rounded-xl font-semibold text-sm transition-all hover:shadow-md"
+                  style={{
+                    backgroundColor: showAllHostsOnMap ? '#007E8C' : 'white',
+                    color: showAllHostsOnMap ? 'white' : '#007E8C',
+                    border: `2px solid ${showAllHostsOnMap ? '#007E8C' : 'rgba(0, 126, 140, 0.3)'}`
+                  }}
+                >
+                  {showAllHostsOnMap ? `Showing All ${availableHosts.length} Hosts` : 'Showing Closest 4 Hosts'}
+                </button>
+                <button
+                  onClick={() => setShowAllHostsOnMap(!showAllHostsOnMap)}
+                  className="text-xs font-semibold hover:underline transition-all"
+                  style={{color: '#007E8C'}}
+                >
+                  {showAllHostsOnMap ? '← Show Only Closest 4' : 'Show All Hosts →'}
+                </button>
+              </div>
+
               {showingDirections && routeInfo && (
                 <div className="mt-3 p-3 rounded-lg" style={{backgroundColor: '#E6F7FF', borderColor: '#007E8C', border: '1px solid'}}>
                   <div className="flex items-center justify-between mb-2">
@@ -570,53 +633,69 @@ This is safe because your API key is already restricted to only the Geocoding AP
             filteredHosts.map((host, index) => (
               <div
                 key={host.id}
-                className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow ${
+                className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow flex ${
                   userCoords && viewMode === 'proximity' && index < 3
                     ? `top-host-card top-host-${index + 1}`
                     : ''
                 }`}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {userCoords && viewMode === 'proximity' && index < 3 && (
-                        <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                          index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
-                        }`}>
-                          {index + 1}
-                        </span>
-                      )}
-                      <h3 className="font-bold text-xl">{host.name}</h3>
-                      {host.distance && (
-                        <span className="premium-badge px-3 py-1.5 text-sm font-semibold rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
-                          {host.distance} mi
-                        </span>
-                      )}
+                {/* Small map view for each host */}
+                <div className="flex-shrink-0 mr-6" style={{width: '120px'}}>
+                  <img
+                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=14&size=120x120&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
+                    alt={`Map of ${host.name}`}
+                    className="rounded-xl border border-gray-200 shadow-sm"
+                    style={{width: '120px', height: '120px', objectFit: 'cover'}}
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        {userCoords && viewMode === 'proximity' && index < 3 && (
+                          <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                            index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                          }`}>
+                            {index + 1}
+                          </span>
+                        )}
+                        <h3 className="font-bold text-xl">{host.name}</h3>
+                        {host.distance && (
+                          <span className="premium-badge px-3 py-1.5 text-sm font-semibold rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
+                            {host.distance} mi
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium mb-3" style={{color: '#236383'}}>
+                        📍 {host.area}
+                      </p>
                     </div>
-                    <p className="text-sm font-medium mb-3" style={{color: '#236383'}}>
-                      📍 {host.area}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {userCoords && showMap && (
+                    <div className="flex gap-2">
+                      {userCoords && showMap && (
+                        <button
+                          onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
+                          className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-xs flex items-center"
+                          style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
+                        >
+                          <i className="lucide-route w-3 h-3 mr-1"></i>
+                          {showingDirections === host.id ? 'Clear Route' : 'Show Route'}
+                        </button>
+                      )}
                       <button
-                        onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
-                        className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-xs flex items-center"
-                        style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
+                        onClick={() => setSelectedHost(host)}
+                        className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-sm flex items-center"
+                        style={{backgroundColor: '#007E8C'}}
                       >
-                        <i className="lucide-route w-3 h-3 mr-1"></i>
-                        {showingDirections === host.id ? 'Clear Route' : 'Show Route'}
+                        <i className="lucide-navigation w-3 h-3 mr-1"></i>
+                        Directions
                       </button>
-                    )}
-                    <button
-                      onClick={() => setSelectedHost(host)}
-                      className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-sm flex items-center"
-                      style={{backgroundColor: '#007E8C'}}
-                    >
-                      <i className="lucide-navigation w-3 h-3 mr-1"></i>
-                      Directions
-                    </button>
+                    </div>
                   </div>
+                  {/* ...existing code... */}
+                  <div className="space-y-3 text-sm">
+                    {/* ...existing code... */}
+                  </div>
+                  {/* ...existing code... */}
                 </div>
 
                 <div className="space-y-3 text-sm">
