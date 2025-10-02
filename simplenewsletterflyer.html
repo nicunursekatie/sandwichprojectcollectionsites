@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sandwich Project - Quick Info Flyer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            width: 8.5in;
+            height: 11in;
+            margin: 0 auto;
+            background: white;
+            padding: 0.5in;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 18px;
+        }
+        .headline {
+            font-size: 40px;
+            font-weight: 900;
+            color: #236383;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .sub {
+            font-size: 24px;
+            color: #007e8c;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .quick-points {
+            font-size: 22px;
+            color: #a31c41;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .qr-section {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .qr-box {
+            text-align: center;
+        }
+        .qr-code {
+            width: 130px;
+            height: 130px;
+            display: block;
+            margin: 0 auto 10px auto;
+        }
+        .qr-label {
+            font-size: 16px;
+            color: #236383;
+            font-weight: 700;
+        }
+        .footer {
+            font-size: 18px;
+            color: #007e8c;
+            text-align: center;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <img src="sandwich-logo.png" alt="Sandwich Project Logo" class="logo" />
+    <div class="headline">Sandwich Project</div>
+    <div class="sub">Weekly Newsletter</div>
+    <div class="quick-points">
+        - Find drop-off locations<br>
+        - Get collection times<br>
+        - See special instructions<br>
+        - Sign up in seconds!
+    </div>
+    <div class="qr-section">
+        <div class="qr-box">
+            <img src="newsletterqrcode.png" alt="Newsletter Signup QR Code" class="qr-code">
+            <div class="qr-label">Sign Up</div>
+        </div>
+        <div class="qr-box">
+            <img src="amazonwishlistqrcode.png" alt="Amazon Wishlist QR Code" class="qr-code">
+            <div class="qr-label">Amazon Wish List</div>
+        </div>
+    </div>
+    <div class="footer">
+        www.thesandwichproject.org
+    </div>
+</body>
+</html>
