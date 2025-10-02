@@ -707,12 +707,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </div>
             )}
-          {filteredHosts.length === 0 ? (
-            <div className="bg-white rounded-2xl premium-card p-12 text-center">
-              <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
-            </div>
-          ) : (
-            filteredHosts.map((host, index) => (
+            {filteredHosts.length === 0 ? (
+              <div className="bg-white rounded-2xl premium-card p-12 text-center">
+                <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
+              </div>
+            ) : (
+              filteredHosts.map((host, index) => (
               <div
                 key={host.id}
                 className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow ${
@@ -858,8 +858,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
                 </div>
               </div>
-            ))
-          )}
+              ))
+            )}
           </div>
         )}
 
