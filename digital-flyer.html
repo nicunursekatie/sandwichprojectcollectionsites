@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Sandwich Project - Digital Flyer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #236383 0%, #007E8C 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .flyer-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        
+        .flyer-frame {
+            width: 8.5in;
+            height: 11in;
+            border: none;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            border-radius: 10px;
+            background: white;
+        }
+        
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .action-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            border: 2px solid #f0f0f0;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-color: #FBAD3F;
+        }
+        
+        .action-card h3 {
+            color: #236383;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+        
+        .action-card p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .btn-primary {
+            background: #FBAD3F;
+            color: #236383;
+        }
+        
+        .btn-primary:hover {
+            background: #236383;
+            color: white;
+            border-color: #FBAD3F;
+        }
+        
+        .btn-secondary {
+            background: #236383;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #FBAD3F;
+            color: #236383;
+        }
+        
+        .print-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .print-section h3 {
+            color: #236383;
+            margin-bottom: 15px;
+        }
+        
+        .print-section p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .flyer-frame {
+                width: 100%;
+                height: auto;
+                min-height: 600px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .actions {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .page-container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+            
+            .header, .actions, .print-section {
+                display: none;
+            }
+            
+            .flyer-frame {
+                box-shadow: none;
+                border-radius: 0;
+                width: 100%;
+                height: 100vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="header">
+            <h1>The Sandwich Project</h1>
+            <p>Digital Flyer - Support Our Mission</p>
+        </div>
+        
+        <div class="content">
+            <div class="flyer-container">
+                <iframe src="Flyers/NCLflyer.html" class="flyer-frame" title="The Sandwich Project Flyer"></iframe>
+            </div>
+            
+            <div class="actions">
+                <div class="action-card">
+                    <h3>🛒 Support Our Mission</h3>
+                    <p>Shop our Amazon Wishlist for essential supplies to help us feed communities in need.</p>
+                    <a href="https://www.amazon.com/hz/wishlist/ls/XRSQ9EDIIIWV?ref_=wl_share" class="btn btn-primary" target="_blank">View Wishlist</a>
+                </div>
+                
+                <div class="action-card">
+                    <h3>📧 Stay Connected</h3>
+                    <p>Get weekly updates on collection locations and volunteer opportunities delivered to your inbox.</p>
+                    <a href="https://www.thesandwichproject.org/get-our-newsletter" class="btn btn-primary" target="_blank">Sign Up</a>
+                </div>
+                
+                <div class="action-card">
+                    <h3>🌐 Visit Our Website</h3>
+                    <p>Learn more about The Sandwich Project and how you can get involved in your community.</p>
+                    <a href="https://www.thesandwichproject.org" class="btn btn-secondary" target="_blank">Visit Website</a>
+                </div>
+            </div>
+            
+            <div class="print-section">
+                <h3>🖨️ Print This Flyer</h3>
+                <p>Click the print button below to save this flyer as a PDF or print it directly. Perfect for sharing at events, posting in community spaces, or distributing to volunteers.</p>
+                <button onclick="window.print()" class="btn btn-secondary">Print / Save as PDF</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
