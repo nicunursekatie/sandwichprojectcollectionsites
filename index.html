@@ -3,30 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sandwich Project - Host Locations</title>
-    <meta name="description" content="Find sandwich drop-off locations near you">
-
-    <!-- Google Fonts - Premium Typography -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- React -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Custom styles -->
-    <link rel="stylesheet" href="styles.css">
+    <title>The Sandwich Project - Digital Flyer</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #236383;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        
+        .flyer-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        iframe {
+            width: 8.5in;
+            height: 11in;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        
+        .description {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .description h2 {
+            color: #236383;
+            margin-bottom: 15px;
+        }
+        
+        .description p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .link-button {
+            background: #FBAD3F;
+            color: #236383;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .link-button:hover {
+            background: #236383;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        @media (max-width: 768px) {
+            iframe {
+                width: 100%;
+                height: auto;
+                min-height: 600px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .links {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
-    <!-- Configuration -->
-    <script src="config.js"></script>
-    <!-- Main app -->
-    <script type="text/babel" src="app.js"></script>
+    <div class="container">
+        <h1>The Sandwich Project</h1>
+        
+        <div class="flyer-container">
+            <iframe src="Flyers/NCLflyer.html" title="The Sandwich Project Flyer"></iframe>
+        </div>
+        
+        <div class="description">
+            <h2>Support Our Mission</h2>
+            <p>Help us feed communities by supporting our cause or staying connected with our weekly updates.</p>
+            <p>Scan the QR codes on the flyer above to:</p>
+            <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
+                <li>Shop our Amazon Wishlist for essential supplies</li>
+                <li>Sign up for our newsletter to get collection locations</li>
+            </ul>
+        </div>
+        
+        <div class="links">
+            <a href="https://www.thesandwichproject.org" class="link-button" target="_blank">Visit Our Website</a>
+            <a href="https://www.amazon.com/hz/wishlist/ls/XRSQ9EDIIIWV?ref_=wl_share" class="link-button" target="_blank">Amazon Wishlist</a>
+            <a href="https://www.thesandwichproject.org/get-our-newsletter" class="link-button" target="_blank">Newsletter Signup</a>
+        </div>
+    </div>
 </body>
 </html>
