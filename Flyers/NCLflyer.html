@@ -123,24 +123,36 @@
         }
         
         .qr-card {
-            background: white;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border-radius: 20px;
-            padding: 30px 25px;
-            box-shadow: 0 10px 40px rgba(35, 99, 131, 0.1);
-            border: 2px solid #f0f0f0;
+            padding: 35px 30px;
+            box-shadow: 0 15px 50px rgba(35, 99, 131, 0.15);
+            border: 3px solid transparent;
+            background-clip: padding-box;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
-        
+
         .qr-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #236383 0%, #FBAD3F 100%);
+            height: 6px;
+            background: linear-gradient(90deg, #236383 0%, #47B3CB 50%, #FBAD3F 100%);
+        }
+
+        .qr-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(251, 173, 63, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
         }
         
         .qr-card:hover {
@@ -149,13 +161,17 @@
         }
         
         .qr-image-wrapper {
-            background: #fafafa;
+            background: white;
             border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
             display: flex;
             justify-content: center;
             align-items: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            border: 3px solid #f0f0f0;
+            position: relative;
+            z-index: 1;
         }
         
         .qr-image {
@@ -169,16 +185,21 @@
         }
         
         .qr-title {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 700;
             color: #236383;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
         }
-        
+
         .qr-subtitle {
-            font-size: 14px;
-            color: #646464;
-            line-height: 1.5;
+            font-size: 15px;
+            color: #5a5a5a;
+            line-height: 1.6;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
         }
         
         /* Action icons */
@@ -196,26 +217,40 @@
         
         /* Bottom section */
         .footer-section {
-            background: #f8f8f8;
-            padding: 30px 50px;
-            border-top: 3px solid #FBAD3F;
+            background: linear-gradient(135deg, #236383 0%, #007E8C 100%);
+            padding: 35px 50px;
+            border-top: 5px solid #FBAD3F;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
         .website-link {
-            color: #236383;
-            font-size: 20px;
-            font-weight: 600;
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
             text-decoration: none;
+            background: rgba(251, 173, 63, 0.2);
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
         }
-        
+
+        .website-link:hover {
+            background: #FBAD3F;
+            color: #236383;
+        }
+
         .support-text {
-            color: #646464;
-            font-size: 14px;
+            color: white;
+            font-size: 15px;
             font-weight: 500;
             text-align: right;
+        }
+
+        .support-text strong {
+            color: #FBAD3F;
+            font-size: 16px;
         }
         
         /* Decorative elements */
@@ -223,22 +258,21 @@
             position: absolute;
             bottom: 0;
             right: 0;
-            width: 100px;
-            height: 100px;
-            background: #FBAD3F;
-            opacity: 0.1;
+            width: 150px;
+            height: 150px;
+            background: linear-gradient(135deg, #FBAD3F 0%, #ff9800 100%);
+            opacity: 0.15;
             clip-path: polygon(100% 0, 100% 100%, 0 100%);
         }
-        
+
         .circle-accent {
             position: absolute;
-            width: 200px;
-            height: 200px;
+            width: 300px;
+            height: 300px;
             border-radius: 50%;
-            background: #47B3CB;
-            opacity: 0.05;
-            top: 50%;
-            left: -100px;
+            background: radial-gradient(circle, rgba(71, 179, 203, 0.12) 0%, transparent 70%);
+            top: 30%;
+            left: -150px;
         }
     </style>
 </head>
@@ -247,24 +281,7 @@
         <div class="hero-section">
             <div class="logo-wrapper">
                 <div class="sandwich-logo-icon">
-                    <!-- Replace this SVG with your actual logo: <img src="path-to-your-logo.png" alt="The Sandwich Project" style="width: 100%; height: 100%; object-fit: contain;"> -->
-                    <svg viewBox="0 0 100 100" xmlns="/Users/kathrynelong/sandwichprojectcollectionsites/LOGOS/sandwich logo.png">
-                        <g transform="translate(50,50)">
-                            <!-- Toothpick -->
-                            <rect x="-2" y="-45" width="4" height="20" fill="#FBAD3F" rx="2"/>
-                            <circle cx="0" cy="-45" r="5" fill="#FBAD3F"/>
-                            <!-- Top bread -->
-                            <path d="M-35,-20 Q-35,-25 -30,-25 L30,-25 Q35,-25 35,-20 L25,-15 Q20,-12 15,-12 L-15,-12 Q-20,-12 -25,-15 Z" fill="#FBAD3F"/>
-                            <!-- Lettuce/filling -->
-                            <path d="M-30,-10 Q-25,-5 -20,-8 Q-15,-3 -10,-6 Q-5,-1 0,-4 Q5,-1 10,-6 Q15,-3 20,-8 Q25,-5 30,-10" stroke="#FBAD3F" stroke-width="3" fill="none"/>
-                            <!-- Middle layer -->
-                            <rect x="-30" y="-5" width="60" height="8" fill="#FBAD3F" rx="4"/>
-                            <!-- Bottom lettuce -->
-                            <path d="M-30,8 Q-25,13 -20,10 Q-15,15 -10,12 Q-5,17 0,14 Q5,17 10,12 Q15,15 20,10 Q25,13 30,8" stroke="#FBAD3F" stroke-width="3" fill="none"/>
-                            <!-- Bottom bread -->
-                            <path d="M-35,15 L-25,20 Q-20,23 -15,23 L15,23 Q20,23 25,20 L35,15 Q35,20 30,20 L-30,20 Q-35,20 -35,15 Z" fill="#FBAD3F"/>
-                        </g>
-                    </svg>
+                    <img src="../LOGOS/sandwich logo.png" alt="The Sandwich Project" style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div class="title-block">
                     <div class="the-text">THE</div>
@@ -279,16 +296,8 @@
             
             <div class="qr-container">
                 <div class="qr-card">
-                    <div class="action-icon">🎁</div>
                     <div class="qr-image-wrapper">
-                        <!-- I'll use placeholder divs for the QR codes since the base64 is too long -->
-                        <div style="width: 180px; height: 180px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==') center/cover; border: 1px solid #ddd;">
-                            <!-- Amazon Wishlist QR placeholder -->
-                            <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="180" height="180" fill="#fff"/>
-                                <text x="90" y="90" text-anchor="middle" fill="#999" font-size="14">Amazon QR Code</text>
-                            </svg>
-                        </div>
+                        <img src="../amazonwishlistqrcode.png" alt="Amazon Wishlist QR Code" class="qr-image">
                     </div>
                     <div class="qr-label">
                         <h2 class="qr-title">Support Our Mission</h2>
@@ -297,17 +306,8 @@
                 </div>
 
                 <div class="qr-card">
-                    <div class="action-icon">📬</div>
                     <div class="qr-image-wrapper">
-                        <div style="width: 180px; height: 180px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==') center/cover; border: 1px solid #ddd;">
-                            <!-- Newsletter QR placeholder with sandwich logo -->
-                            <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="180" height="180" fill="#fff"/>
-                                <rect x="70" y="70" width="40" height="40" fill="#FBAD3F" rx="5"/>
-                                <text x="90" y="95" text-anchor="middle" fill="#fff" font-size="20">🥪</text>
-                                <text x="90" y="130" text-anchor="middle" fill="#999" font-size="12">Newsletter QR</text>
-                            </svg>
-                        </div>
+                        <img src="../newslettersignupqrcode.png" alt="Newsletter QR Code" class="qr-image">
                     </div>
                     <div class="qr-label">
                         <h2 class="qr-title">Get Weekly Updates Directly</h2>
