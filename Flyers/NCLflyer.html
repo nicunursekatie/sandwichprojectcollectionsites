@@ -8,12 +8,27 @@
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
         
         @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+
             body {
                 margin: 0;
                 padding: 0;
             }
+
             .container {
                 page-break-inside: avoid;
+            }
+
+            .hero-section,
+            .qr-card,
+            .cta-section,
+            .footer-section {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
         }
         
@@ -270,6 +285,28 @@
             transform: translateY(-3px);
             box-shadow: 0 12px 35px rgba(35, 99, 131, 0.4);
         }
+
+        .website-url {
+            font-size: 20px;
+            font-weight: 700;
+            color: #236383;
+            margin-top: 20px;
+            letter-spacing: 0.5px;
+            position: relative;
+            z-index: 2;
+        }
+
+        @media print {
+            .cta-button {
+                display: none;
+            }
+        }
+
+        @media screen {
+            .website-url {
+                display: none;
+            }
+        }
         
         /* Decorative elements */
         .corner-accent {
@@ -334,6 +371,7 @@
                 <h2 class="cta-title">Get connected today!</h2>
                 <p class="cta-subtitle">Sign up for our newsletter to get weekly updates on who's collecting each week directly to your inbox! Then visit or share our Amazon wish list to help us provide even more for our neighbors in need!</p>
                 <a href="https://www.thesandwichproject.org" class="cta-button">Get Involved Now</a>
+                <div class="website-url">www.thesandwichproject.org</div>
             </div>
         </div>
 
