@@ -32,7 +32,7 @@
         
         .container {
             width: 8.5in;
-            height: 11in;
+            min-height: 11in;
             margin: 0 auto;
             background: white;
             position: relative;
@@ -40,70 +40,45 @@
             flex-direction: column;
         }
         
-        /* Top diagonal section */
+        /* Top section with full logo */
         .hero-section {
             background: linear-gradient(135deg, #236383 0%, #007E8C 100%);
-            padding: 50px 50px 30px;
+            padding: 40px 50px 30px;
             position: relative;
             clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
-            min-height: 260px;
+            min-height: 200px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         
-        .logo-wrapper {
+        .logo-container {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 40px;
+            text-align: center;
         }
         
-        .sandwich-logo-icon {
-            width: 120px;
-            height: 120px;
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        .main-logo {
+            max-width: 400px;
+            max-height: 120px;
+            width: auto;
+            height: auto;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
         }
-        
-        .sandwich-logo-icon svg {
-            width: 100%;
-            height: 100%;
-        }
-        
-        .title-block {
-            color: white;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .the-text {
-            font-size: 24px;
-            font-weight: 300;
-            letter-spacing: 6px;
-            opacity: 0.95;
-            color: white;
-        }
-        
-        .sandwich-text {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 64px;
-            letter-spacing: 2px;
-            line-height: 0.9;
-            margin: 5px 0;
-            color: white;
-        }
-        
-        .project-text {
-            font-size: 32px;
-            font-weight: 600;
-            letter-spacing: 8px;
-            color: #FBAD3F;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+
+        .hero-subtitle {
+            font-size: 18px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 20px;
+            text-align: center;
+            letter-spacing: 1px;
         }
         
         /* QR Section */
@@ -132,6 +107,10 @@
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            text-decoration: none;
+            display: block;
+            cursor: pointer;
+            color: inherit;
         }
 
         .qr-card::before {
@@ -157,7 +136,8 @@
         
         .qr-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 50px rgba(35, 99, 131, 0.15);
+            box-shadow: 0 20px 60px rgba(35, 99, 131, 0.25);
+            border-color: rgba(251, 173, 63, 0.3);
         }
         
         .qr-image-wrapper {
@@ -215,42 +195,80 @@
             font-size: 20px;
         }
         
-        /* Bottom section */
-        .footer-section {
-            background: linear-gradient(135deg, #236383 0%, #007E8C 100%);
-            padding: 35px 50px;
-            border-top: 5px solid #FBAD3F;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+
+        /* Call to Action Section */
+        .cta-section {
+            background: linear-gradient(135deg, #FBAD3F 0%, #ff9800 100%);
+            padding: 30px 40px;
+            text-align: center;
+            position: relative;
+            overflow: visible;
+            min-height: 200px;
         }
-        
-        .website-link {
-            color: white;
-            font-size: 22px;
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .cta-title {
+            font-size: 32px;
             font-weight: 700;
-            text-decoration: none;
-            background: rgba(251, 173, 63, 0.2);
-            padding: 12px 24px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .website-link:hover {
-            background: #FBAD3F;
             color: #236383;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .support-text {
-            color: white;
-            font-size: 15px;
-            font-weight: 500;
-            text-align: right;
-        }
-
-        .support-text strong {
-            color: #FBAD3F;
+        .cta-subtitle {
             font-size: 16px;
+            color: #236383;
+            font-weight: 500;
+            margin-bottom: 20px;
+            opacity: 0.9;
+            line-height: 1.4;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #236383;
+            color: white;
+            padding: 15px 35px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            box-shadow: 0 8px 25px rgba(35, 99, 131, 0.3);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .cta-button:hover {
+            background: white;
+            color: #236383;
+            border-color: #236383;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(35, 99, 131, 0.4);
         }
         
         /* Decorative elements */
@@ -279,15 +297,9 @@
 <body>
     <div class="container">
         <div class="hero-section">
-            <div class="logo-wrapper">
-                <div class="sandwich-logo-icon">
-                    <img src="../LOGOS/sandwich logo.png" alt="The Sandwich Project" style="width: 100%; height: 100%; object-fit: contain;">
-                </div>
-                <div class="title-block">
-                    <div class="the-text">THE</div>
-                    <div class="sandwich-text">SANDWICH</div>
-                    <div class="project-text">PROJECT</div>
-                </div>
+            <div class="logo-container">
+                <img src="../LOGOS/CMYK_PRINT_TSP-01-01.jpg" alt="The Sandwich Project" class="main-logo">
+                <div class="hero-subtitle">NOURISH THE HUNGRY, FEED THE SOUL</div>
             </div>
         </div>
 
@@ -295,7 +307,7 @@
             <div class="circle-accent"></div>
             
             <div class="qr-container">
-                <div class="qr-card">
+                <a href="https://www.amazon.com/hz/wishlist/ls/XRSQ9EDIIIWV?ref_=wl_share" target="_blank" rel="noopener noreferrer" class="qr-card">
                     <div class="qr-image-wrapper">
                         <img src="../amazonwishlistqrcode.png" alt="Amazon Wishlist QR Code" class="qr-image">
                     </div>
@@ -303,9 +315,9 @@
                         <h2 class="qr-title">Support Our Mission</h2>
                         <p class="qr-subtitle">Shop our Amazon Wishlist for essential supplies</p>
                     </div>
-                </div>
+                </a>
 
-                <div class="qr-card">
+                <a href="https://www.thesandwichproject.org/get-our-newsletter" target="_blank" rel="noopener noreferrer" class="qr-card">
                     <div class="qr-image-wrapper">
                         <img src="../newslettersignupqrcode.png" alt="Newsletter QR Code" class="qr-image">
                     </div>
@@ -313,19 +325,19 @@
                         <h2 class="qr-title">Get Weekly Updates Directly</h2>
                         <p class="qr-subtitle">Collection hosts sent straight to your inbox each week</p>
                     </div>
-                </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <div class="cta-content">
+                <h2 class="cta-title">Get connected today!</h2>
+                <p class="cta-subtitle">Sign up for our newsletter to get weekly updates on who's collecting each week directly to your inbox! Then visit or share our Amazon wish list to help us provide even more for our neighbors in need!</p>
+                <a href="https://www.thesandwichproject.org" class="cta-button">Get Involved Now</a>
             </div>
         </div>
 
         <div class="corner-accent"></div>
-
-        <div class="footer-section">
-            <a href="https://www.thesandwichproject.org" class="website-link">www.thesandwichproject.org</a>
-            <div class="support-text">
-                <strong>Making sandwiches?</strong><br>
-                Get collection locations delivered weekly to your inbox
-            </div>
-        </div>
     </div>
 
     <script>
