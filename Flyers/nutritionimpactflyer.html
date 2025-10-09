@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Sandwich Project - Nutrition Impact</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+
+            @page {
+                margin: 0 !important;
+                size: 8.5in 11in !important;
+            }
+
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                width: 8.5in !important;
+                height: 11in !important;
+            }
+
+            .container {
+                page-break-inside: avoid;
+                width: 8.5in !important;
+                height: 11in !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            width: 8.5in;
+            height: 11in;
+            margin: 0 auto;
+            background: white;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #236383 0%, #007E8C 100%);
+            padding: 25px 40px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 38px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header .subtitle {
+            font-size: 20px;
+            font-weight: 500;
+            opacity: 0.95;
+            letter-spacing: 0.5px;
+        }
+
+        .content {
+            padding: 20px 45px;
+            flex: 1;
+        }
+
+        .intro {
+            text-align: center;
+            font-size: 16px;
+            color: #007e8c;
+            font-weight: 600;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+
+        .nutrition-box {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-left: 5px solid #FBAD3F;
+            padding: 16px 22px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .nutrition-box h2 {
+            color: #236383;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .nutrition-box h3 {
+            color: #007e8c;
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .nutrition-box ul {
+            list-style: none;
+            margin: 10px 0;
+            padding-left: 0;
+        }
+
+        .nutrition-box li {
+            padding: 8px 0;
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .nutrition-box li:before {
+            content: "→";
+            color: #FBAD3F;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+
+        .highlight-stat {
+            background: linear-gradient(135deg, #236383 0%, #007e8c 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 15px 0;
+            box-shadow: 0 6px 15px rgba(35, 99, 131, 0.2);
+        }
+
+        .highlight-stat .big-number {
+            font-size: 38px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 5px;
+            color: #FBAD3F;
+        }
+
+        .highlight-stat .stat-label {
+            font-size: 16px;
+            font-weight: 600;
+            opacity: 0.95;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .comparison-item {
+            background: #f8f9fa;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+
+        .comparison-item .item-name {
+            font-weight: 700;
+            color: #236383;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .comparison-item .item-stats {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .callout-box {
+            background: linear-gradient(135deg, #FBAD3F 0%, #ff9800 100%);
+            color: #236383;
+            padding: 18px 25px;
+            border-radius: 8px;
+            margin: 15px 0 0 0;
+            text-align: center;
+            box-shadow: 0 6px 15px rgba(251, 173, 63, 0.25);
+        }
+
+        .callout-box h2 {
+            font-size: 23px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            color: #236383;
+        }
+
+        .callout-box p {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin: 6px 0;
+        }
+
+        .footer {
+            background: #236383;
+            color: white;
+            text-align: center;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .footer a {
+            color: #FBAD3F;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Know Your Impact</h1>
+            <div class="subtitle">What's really in each sandwich you make?</div>
+        </div>
+
+        <div class="content">
+            <div class="intro">
+                When someone says "it's just a sandwich" — here's what they're missing:
+            </div>
+
+            <div class="nutrition-box">
+                <h2>What's Inside:</h2>
+                <p style="font-size: 18px; color: #333; margin-bottom: 15px; line-height: 1.8; text-align: center;">
+                    <strong>2 slices bread</strong> + <strong>2 slices cheese</strong> + <strong>3 slices deli meat</strong>
+                </p>
+                <p style="font-size: 20px; color: #236383; font-weight: 700; margin-bottom: 15px; text-align: center; line-height: 1.6;">
+                    = <strong style="color: #007e8c;">350+ calories</strong> | <strong style="color: #a31c41;">27g protein</strong><br>
+                    <strong style="color: #FBAD3F;">Calcium • B vitamins • Iron</strong>
+                </p>
+                <p style="font-size: 16px; color: #555; font-style: italic; text-align: center;">
+                    A complete, balanced meal — not just a snack
+                </p>
+            </div>
+
+            <div class="highlight-stat">
+                <div class="big-number">$1.44</div>
+                <div class="stat-label">delivers real nutrition + dignity</div>
+            </div>
+
+            <div class="nutrition-box">
+                <h2>Put It in Perspective</h2>
+                <div class="comparison-grid">
+                    <div class="comparison-item">
+                        <div class="item-name">🥪 Our Sandwich</div>
+                        <div class="item-stats"><strong style="color: #007e8c;">350 cal</strong> • <strong style="color: #a31c41;">27g protein</strong></div>
+                    </div>
+                    <div class="comparison-item">
+                        <div class="item-name">🍔 Fast Food Burger</div>
+                        <div class="item-stats" style="color: #888;"><strong>300 cal</strong> • <strong>15g protein</strong></div>
+                    </div>
+                    <div class="comparison-item">
+                        <div class="item-name">🍲 Cup of standard soup <br>(broth-based)<br></div>
+                        <div class="item-stats" style="color: #888;"><strong>250 cal</strong> • <strong>12g protein</strong></div>
+                    </div>
+                    <div class="comparison-item">
+                        <div class="item-name">🍜 Instant Ramen Packet</div>
+                        <div class="item-stats" style="color: #888;"><strong>380 cal</strong> • <strong>8 g protein</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout-box">
+                <h2>We Mobilize Untapped Community Resources</h2>
+                <p>Home kitchens become production centers. Family time becomes service hours.</p>
+                <p>Existing resources transform into systematic food support.</p>
+                <p><strong>No new infrastructure needed. Just coordination.</strong></p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://www.thesandwichproject.org">www.thesandwichproject.org</a>
+        </div>
+    </div>
+</body>
+</html>
