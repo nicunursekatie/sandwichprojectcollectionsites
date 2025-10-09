@@ -41,15 +41,15 @@
                 background: linear-gradient(135deg, #236383 0%, #007E8C 100%) !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 20px 30px !important;
-                min-height: 120px !important;
+                padding: 25px 30px 20px !important;
+                min-height: 135px !important;
             }
 
             .cta-section {
                 background: linear-gradient(135deg, #FBAD3F 0%, #ff9800 100%) !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 15px 25px !important;
+                padding: 20px 30px !important;
                 min-height: auto !important;
             }
 
@@ -66,12 +66,38 @@
             }
 
             .content-area {
-                padding: 10px 30px 15px !important;
+                padding: 15px 30px 20px !important;
             }
 
             .qr-container {
-                gap: 25px !important;
+                gap: 30px !important;
                 margin-top: 0 !important;
+            }
+
+            .qr-card {
+                padding: 25px 20px !important;
+            }
+
+            .qr-image {
+                width: 170px !important;
+                height: 170px !important;
+            }
+
+            .qr-title {
+                font-size: 24px !important;
+            }
+
+            .qr-subtitle {
+                font-size: 15px !important;
+            }
+
+            .cta-title {
+                font-size: 30px !important;
+            }
+
+            .cta-subtitle {
+                font-size: 15px !important;
+                margin-bottom: 15px !important;
             }
 
             .website-footer {
@@ -79,8 +105,17 @@
                 color: white !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 8px !important;
-                font-size: 14px !important;
+                padding: 10px !important;
+                font-size: 16px !important;
+            }
+
+            .hero-subtitle {
+                font-size: 17px !important;
+            }
+
+            .main-logo {
+                max-width: 380px !important;
+                max-height: 105px !important;
             }
 
             .website-footer a {
@@ -116,10 +151,10 @@
         /* Top section with full logo */
         .hero-section {
             background: linear-gradient(135deg, #236383 0%, #007E8C 100%);
-            padding: 30px 50px 20px;
+            padding: 35px 50px 25px;
             position: relative;
             clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
-            min-height: 150px;
+            min-height: 160px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -146,12 +181,12 @@
         }
 
         .hero-subtitle {
-            font-size: 16px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
-            margin-top: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+            margin-top: 12px;
             text-align: center;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
         }
         
         /* QR Section */
@@ -173,7 +208,7 @@
         .qr-card {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border-radius: 20px;
-            padding: 25px 20px;
+            padding: 30px 25px;
             box-shadow: 0 15px 50px rgba(35, 99, 131, 0.15);
             border: 3px solid transparent;
             background-clip: padding-box;
@@ -228,8 +263,8 @@
         }
         
         .qr-image {
-            width: 160px;
-            height: 160px;
+            width: 180px;
+            height: 180px;
             display: block;
         }
         
@@ -238,16 +273,16 @@
         }
         
         .qr-title {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 700;
             color: #236383;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             position: relative;
             z-index: 1;
         }
 
         .qr-subtitle {
-            font-size: 14px;
+            font-size: 16px;
             color: #5a5a5a;
             line-height: 1.6;
             font-weight: 500;
@@ -301,21 +336,21 @@
         }
 
         .cta-title {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 700;
             color: #236383;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .cta-subtitle {
-            font-size: 14px;
+            font-size: 16px;
             color: #236383;
             font-weight: 500;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
             opacity: 0.9;
-            line-height: 1.4;
-            max-width: 600px;
+            line-height: 1.5;
+            max-width: 650px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -324,10 +359,10 @@
             display: inline-block;
             background: #236383;
             color: white;
-            padding: 12px 25px;
+            padding: 14px 32px;
             border-radius: 50px;
             text-decoration: none;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1.2px;
@@ -349,8 +384,8 @@
             background: #236383;
             color: white;
             text-align: center;
-            padding: 10px;
-            font-size: 16px;
+            padding: 12px;
+            font-size: 18px;
             font-weight: 600;
             letter-spacing: 1px;
         }
@@ -434,7 +469,7 @@
 
                 <a href="https://www.thesandwichproject.org/get-our-newsletter" target="_blank" rel="noopener noreferrer" class="qr-card">
                     <div class="qr-image-wrapper">
-                        <img src="../newslettersignupqrcode.png" alt="Newsletter QR Code" class="qr-image">
+                        <img src="../newsletterqrcode2.png" alt="Newsletter QR Code" class="qr-image">
                     </div>
                     <div class="qr-label">
                         <h2 class="qr-title">Get Weekly Updates Directly</h2>
