@@ -1,0 +1,16 @@
+# Robots.txt for The Sandwich Project
+# Prevent indexing of collection site pages with addresses
+
+User-agent: *
+# Block the main collection sites page
+Disallow: /index.html
+Disallow: /
+
+# Allow flyers and forms to be indexed
+Allow: /Flyers/
+Allow: /Forms/
+
+# Block any pages with sensitive location data
+Disallow: /app.js
+Disallow: /config.js
+
