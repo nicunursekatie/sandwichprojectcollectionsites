@@ -114,7 +114,7 @@
         
         .header-field label {
             font-weight: 600;
-            font-size: 12px;
+            font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -137,7 +137,8 @@
         
         table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
         }
         
         thead th {
@@ -145,7 +146,7 @@
             color: #236383;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 10px;
+            font-size: 12px;
             letter-spacing: 0.3px;
             padding: 8px 4px;
             border: 1px solid #236383;
@@ -168,15 +169,15 @@
         .meat-cheese-header {
             background: #fbad3f;
             color: #236383;
-            width: 80px;
-            font-size: 9px;
+            width: 40px;
+            font-size: 11px;
         }
-        
+
         .pbj-header {
             background: #a31c41;
             color: white;
-            width: 80px;
-            font-size: 9px;
+            width: 40px;
+            font-size: 11px;
         }
         
         .snack-header {
@@ -185,8 +186,8 @@
         }
         
         tbody td {
-            border: 1px solid #236383;
-            height: 28px;
+            border: 1px solid #236383 !important;
+            height: 45px;
             padding: 3px;
             position: relative;
         }
@@ -207,15 +208,6 @@
         .input-cell {
             background: white;
             position: relative;
-        }
-        
-        .input-cell::after {
-            content: '';
-            position: absolute;
-            bottom: 5px;
-            left: 3px;
-            right: 3px;
-            border-bottom: 1px dotted #47b3cb;
         }
         
         .checkbox-cell {
@@ -248,12 +240,10 @@
         
         .meat-cheese-cell {
             background: #fff8e1 !important;
-            border: 1px solid #236383 !important;
         }
-        
+
         .pbj-cell {
             background: #fce4ec !important;
-            border: 1px solid #236383 !important;
         }
         
         @media print {
@@ -314,6 +304,10 @@
             tbody tr {
                 page-break-inside: avoid;
             }
+
+            tbody td {
+                border: 1px solid #236383 !important;
+            }
             
             tbody tr:nth-child(even) {
                 background: #f0f8f9 !important;
@@ -356,7 +350,7 @@
                             <strong>Stay Connected!</strong><br>
                             Scan to sign up to receive our weekly newsletter to find out which host homes are collecting each week & get important updates!
                         </div>
-                        <img class="qr-code" src="newsletterqrcode.png" alt="Newsletter QR Code" style="width: 60px; height: 60px; border: 2px solid #007e8c; border-radius: 4px; padding: 2px; background: white;">
+                        <img class="qr-code" src="newslettersignupqrcode.png" alt="Newsletter QR Code" style="width: 60px; height: 60px; border: 2px solid #007e8c; border-radius: 4px; padding: 2px; background: white;">
                     </div>
                 </div>
             </div>
@@ -368,8 +362,7 @@
                     <tr>
                         <th>#</th>
                         <th style="width: 25%;">Full Name</th>
-                        <th style="width: 15%;">Phone Number</th>
-                        <th style="width: 15%;">Email Address</th>
+                        <th style="width: 27%;">Email & Phone</th>
                         <th class="checkbox-header">First<br>Time?</th>
                         <th class="meat-cheese-header"># of Meat &<br>Cheese<br>Sandwiches</th>
                         <th class="pbj-header"># of PB&J<br>Sandwiches</th>
@@ -379,16 +372,15 @@
                 </thead>
                 <tbody>
                     <script>
-                        for (let i = 1; i <= 16; i++) {
+                        for (let i = 1; i <= 12; i++) {
                             document.write(`
                                 <tr>
                                     <td class="row-number">${i}</td>
                                     <td class="input-cell"></td>
                                     <td class="input-cell"></td>
-                                    <td class="input-cell"></td>
                                     <td class="checkbox-cell"><span class="checkbox-box"></span></td>
-                                    <td class="number-cell meat-cheese-cell"><span class="number-box"></span></td>
-                                    <td class="number-cell pbj-cell"><span class="number-box"></span></td>
+                                    <td class="checkbox-cell meat-cheese-cell"></td>
+                                    <td class="checkbox-cell pbj-cell"></td>
                                     <td class="input-cell"></td>
                                     <td class="input-cell"></td>
                                 </tr>
