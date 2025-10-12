@@ -874,28 +874,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-5">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            {userCoords && viewMode === 'proximity' && index < 3 && (
-                              <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                                index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
-                              }`}>
-                                {index + 1}
-                              </span>
-                            )}
-                            <h3 className="font-bold text-2xl">{host.name}</h3>
-                            {host.distance && (
-                              <span className="premium-badge px-4 py-2 text-sm font-semibold rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
-                                {host.distance} mi
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-lg font-medium mb-4" style={{color: '#236383'}}>
-                            📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
-                          </p>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3">
+                          {userCoords && viewMode === 'proximity' && index < 3 && (
+                            <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                              index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          )}
+                          <h3 className="font-bold text-2xl whitespace-nowrap">{host.name}</h3>
                         </div>
-                        <div className="flex gap-3 ml-4">
+                        <div className="flex gap-3 ml-4 flex-shrink-0">
                           {userCoords && (
                             <button
                               onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
@@ -918,6 +908,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </button>
                         </div>
                       </div>
+
+                      <p className="text-lg font-medium mb-4" style={{color: '#236383'}}>
+                        📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
+                      </p>
 
                       <div className="space-y-4 text-base">
                         <div className="info-box p-4">
@@ -1046,28 +1040,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-5">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            {userCoords && viewMode === 'proximity' && index < 3 && (
-                              <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                                index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
-                              }`}>
-                                {index + 1}
-                              </span>
-                            )}
-                            <h3 className="font-bold text-2xl">{host.name}</h3>
-                            {host.distance && (
-                              <span className="premium-badge px-4 py-2 text-sm font-semibold rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
-                                {host.distance} mi
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-lg font-medium mb-4" style={{color: '#236383'}}>
-                            📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
-                          </p>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3">
+                          {userCoords && viewMode === 'proximity' && index < 3 && (
+                            <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                              index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          )}
+                          <h3 className="font-bold text-2xl whitespace-nowrap">{host.name}</h3>
                         </div>
-                        <div className="flex gap-3 ml-4">
+                        <div className="flex gap-3 ml-4 flex-shrink-0">
                           {userCoords && (
                             <button
                               onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
@@ -1090,6 +1074,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </button>
                         </div>
                       </div>
+
+                      <p className="text-lg font-medium mb-4" style={{color: '#236383'}}>
+                        📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
+                      </p>
 
                       <div className="space-y-4 text-base">
                         <div className="info-box p-4">
