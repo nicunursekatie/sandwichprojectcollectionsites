@@ -261,7 +261,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             lng: position.coords.longitude
           });
           setUserAddress('Current Location');
-          setViewMode('proximity');
+          setViewMode('list');
         },
         (error) => {
           alert('Could not get your location. Please enter an address instead.');
@@ -339,21 +339,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
       setNameSearch(input);
       setUserCoords(null);
       setUserAddress('');
-      setViewMode('proximity');
+      setViewMode('list');
     } else {
       // Try geocoding as an address
       const success = await geocodeAddress(input);
       if (success) {
         setUserAddress(input);
         setNameSearch(''); // Clear any name filter
-        setViewMode('proximity');
+        setViewMode('list');
       } else {
         // Geocoding failed, fall back to name search if we have matches
         if (matchingHosts.length > 0) {
           setNameSearch(input);
           setUserCoords(null);
           setUserAddress('');
-          setViewMode('proximity');
+          setViewMode('list');
         }
       }
     }
@@ -693,84 +693,41 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </div>
 
           {/* View Toggle */}
-          {!userCoords ? (
-            // Before location: Show List/Map toggle
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                  viewMode === 'list' || viewMode === 'proximity' ? 'active' : ''
-                }`}
-                style={{
-                  backgroundColor: viewMode === 'list' || viewMode === 'proximity' ? '#007E8C' : undefined,
-                  color: viewMode === 'list' || viewMode === 'proximity' ? 'white' : undefined
-                }}
-              >
-                📋 List View
-              </button>
-              <button
-                onClick={() => setViewMode('area')}
-                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                  viewMode === 'area' ? 'active' : ''
-                }`}
-                style={{
-                  backgroundColor: viewMode === 'area' ? '#007E8C' : undefined,
-                  color: viewMode === 'area' ? 'white' : undefined
-                }}
-              >
-                🗺️ Map View
-              </button>
-            </div>
-          ) : (
-            // After location: Show Nearest/Area toggle
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => setViewMode('proximity')}
-                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                  viewMode === 'proximity' ? 'active' : ''
-                }`}
-                style={{
-                  backgroundColor: viewMode === 'proximity' ? '#007E8C' : undefined,
-                  color: viewMode === 'proximity' ? 'white' : undefined
-                }}
-              >
-                📍 Nearest First
-              </button>
-              <button
-                onClick={() => setViewMode('area')}
-                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                  viewMode === 'area' ? 'active' : ''
-                }`}
-                style={{
-                  backgroundColor: viewMode === 'area' ? '#007E8C' : undefined,
-                  color: viewMode === 'area' ? 'white' : undefined
-                }}
-              >
-                🏘️ By Area
-              </button>
-            </div>
-          )}
-
-          {/* Area Filter (only show in area view with location) */}
-          {viewMode === 'area' && userCoords && (
-            <select
-              value={filterArea}
-              onChange={(e) => setFilterArea(e.target.value)}
-              className="mt-4 px-5 py-3 premium-input rounded-xl font-medium text-base"
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
+                viewMode === 'list' || viewMode === 'proximity' ? 'active' : ''
+              }`}
+              style={{
+                backgroundColor: viewMode === 'list' || viewMode === 'proximity' ? '#007E8C' : undefined,
+                color: viewMode === 'list' || viewMode === 'proximity' ? 'white' : undefined
+              }}
             >
-              <option value="all">All Areas</option>
-              {areas.map(area => (
-                <option key={area} value={area}>{area}</option>
-              ))}
-            </select>
-          )}
+              📋 List View
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
+                viewMode === 'map' ? 'active' : ''
+              }`}
+              style={{
+                backgroundColor: viewMode === 'map' ? '#007E8C' : undefined,
+                color: viewMode === 'map' ? 'white' : undefined
+              }}
+            >
+              🗺️ Map View
+            </button>
+          </div>
+
         </div>
 
-        {/* Side-by-side: Map and List (when user has location) */}
+        {/* Map and/or List (when user has location) */}
         {userCoords ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={`grid grid-cols-1 ${viewMode === 'list' ? '' : 'lg:grid-cols-2'} gap-6`}>
             {/* Map View */}
-            <div className="bg-white rounded-2xl premium-card overflow-hidden">
+            {viewMode !== 'list' && (
+              <div className="bg-white rounded-2xl premium-card overflow-hidden">
               <div className="p-6 border-b" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}}>
                 <h2 className="text-xl font-bold mb-3" style={{color: '#236383'}}>
                   🗺️ Drop-Off Locations Map
@@ -854,10 +811,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
               </div>
               <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
-            </div>
+              </div>
+            )}
 
             {/* Host List */}
-            <div className="space-y-4 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
+            {viewMode !== 'map' && (
+              <div className="space-y-4 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
             {userCoords && viewMode === 'proximity' && (
               <div className="distance-banner p-4 mb-2">
                 <div className="flex items-center">
@@ -944,8 +903,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
                               title={showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'}
                             >
-                              <i className="lucide-route w-3 h-3 mr-1"></i>
-                              {showingDirections === host.id ? 'Clear Route' : 'Show on Map'}
+                              <i className="lucide-route w-4 h-4 mr-1.5"></i>
+                              {showingDirections === host.id ? 'Clear Route' : 'Show Route on Map'}
                             </button>
                           )}
                           <button
@@ -954,7 +913,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             style={{backgroundColor: '#007E8C'}}
                             title="Get directions to this host in Apple or Google Maps"
                           >
-                            <i className="lucide-navigation w-3 h-3 mr-1"></i>
+                            <i className="lucide-navigation w-4 h-4 mr-1.5"></i>
                             Get Directions
                           </button>
                         </div>
@@ -1015,9 +974,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
             ))
           )}
-            </div>
+              </div>
+            )}
           </div>
-        ) : viewMode === 'area' ? (
+        ) : viewMode === 'map' ? (
           // No user location but Map View selected - show prompt
           <div className="bg-white rounded-2xl premium-card p-12 text-center">
             <div className="max-w-md mx-auto">
@@ -1115,8 +1075,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
                               title={showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'}
                             >
-                              <i className="lucide-route w-3 h-3 mr-1"></i>
-                              {showingDirections === host.id ? 'Clear Route' : 'Show on Map'}
+                              <i className="lucide-route w-4 h-4 mr-1.5"></i>
+                              {showingDirections === host.id ? 'Clear Route' : 'Show Route on Map'}
                             </button>
                           )}
                           <button
@@ -1125,7 +1085,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             style={{backgroundColor: '#007E8C'}}
                             title="Get directions to this host in Apple or Google Maps"
                           >
-                            <i className="lucide-navigation w-3 h-3 mr-1"></i>
+                            <i className="lucide-navigation w-4 h-4 mr-1.5"></i>
                             Get Directions
                           </button>
                         </div>
@@ -1207,20 +1167,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               )}
               <div className="space-y-3">
-                {userCoords && (
-                  <button
-                    onClick={() => {
-                      showDirections(selectedHost);
-                      setSelectedHost(null);
-                      // Scroll to map
-                      document.getElementById('map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }}
-                    className="btn-secondary block w-full px-6 py-3.5 text-white rounded-xl font-semibold text-center transition-all"
-                    style={{backgroundColor: '#FBAD3F'}}
-                  >
-                    🗺️ Show Route on Map
-                  </button>
-                )}
                 <a
                   href={`https://maps.apple.com/?daddr=${selectedHost.lat},${selectedHost.lng}`}
                   className="btn-primary block w-full px-6 py-3.5 text-white rounded-xl font-semibold text-center transition-all"
@@ -1236,6 +1182,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   style={{backgroundColor: '#A31C41'}}
                 >
                   🌎 Open in Google Maps
+                </button>
+                <button
+                  onClick={() => {
+                    const coords = `${selectedHost.lat}, ${selectedHost.lng}`;
+                    navigator.clipboard.writeText(coords).then(() => {
+                      alert(`Coordinates copied to clipboard:\n${coords}`);
+                    }).catch(() => {
+                      alert(`Coordinates:\n${coords}`);
+                    });
+                  }}
+                  className="btn-primary block w-full px-6 py-3.5 text-white rounded-xl font-semibold text-center transition-all"
+                  style={{backgroundColor: '#FBAD3F'}}
+                >
+                  📋 Copy Coordinates
                 </button>
                 <button
                   onClick={() => setSelectedHost(null)}
