@@ -775,14 +775,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <h2 className="text-xl font-bold mb-3" style={{color: '#236383'}}>
                   🗺️ Drop-Off Locations Map
                 </h2>
-                <div className="flex flex-wrap gap-4 mb-2">
+                <div className="flex flex-wrap gap-3 mb-3">
                   <span className="inline-flex items-center text-base font-medium" style={{color: '#236383'}}>
                     <span className="w-5 h-5 rounded-full mr-2 border-2 border-white shadow-sm" style={{backgroundColor: '#47B3CB'}}></span>
                     Your location
                   </span>
                   <span className="inline-flex items-center text-base font-medium" style={{color: '#236383'}}>
+                    <span className="w-5 h-5 rounded-full mr-2 border-2 border-white shadow-sm flex items-center justify-center text-xs font-bold" style={{backgroundColor: '#FBBF24', color: '#000'}}>1</span>
+                    Closest
+                  </span>
+                  <span className="inline-flex items-center text-base font-medium" style={{color: '#236383'}}>
+                    <span className="w-5 h-5 rounded-full mr-2 border-2 border-white shadow-sm flex items-center justify-center text-xs font-bold" style={{backgroundColor: '#9CA3AF', color: '#000'}}>2</span>
+                    2nd Closest
+                  </span>
+                  <span className="inline-flex items-center text-base font-medium" style={{color: '#236383'}}>
+                    <span className="w-5 h-5 rounded-full mr-2 border-2 border-white shadow-sm flex items-center justify-center text-xs font-bold" style={{backgroundColor: '#F59E0B', color: '#000'}}>3</span>
+                    3rd Closest
+                  </span>
+                  <span className="inline-flex items-center text-base font-medium" style={{color: '#236383'}}>
                     <span className="w-5 h-5 rounded-full mr-2 border-2 border-white shadow-sm" style={{backgroundColor: '#A31C41'}}></span>
-                    Drop-off hosts
+                    Other hosts
                   </span>
                 </div>
                 <p className="text-sm font-medium mb-3" style={{color: '#007E8C'}}>
