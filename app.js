@@ -766,7 +766,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
         {/* Map and/or List (when user has location) */}
         {userCoords ? (
-          <div className={`grid grid-cols-1 ${viewMode === 'list' ? '' : 'lg:grid-cols-2'} gap-6`}>
+          <div className={`grid grid-cols-1 ${viewMode === 'list' ? '' : 'lg:grid-cols-2 lg:items-start'} gap-6`}>
             {/* Map View */}
             {viewMode !== 'list' && (
               <div className="bg-white rounded-2xl premium-card overflow-hidden">
@@ -899,7 +899,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
             {/* Host List */}
             {viewMode !== 'map' && (
-              <div className="space-y-4 lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto">
+              <div className="space-y-4 lg:max-h-[1400px] lg:overflow-y-auto">
             {userCoords && viewMode === 'proximity' && (
               <div className="distance-banner p-4 mb-2">
                 <div className="flex items-center">
