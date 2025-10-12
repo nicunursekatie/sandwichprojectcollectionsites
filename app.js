@@ -13,6 +13,7 @@ const HostAvailabilityApp = () => {
   const [directionsRenderer, setDirectionsRenderer] = React.useState(null);
   const [showingDirections, setShowingDirections] = React.useState(null);
   const [routeInfo, setRouteInfo] = React.useState(null);
+  const [directionSteps, setDirectionSteps] = React.useState(null);
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
@@ -570,7 +571,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
       if (status === 'OK') {
         directionsRenderer.setDirections(result);
         setShowingDirections(host.id);
-        
+
         // Extract route information
         const route = result.routes[0];
         const leg = route.legs[0];
@@ -578,8 +579,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
           hostId: host.id,
           duration: leg.duration.text,
           distance: leg.distance.text,
-          hostName: host.name
+          hostName: host.name,
+          hostAddress: `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`,
+          hostPhone: host.phone
         });
+
+        // Extract turn-by-turn directions
+        setDirectionSteps(leg.steps.map(step => ({
+          instruction: step.instructions,
+          distance: step.distance.text,
+          duration: step.duration.text
+        })));
       } else {
         alert('Could not calculate driving directions. Please use the external map links instead.');
       }
@@ -592,6 +602,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
       directionsRenderer.setDirections({ routes: [] });
       setShowingDirections(null);
       setRouteInfo(null);
+      setDirectionSteps(null);
     }
   };
 
@@ -605,6 +616,33 @@ This is safe because your API key is already restricted to only the Geocoding AP
       const url = `https://www.google.com/maps/search/?api=1&query=${host.lat},${host.lng}`;
       window.open(url, '_blank');
     }
+  };
+
+  // Email directions
+  const emailDirections = () => {
+    if (!routeInfo || !directionSteps) return;
+
+    const subject = encodeURIComponent(`Directions to ${routeInfo.hostName} - Sandwich Drop-Off`);
+
+    // Create plain text directions
+    let body = `Directions to ${routeInfo.hostName}\n`;
+    body += `Location: ${routeInfo.hostAddress}\n`;
+    body += `Phone: ${routeInfo.hostPhone}\n`;
+    body += `\nTotal Distance: ${routeInfo.distance}\n`;
+    body += `Estimated Time: ${routeInfo.duration}\n`;
+    body += `\n--- Turn-by-Turn Directions ---\n\n`;
+
+    directionSteps.forEach((step, index) => {
+      // Strip HTML tags from instructions
+      const plainText = step.instruction.replace(/<[^>]*>/g, '');
+      body += `${index + 1}. ${plainText} (${step.distance})\n`;
+    });
+
+    body += `\nDrop-off Date: ${dropOffDate}\n`;
+    body += `\nView on Google Maps: https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${availableHosts.find(h => h.id === routeInfo.hostId).lat},${availableHosts.find(h => h.id === routeInfo.hostId).lng}`;
+
+    const mailtoLink = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
   };
 
   return (
@@ -815,6 +853,47 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
               </div>
               <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
+
+              {/* Turn-by-Turn Directions */}
+              {directionSteps && routeInfo && (
+                <div className="border-t" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}}>
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold" style={{color: '#236383'}}>
+                        📍 Turn-by-Turn Directions
+                      </h3>
+                      <button
+                        onClick={emailDirections}
+                        className="text-sm px-4 py-2 rounded-lg font-medium text-white flex items-center"
+                        style={{backgroundColor: '#007E8C'}}
+                        title="Email these directions to yourself"
+                      >
+                        <i className="lucide-mail w-4 h-4 mr-1.5"></i>
+                        Email Directions
+                      </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
+                      {directionSteps.map((step, index) => (
+                        <div key={index} className="flex gap-3 p-3 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.05)'}}>
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs text-white" style={{backgroundColor: '#007E8C'}}>
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <div
+                              className="text-sm font-medium mb-1"
+                              style={{color: '#236383'}}
+                              dangerouslySetInnerHTML={{__html: step.instruction}}
+                            />
+                            <div className="text-xs font-medium" style={{color: '#007E8C'}}>
+                              {step.distance} • {step.duration}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
               </div>
             )}
 
