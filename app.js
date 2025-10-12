@@ -139,7 +139,7 @@ const HostAvailabilityApp = () => {
 
   const copyAsCode = () => {
     const codeStr = `    return [\n${allHosts.map(host =>
-      `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}', notes: '${host.notes}', available: ${host.available} }`
+      `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}', openTime: '${host.openTime}', closeTime: '${host.closeTime}'${host.thursdayOpenTime ? `, thursdayOpenTime: '${host.thursdayOpenTime}', thursdayCloseTime: '${host.thursdayCloseTime}'` : ''}, notes: '${host.notes}', available: ${host.available} }`
     ).join(',\n')}\n    ];`;
 
     navigator.clipboard.writeText(codeStr).then(() => {
@@ -746,31 +746,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
                 Sandwich Drop-Off Locations
               </h1>
-              <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
+              <p className="text-2xl font-bold" style={{color: '#007E8C'}}>
                 {dropOffDate}
               </p>
-              {/* Countdown to drop-off day */}
-              {(() => {
-                const now = new Date();
-                const dropOff = nextWednesday;
-                const diffMs = dropOff - now;
-                const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-                if (days === 0 && hours >= 0) {
-                  return (
-                    <p className="text-lg font-semibold px-4 py-2 rounded-lg inline-block" style={{backgroundColor: '#28a745', color: 'white'}}>
-                      🎯 Drop-off day is TODAY!
-                    </p>
-                  );
-                } else if (days > 0) {
-                  return (
-                    <p className="text-lg font-semibold" style={{color: '#236383'}}>
-                      ⏰ {days} day{days > 1 ? 's' : ''} and {hours} hour{hours > 1 ? 's' : ''} until drop-off
-                    </p>
-                  );
-                }
-              })()}
             </div>
             <button
               onClick={() => {
@@ -1664,7 +1642,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Open Time</label>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Wednesday Open Time</label>
                         <input
                           type="time"
                           name="openTime"
@@ -1676,7 +1654,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <p className="text-xs mt-1" style={{color: '#007E8C'}}>24-hour format</p>
                       </div>
                       <div>
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Close Time</label>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Wednesday Close Time</label>
                         <input
                           type="time"
                           name="closeTime"
@@ -1686,6 +1664,31 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           placeholder="20:00"
                         />
                         <p className="text-xs mt-1" style={{color: '#007E8C'}}>24-hour format</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Thursday Open Time (optional)</label>
+                        <input
+                          type="time"
+                          name="thursdayOpenTime"
+                          defaultValue={editingHost.thursdayOpenTime}
+                          className="w-full px-4 py-3 premium-input rounded-xl"
+                          placeholder="08:00"
+                        />
+                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>For hosts accepting Thursday drop-offs</p>
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Thursday Close Time (optional)</label>
+                        <input
+                          type="time"
+                          name="thursdayCloseTime"
+                          defaultValue={editingHost.thursdayCloseTime}
+                          className="w-full px-4 py-3 premium-input rounded-xl"
+                          placeholder="09:30"
+                        />
+                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>Leave blank if not available Thursday</p>
                       </div>
                     </div>
 
