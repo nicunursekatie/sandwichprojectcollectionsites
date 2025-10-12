@@ -693,35 +693,66 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </div>
 
           {/* View Toggle */}
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setViewMode('proximity')}
-              className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                viewMode === 'proximity' ? 'active' : ''
-              }`}
-              style={{
-                backgroundColor: viewMode === 'proximity' ? '#007E8C' : undefined,
-                color: viewMode === 'proximity' ? 'white' : undefined
-              }}
-            >
-              {userCoords ? '📍 Nearest First' : '📋 All Hosts'}
-            </button>
-            <button
-              onClick={() => setViewMode('area')}
-              className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                viewMode === 'area' ? 'active' : ''
-              }`}
-              style={{
-                backgroundColor: viewMode === 'area' ? '#007E8C' : undefined,
-                color: viewMode === 'area' ? 'white' : undefined
-              }}
-            >
-              🏘️ By Area
-            </button>
-          </div>
+          {!userCoords ? (
+            // Before location: Show List/Map toggle
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
+                  viewMode === 'list' || viewMode === 'proximity' ? 'active' : ''
+                }`}
+                style={{
+                  backgroundColor: viewMode === 'list' || viewMode === 'proximity' ? '#007E8C' : undefined,
+                  color: viewMode === 'list' || viewMode === 'proximity' ? 'white' : undefined
+                }}
+              >
+                📋 List View
+              </button>
+              <button
+                onClick={() => setViewMode('area')}
+                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
+                  viewMode === 'area' ? 'active' : ''
+                }`}
+                style={{
+                  backgroundColor: viewMode === 'area' ? '#007E8C' : undefined,
+                  color: viewMode === 'area' ? 'white' : undefined
+                }}
+              >
+                🗺️ Map View
+              </button>
+            </div>
+          ) : (
+            // After location: Show Nearest/Area toggle
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setViewMode('proximity')}
+                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
+                  viewMode === 'proximity' ? 'active' : ''
+                }`}
+                style={{
+                  backgroundColor: viewMode === 'proximity' ? '#007E8C' : undefined,
+                  color: viewMode === 'proximity' ? 'white' : undefined
+                }}
+              >
+                📍 Nearest First
+              </button>
+              <button
+                onClick={() => setViewMode('area')}
+                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
+                  viewMode === 'area' ? 'active' : ''
+                }`}
+                style={{
+                  backgroundColor: viewMode === 'area' ? '#007E8C' : undefined,
+                  color: viewMode === 'area' ? 'white' : undefined
+                }}
+              >
+                🏘️ By Area
+              </button>
+            </div>
+          )}
 
-          {/* Area Filter (only show in area view) */}
-          {viewMode === 'area' && (
+          {/* Area Filter (only show in area view with location) */}
+          {viewMode === 'area' && userCoords && (
             <select
               value={filterArea}
               onChange={(e) => setFilterArea(e.target.value)}
@@ -940,28 +971,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </div>
                         </div>
 
-                        {userCoords && (
+                        {host.distance && (
                           <div className="info-box p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <i className="lucide-car w-5 h-5 mr-2" style={{color: '#007E8C'}}></i>
-                                <div>
-                                  <span className="font-semibold" style={{color: '#236383'}}>Distance: </span>
-                                  <span className="font-medium" style={{color: '#007E8C'}}>{host.distance} miles</span>
-                                  {routeInfo && routeInfo.hostId === host.id && (
-                                    <span className="font-medium" style={{color: '#007E8C'}}> • {routeInfo.duration}</span>
-                                  )}
-                                </div>
+                            <div className="flex items-center">
+                              <i className="lucide-car w-5 h-5 mr-2" style={{color: '#007E8C'}}></i>
+                              <div>
+                                <span className="font-semibold" style={{color: '#236383'}}>Distance: </span>
+                                <span className="font-medium" style={{color: '#007E8C'}}>{host.distance} miles</span>
+                                {routeInfo && routeInfo.hostId === host.id && (
+                                  <span className="font-medium" style={{color: '#007E8C'}}> • {routeInfo.duration}</span>
+                                )}
                               </div>
-                              <button
-                                onClick={() => openGoogleMapsDirections(host)}
-                                className="btn-primary text-xs px-5 py-2.5 rounded-xl font-medium flex items-center"
-                                style={{backgroundColor: '#007E8C', color: 'white'}}
-                                title="Open this location in Google Maps"
-                              >
-                                <i className="lucide-external-link w-3 h-3 mr-1"></i>
-                                Google Maps
-                              </button>
                             </div>
                           </div>
                         )}
@@ -983,6 +1003,25 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
             ))
           )}
+            </div>
+          </div>
+        ) : viewMode === 'area' ? (
+          // No user location but Map View selected - show prompt
+          <div className="bg-white rounded-2xl premium-card p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="text-6xl mb-4">🗺️</div>
+              <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>Map View Available with Location</h3>
+              <p className="text-lg mb-6" style={{color: '#007E8C'}}>
+                Enter your address or use your current location to see hosts on an interactive map
+              </p>
+              <button
+                onClick={getCurrentLocation}
+                className="btn-primary px-8 py-4 text-white rounded-xl font-medium inline-flex items-center"
+                style={{backgroundColor: '#007E8C'}}
+              >
+                <i className="lucide-locate w-5 h-5 mr-2"></i>
+                Use My Location
+              </button>
             </div>
           </div>
         ) : (
@@ -1103,28 +1142,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </div>
                         </div>
 
-                        {userCoords && (
+                        {host.distance && (
                           <div className="info-box p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <i className="lucide-car w-5 h-5 mr-2" style={{color: '#007E8C'}}></i>
-                                <div>
-                                  <span className="font-semibold" style={{color: '#236383'}}>Distance: </span>
-                                  <span className="font-medium" style={{color: '#007E8C'}}>{host.distance} miles</span>
-                                  {routeInfo && routeInfo.hostId === host.id && (
-                                    <span className="font-medium" style={{color: '#007E8C'}}> • {routeInfo.duration}</span>
-                                  )}
-                                </div>
+                            <div className="flex items-center">
+                              <i className="lucide-car w-5 h-5 mr-2" style={{color: '#007E8C'}}></i>
+                              <div>
+                                <span className="font-semibold" style={{color: '#236383'}}>Distance: </span>
+                                <span className="font-medium" style={{color: '#007E8C'}}>{host.distance} miles</span>
+                                {routeInfo && routeInfo.hostId === host.id && (
+                                  <span className="font-medium" style={{color: '#007E8C'}}> • {routeInfo.duration}</span>
+                                )}
                               </div>
-                              <button
-                                onClick={() => openGoogleMapsDirections(host)}
-                                className="btn-primary text-xs px-5 py-2.5 rounded-xl font-medium flex items-center"
-                                style={{backgroundColor: '#007E8C', color: 'white'}}
-                                title="Open this location in Google Maps"
-                              >
-                                <i className="lucide-external-link w-3 h-3 mr-1"></i>
-                                Google Maps
-                              </button>
                             </div>
                           </div>
                         )}
