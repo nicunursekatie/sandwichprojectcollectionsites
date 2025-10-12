@@ -1522,7 +1522,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {/* Edit Host Modal */}
         {editingHost && (
           <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setEditingHost(null)}>
-            <div className="modal-content bg-white rounded-2xl max-w-2xl w-full premium-card-header" onClick={e => e.stopPropagation()}>
+            <div className="modal-content bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto premium-card-header" onClick={e => e.stopPropagation()}>
               <div className="p-8">
                 <h3 className="text-2xl font-bold mb-6" style={{color: '#236383'}}>
                   {editingHost.id === 'new' ? '➕ Add New Host' : `✏️ Edit ${editingHost.name}`}
