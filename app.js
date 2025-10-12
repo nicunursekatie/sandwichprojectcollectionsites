@@ -252,6 +252,74 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   };
 
+  // Calculate host availability status
+  const getHostAvailability = (host) => {
+    if (!host.openTime || !host.closeTime) return null;
+
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday, 3 = Wednesday
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // Check if today is Wednesday (drop-off day)
+    const isDropOffDay = currentDay === 3;
+
+    if (!isDropOffDay) {
+      // Calculate days until Wednesday
+      const daysUntilWednesday = (3 - currentDay + 7) % 7 || 7;
+      return {
+        status: 'closed-until-dropoff',
+        message: `Opens ${daysUntilWednesday === 1 ? 'tomorrow' : `in ${daysUntilWednesday} days`} (Wednesday) at ${formatTime(host.openTime)}`,
+        color: '#FBAD3F'
+      };
+    }
+
+    // It's Wednesday - check if within operating hours
+    if (currentTime < host.openTime) {
+      const openDate = new Date();
+      const [openHour, openMin] = host.openTime.split(':');
+      openDate.setHours(parseInt(openHour), parseInt(openMin), 0);
+      const hoursUntil = Math.floor((openDate - now) / (1000 * 60 * 60));
+      const minutesUntil = Math.floor((openDate - now) / (1000 * 60)) % 60;
+
+      return {
+        status: 'opens-soon',
+        message: hoursUntil > 0
+          ? `Opens in ${hoursUntil}h ${minutesUntil}m`
+          : `Opens in ${minutesUntil}m`,
+        color: '#FBAD3F'
+      };
+    } else if (currentTime >= host.openTime && currentTime < host.closeTime) {
+      const closeDate = new Date();
+      const [closeHour, closeMin] = host.closeTime.split(':');
+      closeDate.setHours(parseInt(closeHour), parseInt(closeMin), 0);
+      const hoursUntil = Math.floor((closeDate - now) / (1000 * 60 * 60));
+      const minutesUntil = Math.floor((closeDate - now) / (1000 * 60)) % 60;
+
+      return {
+        status: 'open',
+        message: hoursUntil > 1
+          ? `Open now - closes in ${hoursUntil}h ${minutesUntil}m`
+          : `Open now - closes in ${minutesUntil}m`,
+        color: '#28a745'
+      };
+    } else {
+      return {
+        status: 'closed',
+        message: `Closed for today`,
+        color: '#A31C41'
+      };
+    }
+  };
+
+  // Format time from 24hr to 12hr
+  const formatTime = (time24) => {
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'pm' : 'am';
+    const hour12 = hour % 12 || 12;
+    return minutes === '00' ? `${hour12}${ampm}` : `${hour12}:${minutes}${ampm}`;
+  };
+
   // Get user's current location
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -658,6 +726,28 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
                 {dropOffDate}
               </p>
+              {/* Countdown to drop-off day */}
+              {(() => {
+                const now = new Date();
+                const dropOff = nextWednesday;
+                const diffMs = dropOff - now;
+                const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+                if (days === 0 && hours >= 0) {
+                  return (
+                    <p className="text-lg font-semibold px-4 py-2 rounded-lg inline-block" style={{backgroundColor: '#28a745', color: 'white'}}>
+                      🎯 Drop-off day is TODAY!
+                    </p>
+                  );
+                } else if (days > 0) {
+                  return (
+                    <p className="text-lg font-semibold" style={{color: '#236383'}}>
+                      ⏰ {days} day{days > 1 ? 's' : ''} and {hours} hour{hours > 1 ? 's' : ''} until drop-off
+                    </p>
+                  );
+                }
+              })()}
             </div>
             <button
               onClick={() => {
@@ -1000,9 +1090,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <div className="info-box p-4">
                           <div className="flex items-start">
                             <i className="lucide-clock w-5 h-5 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
-                            <div>
+                            <div className="flex-1">
                               <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours</div>
-                              <div className="font-medium" style={{color: '#007E8C'}}>{host.hours}</div>
+                              <div className="font-medium mb-2" style={{color: '#007E8C'}}>{host.hours}</div>
+                              {/* Availability Status */}
+                              {(() => {
+                                const availability = getHostAvailability(host);
+                                if (!availability) return null;
+                                return (
+                                  <div
+                                    className="inline-block px-3 py-1 rounded-lg text-sm font-bold mt-1"
+                                    style={{backgroundColor: availability.color, color: 'white'}}
+                                  >
+                                    {availability.message}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1166,9 +1269,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <div className="info-box p-4">
                           <div className="flex items-start">
                             <i className="lucide-clock w-5 h-5 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
-                            <div>
+                            <div className="flex-1">
                               <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours</div>
-                              <div className="font-medium" style={{color: '#007E8C'}}>{host.hours}</div>
+                              <div className="font-medium mb-2" style={{color: '#007E8C'}}>{host.hours}</div>
+                              {/* Availability Status */}
+                              {(() => {
+                                const availability = getHostAvailability(host);
+                                if (!availability) return null;
+                                return (
+                                  <div
+                                    className="inline-block px-3 py-1 rounded-lg text-sm font-bold mt-1"
+                                    style={{backgroundColor: availability.color, color: 'white'}}
+                                  >
+                                    {availability.message}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1333,7 +1449,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', notes: '', available: true })}
+                    onClick={() => setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
                     style={{backgroundColor: '#007E8C'}}
                   >
@@ -1422,6 +1538,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     lng: formData.get('lng'),
                     phone: formData.get('phone'),
                     hours: formData.get('hours'),
+                    openTime: formData.get('openTime'),
+                    closeTime: formData.get('closeTime'),
                     notes: formData.get('notes'),
                     available: formData.get('available') === 'on'
                   };
@@ -1509,7 +1627,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                     
                     <div>
-                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Drop-off Hours</label>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Drop-off Hours (Display Text)</label>
                       <input
                         type="text"
                         name="hours"
@@ -1518,8 +1636,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         className="w-full px-4 py-3 premium-input rounded-xl"
                         placeholder="8 am to 8 pm"
                       />
+                      <p className="text-sm mt-1" style={{color: '#007E8C'}}>This is shown to users as-is</p>
                     </div>
-                    
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Open Time</label>
+                        <input
+                          type="time"
+                          name="openTime"
+                          defaultValue={editingHost.openTime}
+                          required
+                          className="w-full px-4 py-3 premium-input rounded-xl"
+                          placeholder="08:00"
+                        />
+                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>24-hour format</p>
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Close Time</label>
+                        <input
+                          type="time"
+                          name="closeTime"
+                          defaultValue={editingHost.closeTime}
+                          required
+                          className="w-full px-4 py-3 premium-input rounded-xl"
+                          placeholder="20:00"
+                        />
+                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>24-hour format</p>
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block font-semibold mb-2" style={{color: '#236383'}}>Special Instructions (optional)</label>
                       <textarea
