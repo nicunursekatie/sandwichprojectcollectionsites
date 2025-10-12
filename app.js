@@ -878,7 +878,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-3">
+                      <div className="flex flex-wrap justify-between items-start gap-3 mb-3">
                         <div className="flex items-center gap-3">
                           {userCoords && viewMode === 'proximity' && index < 3 && (
                             <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
@@ -889,11 +889,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           )}
                           <h3 className="font-bold text-2xl whitespace-nowrap">{host.name}</h3>
                         </div>
-                        <div className="flex gap-3 ml-4 flex-shrink-0">
+                        <div className="flex flex-wrap gap-3">
                           {userCoords && (
                             <button
                               onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
-                              className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center"
+                              className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
                               style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
                               title={showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'}
                             >
@@ -903,7 +903,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           )}
                           <button
                             onClick={() => setSelectedHost(host)}
-                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center"
+                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
                             style={{backgroundColor: '#007E8C'}}
                             title="Get directions to this host in Apple or Google Maps"
                           >
@@ -1044,7 +1044,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-3">
+                      <div className="flex flex-wrap justify-between items-start gap-3 mb-3">
                         <div className="flex items-center gap-3">
                           {userCoords && viewMode === 'proximity' && index < 3 && (
                             <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
@@ -1055,11 +1055,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           )}
                           <h3 className="font-bold text-2xl whitespace-nowrap">{host.name}</h3>
                         </div>
-                        <div className="flex gap-3 ml-4 flex-shrink-0">
+                        <div className="flex flex-wrap gap-3">
                           {userCoords && (
                             <button
                               onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
-                              className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center"
+                              className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
                               style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
                               title={showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'}
                             >
@@ -1069,7 +1069,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           )}
                           <button
                             onClick={() => setSelectedHost(host)}
-                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center"
+                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
                             style={{backgroundColor: '#007E8C'}}
                             title="Get directions to this host in Apple or Google Maps"
                           >
