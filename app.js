@@ -899,7 +899,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
             {/* Host List */}
             {viewMode !== 'map' && (
-              <div className="space-y-4 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
+              <div className="space-y-4 lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto">
             {userCoords && viewMode === 'proximity' && (
               <div className="distance-banner p-4 mb-2">
                 <div className="flex items-center">
