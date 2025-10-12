@@ -241,6 +241,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
       }
     } catch (error) {
       console.error('Geocoding error:', error);
+      if (error.message) {
+        console.error('Error message:', error.message);
+      }
       alert('Error looking up address. Please check your internet connection and try again.');
       return false;
     } finally {
@@ -847,7 +850,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          {userCoords && showMap && (
+                          {userCoords && (
                             <button
                               onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
                               className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-xs flex items-center"
