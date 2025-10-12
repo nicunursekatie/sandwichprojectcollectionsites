@@ -517,9 +517,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
     setMap(mapInstance);
   }, [userCoords, availableHosts, map, showAllHostsOnMap]);
 
-  // Load Google Maps API
+  // Load Google Maps API when user has location and switches to map view
   React.useEffect(() => {
-    if (mapLoaded || !userCoords) return;
+    if (mapLoaded || !userCoords || viewMode !== 'map') return;
 
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=marker,geometry`;
@@ -535,7 +535,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         document.head.removeChild(existingScript);
       }
     };
-  }, [userCoords, GOOGLE_MAPS_API_KEY]);
+  }, [userCoords, viewMode, GOOGLE_MAPS_API_KEY, mapLoaded]);
 
   // Reset map when toggle changes
   React.useEffect(() => {
@@ -544,13 +544,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   }, [showAllHostsOnMap]);
 
-  // Initialize map when API is loaded and user has location
+  // Initialize map when API is loaded, user has location, AND map view is active
   React.useEffect(() => {
-    if (mapLoaded && userCoords) {
+    if (mapLoaded && userCoords && viewMode === 'map') {
       // Small delay to ensure DOM element exists
       setTimeout(initializeMap, 100);
     }
-  }, [mapLoaded, userCoords, initializeMap]);
+  }, [mapLoaded, userCoords, viewMode, initializeMap]);
 
   // Show driving directions on map
   const showDirections = (host) => {
