@@ -346,7 +346,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
       if (success) {
         setUserAddress(input);
         setNameSearch(''); // Clear any name filter
-        setViewMode('list');
+        setViewMode('proximity');
       } else {
         // Geocoding failed, fall back to name search if we have matches
         if (matchingHosts.length > 0) {
