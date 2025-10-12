@@ -840,39 +840,41 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   }`}
                 >
                   <div className="flex gap-5 items-start">
-                    {/* Small map view for each host */}
-                    <div className="flex-shrink-0" style={{width: '85px'}}>
-                      {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
-                        <img
-                          src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=15&size=85x85&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
-                          alt={`Map of ${host.name}`}
-                          className="rounded-lg border border-gray-200 shadow-sm"
-                          style={{width: '85px', height: '85px', objectFit: 'cover'}}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
+                    {/* Only show map thumbnail if map view is NOT active */}
+                    {!userCoords && (
+                      <div className="flex-shrink-0" style={{width: '85px'}}>
+                        {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
+                          <img
+                            src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=15&size=85x85&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
+                            alt={`Map of ${host.name}`}
+                            className="rounded-lg border border-gray-200 shadow-sm"
+                            style={{width: '85px', height: '85px', objectFit: 'cover'}}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="rounded-lg border border-gray-200 shadow-sm flex items-center justify-center"
+                          style={{
+                            width: '85px',
+                            height: '85px',
+                            backgroundColor: '#f8f9fa',
+                            display: GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE' ? 'flex' : 'none'
                           }}
-                        />
-                      ) : null}
-                      <div
-                        className="rounded-lg border border-gray-200 shadow-sm flex items-center justify-center"
-                        style={{
-                          width: '85px',
-                          height: '85px',
-                          backgroundColor: '#f8f9fa',
-                          display: GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE' ? 'flex' : 'none'
-                        }}
-                      >
-                        <div className="text-center text-xs" style={{color: '#236383'}}>
-                          <i className="lucide-map-pin w-4 h-4 mx-auto mb-1"></i>
-                          <div className="font-semibold text-xs">{host.area}</div>
+                        >
+                          <div className="text-center text-xs" style={{color: '#236383'}}>
+                            <i className="lucide-map-pin w-4 h-4 mx-auto mb-1"></i>
+                            <div className="font-semibold text-xs">{host.area}</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
+                      <div className="flex justify-between items-start mb-5">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
                             {userCoords && viewMode === 'proximity' && index < 3 && (
                               <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white ${
                                 index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
@@ -880,40 +882,42 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 {index + 1}
                               </span>
                             )}
-                            <h3 className="font-bold text-xl">{host.name}</h3>
+                            <h3 className="font-bold text-2xl">{host.name}</h3>
                             {host.distance && (
-                              <span className="premium-badge px-3 py-1.5 text-sm font-semibold rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
+                              <span className="premium-badge px-4 py-2 text-sm font-semibold rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
                                 {host.distance} mi
                               </span>
                             )}
                           </div>
-                          <p className="text-base font-medium mb-3" style={{color: '#236383'}}>
+                          <p className="text-lg font-medium mb-4" style={{color: '#236383'}}>
                             📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-3 ml-4">
                           {userCoords && (
                             <button
                               onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
-                              className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-xs flex items-center"
+                              className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center"
                               style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
+                              title={showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'}
                             >
                               <i className="lucide-route w-3 h-3 mr-1"></i>
-                              {showingDirections === host.id ? 'Clear Route' : 'Show Route'}
+                              {showingDirections === host.id ? 'Clear Route' : 'Show on Map'}
                             </button>
                           )}
                           <button
                             onClick={() => setSelectedHost(host)}
-                            className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-sm flex items-center"
+                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center"
                             style={{backgroundColor: '#007E8C'}}
+                            title="Get directions to this host in Apple or Google Maps"
                           >
                             <i className="lucide-navigation w-3 h-3 mr-1"></i>
-                            Directions
+                            Get Directions
                           </button>
                         </div>
                       </div>
 
-                      <div className="space-y-3 text-base">
+                      <div className="space-y-4 text-base">
                         <div className="info-box p-4">
                           <div className="flex items-start">
                             <i className="lucide-clock w-5 h-5 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
@@ -953,9 +957,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 onClick={() => openGoogleMapsDirections(host)}
                                 className="btn-primary text-xs px-5 py-2.5 rounded-xl font-medium flex items-center"
                                 style={{backgroundColor: '#007E8C', color: 'white'}}
+                                title="Open this location in Google Maps"
                               >
                                 <i className="lucide-external-link w-3 h-3 mr-1"></i>
-                                Maps
+                                Google Maps
                               </button>
                             </div>
                           </div>
@@ -998,39 +1003,41 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   }`}
                 >
                   <div className="flex gap-5 items-start">
-                    {/* Small map view for each host */}
-                    <div className="flex-shrink-0" style={{width: '85px'}}>
-                      {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
-                        <img
-                          src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=15&size=85x85&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
-                          alt={`Map of ${host.name}`}
-                          className="rounded-lg border border-gray-200 shadow-sm"
-                          style={{width: '85px', height: '85px', objectFit: 'cover'}}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
+                    {/* Only show map thumbnail if map view is NOT active */}
+                    {!userCoords && (
+                      <div className="flex-shrink-0" style={{width: '85px'}}>
+                        {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
+                          <img
+                            src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=15&size=85x85&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
+                            alt={`Map of ${host.name}`}
+                            className="rounded-lg border border-gray-200 shadow-sm"
+                            style={{width: '85px', height: '85px', objectFit: 'cover'}}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="rounded-lg border border-gray-200 shadow-sm flex items-center justify-center"
+                          style={{
+                            width: '85px',
+                            height: '85px',
+                            backgroundColor: '#f8f9fa',
+                            display: GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE' ? 'flex' : 'none'
                           }}
-                        />
-                      ) : null}
-                      <div
-                        className="rounded-lg border border-gray-200 shadow-sm flex items-center justify-center"
-                        style={{
-                          width: '85px',
-                          height: '85px',
-                          backgroundColor: '#f8f9fa',
-                          display: GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE' ? 'flex' : 'none'
-                        }}
-                      >
-                        <div className="text-center text-xs" style={{color: '#236383'}}>
-                          <i className="lucide-map-pin w-4 h-4 mx-auto mb-1"></i>
-                          <div className="font-semibold text-xs">{host.area}</div>
+                        >
+                          <div className="text-center text-xs" style={{color: '#236383'}}>
+                            <i className="lucide-map-pin w-4 h-4 mx-auto mb-1"></i>
+                            <div className="font-semibold text-xs">{host.area}</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
+                      <div className="flex justify-between items-start mb-5">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
                             {userCoords && viewMode === 'proximity' && index < 3 && (
                               <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white ${
                                 index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
@@ -1038,40 +1045,42 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 {index + 1}
                               </span>
                             )}
-                            <h3 className="font-bold text-xl">{host.name}</h3>
+                            <h3 className="font-bold text-2xl">{host.name}</h3>
                             {host.distance && (
-                              <span className="premium-badge px-3 py-1.5 text-sm font-semibold rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
+                              <span className="premium-badge px-4 py-2 text-sm font-semibold rounded-full" style={{backgroundColor: '#E6F7FF', color: '#007E8C'}}>
                                 {host.distance} mi
                               </span>
                             )}
                           </div>
-                          <p className="text-base font-medium mb-3" style={{color: '#236383'}}>
+                          <p className="text-lg font-medium mb-4" style={{color: '#236383'}}>
                             📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-3 ml-4">
                           {userCoords && (
                             <button
                               onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
-                              className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-xs flex items-center"
+                              className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center"
                               style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
+                              title={showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'}
                             >
                               <i className="lucide-route w-3 h-3 mr-1"></i>
-                              {showingDirections === host.id ? 'Clear Route' : 'Show Route'}
+                              {showingDirections === host.id ? 'Clear Route' : 'Show on Map'}
                             </button>
                           )}
                           <button
                             onClick={() => setSelectedHost(host)}
-                            className="btn-primary px-5 py-2.5 rounded-xl font-medium text-white text-sm flex items-center"
+                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center"
                             style={{backgroundColor: '#007E8C'}}
+                            title="Get directions to this host in Apple or Google Maps"
                           >
                             <i className="lucide-navigation w-3 h-3 mr-1"></i>
-                            Directions
+                            Get Directions
                           </button>
                         </div>
                       </div>
 
-                      <div className="space-y-3 text-base">
+                      <div className="space-y-4 text-base">
                         <div className="info-box p-4">
                           <div className="flex items-start">
                             <i className="lucide-clock w-5 h-5 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
@@ -1111,9 +1120,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 onClick={() => openGoogleMapsDirections(host)}
                                 className="btn-primary text-xs px-5 py-2.5 rounded-xl font-medium flex items-center"
                                 style={{backgroundColor: '#007E8C', color: 'white'}}
+                                title="Open this location in Google Maps"
                               >
                                 <i className="lucide-external-link w-3 h-3 mr-1"></i>
-                                Maps
+                                Google Maps
                               </button>
                             </div>
                           </div>
