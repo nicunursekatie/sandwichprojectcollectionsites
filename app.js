@@ -716,6 +716,29 @@ This is safe because your API key is already restricted to only the Geocoding AP
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
+        {/* Announcement Banner */}
+        <div className="mb-6 p-6 rounded-2xl" style={{backgroundColor: '#FFF3CD', border: '3px solid #FBAD3F'}}>
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 text-3xl">
+              ⚠️
+            </div>
+            <div>
+              <h2 className="text-xl font-bold mb-2" style={{color: '#A31C41'}}>
+                Important: Hosts NOT Collecting This Week
+              </h2>
+              <p className="text-lg font-semibold mb-2" style={{color: '#236383'}}>
+                The following hosts are <strong>NOT available</strong> for drop-offs this week:
+              </p>
+              <p className="text-lg font-bold" style={{color: '#A31C41'}}>
+                Carrey H., Jen C., Sarah K., Della F., Angie B.
+              </p>
+              <p className="text-base mt-2" style={{color: '#007E8C'}}>
+                Please choose a different host from the available list below.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="bg-white rounded-2xl premium-card-header p-8 mb-8">
           <div className="flex justify-between items-start mb-6">
