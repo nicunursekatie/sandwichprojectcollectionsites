@@ -517,9 +517,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
     setMap(mapInstance);
   }, [userCoords, availableHosts, map, showAllHostsOnMap]);
 
-  // Load Google Maps API when user has location and switches to map view
+  // Load Google Maps API when user has location (load API, but don't initialize map yet)
   React.useEffect(() => {
-    if (mapLoaded || !userCoords || viewMode !== 'map') return;
+    if (mapLoaded || !userCoords) return;
 
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=marker,geometry`;
@@ -535,7 +535,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         document.head.removeChild(existingScript);
       }
     };
-  }, [userCoords, viewMode, GOOGLE_MAPS_API_KEY, mapLoaded]);
+  }, [userCoords, GOOGLE_MAPS_API_KEY, mapLoaded]);
 
   // Reset map when toggle changes
   React.useEffect(() => {
@@ -544,11 +544,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   }, [showAllHostsOnMap]);
 
-  // Initialize map when API is loaded, user has location, AND map view is active
+  // Initialize map when API is loaded, user has location, AND map div exists
   React.useEffect(() => {
-    if (mapLoaded && userCoords && viewMode === 'map') {
-      // Small delay to ensure DOM element exists
-      setTimeout(initializeMap, 100);
+    if (mapLoaded && userCoords && viewMode !== 'list') {
+      // Check if map element exists in DOM before initializing
+      const mapElement = document.getElementById('map');
+      if (mapElement) {
+        // Small delay to ensure DOM element is fully ready
+        setTimeout(initializeMap, 100);
+      }
     }
   }, [mapLoaded, userCoords, viewMode, initializeMap]);
 
