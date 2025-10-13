@@ -398,12 +398,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
               Find Locations Near You
             </label>
             <p className="text-sm mb-4" style={{color: '#007E8C'}}>
-              Enter your address to see hosts sorted by distance
+              Enter YOUR address to find the host closest to you
             </p>
             <div className="flex gap-3 mb-3">
               <input
                 type="text"
-                placeholder="Enter address, neighborhood, or ZIP code"
+                placeholder="Enter YOUR address, neighborhood, or ZIP code"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
