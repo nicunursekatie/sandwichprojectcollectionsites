@@ -134,6 +134,12 @@ const HostAvailabilityApp = () => {
   };
 
   const exportHosts = () => {
+    trackEvent('admin_export_hosts', {
+      event_category: 'Admin',
+      event_label: 'Export Hosts JSON',
+      host_count: allHosts.length
+    });
+    
     const dataStr = JSON.stringify(allHosts, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = `sandwich-hosts-${new Date().toISOString().split('T')[0]}.json`;
@@ -145,6 +151,12 @@ const HostAvailabilityApp = () => {
   };
 
   const copyAsCode = () => {
+    trackEvent('admin_copy_code', {
+      event_category: 'Admin',
+      event_label: 'Copy Hosts as Code',
+      host_count: allHosts.length
+    });
+    
     const codeStr = `    return [\n${allHosts.map(host =>
       `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}', openTime: '${host.openTime}', closeTime: '${host.closeTime}'${host.thursdayOpenTime ? `, thursdayOpenTime: '${host.thursdayOpenTime}', thursdayCloseTime: '${host.thursdayCloseTime}'` : ''}, notes: '${host.notes}', available: ${host.available} }`
     ).join(',\n')}\n    ];`;
@@ -169,8 +181,17 @@ const HostAvailabilityApp = () => {
           const importedHosts = JSON.parse(e.target.result);
           setAllHosts(importedHosts);
           alert('Hosts imported successfully!');
+          trackEvent('admin_import_hosts', {
+            event_category: 'Admin',
+            event_label: 'Import Hosts JSON',
+            host_count: importedHosts.length
+          });
         } catch (error) {
           alert('Error importing file. Please check the format.');
+          trackEvent('admin_import_error', {
+            event_category: 'Admin',
+            event_label: 'Import Failed'
+          });
         }
       };
       reader.readAsText(file);
@@ -605,6 +626,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
       // Add click listener to show host info
       marker.addListener('click', () => {
         setSelectedHost(host);
+        trackEvent('map_marker_click', {
+          event_category: 'Map',
+          event_label: 'Marker Clicked',
+          host_name: host.name,
+          host_area: host.area,
+          rank: rank
+        });
       });
     });
 
@@ -1176,7 +1204,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             </button>
                           )}
                           <button
-                            onClick={() => setSelectedHost(host)}
+                            onClick={() => {
+                              setSelectedHost(host);
+                              trackEvent('get_directions_click', {
+                                event_category: 'Directions',
+                                event_label: 'Get Directions Button',
+                                host_name: host.name,
+                                host_area: host.area
+                              });
+                            }}
                             className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
                             style={{backgroundColor: '#007E8C'}}
                             title="Get directions to this host in Apple or Google Maps"
@@ -1220,7 +1256,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <i className="lucide-phone w-5 h-5 mr-2" style={{color: '#007E8C'}}></i>
                             <div>
                               <span className="font-semibold" style={{color: '#236383'}}>Contact: </span>
-                              <a href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} className="hover:underline font-semibold" style={{color: '#007E8C'}}>
+                              <a 
+                                href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} 
+                                className="hover:underline font-semibold" 
+                                style={{color: '#007E8C'}}
+                                onClick={() => {
+                                  trackEvent('call_host', {
+                                    event_category: 'Contact',
+                                    event_label: 'Phone Call',
+                                    host_name: host.name,
+                                    host_area: host.area
+                                  });
+                                }}
+                              >
                                 {host.phone}
                               </a>
                             </div>
@@ -1355,7 +1403,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             </button>
                           )}
                           <button
-                            onClick={() => setSelectedHost(host)}
+                            onClick={() => {
+                              setSelectedHost(host);
+                              trackEvent('get_directions_click', {
+                                event_category: 'Directions',
+                                event_label: 'Get Directions Button',
+                                host_name: host.name,
+                                host_area: host.area
+                              });
+                            }}
                             className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
                             style={{backgroundColor: '#007E8C'}}
                             title="Get directions to this host in Apple or Google Maps"
@@ -1399,7 +1455,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <i className="lucide-phone w-5 h-5 mr-2" style={{color: '#007E8C'}}></i>
                             <div>
                               <span className="font-semibold" style={{color: '#236383'}}>Contact: </span>
-                              <a href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} className="hover:underline font-semibold" style={{color: '#007E8C'}}>
+                              <a 
+                                href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} 
+                                className="hover:underline font-semibold" 
+                                style={{color: '#007E8C'}}
+                                onClick={() => {
+                                  trackEvent('call_host', {
+                                    event_category: 'Contact',
+                                    event_label: 'Phone Call',
+                                    host_name: host.name,
+                                    host_area: host.area
+                                  });
+                                }}
+                              >
                                 {host.phone}
                               </a>
                             </div>
@@ -1465,6 +1533,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   style={{backgroundColor: '#007E8C'}}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => {
+                    trackEvent('open_apple_maps', {
+                      event_category: 'External Navigation',
+                      event_label: 'Apple Maps',
+                      host_name: selectedHost.name,
+                      host_area: selectedHost.area
+                    });
+                  }}
                 >
                   🍎 Open in Apple Maps
                 </a>
@@ -1478,6 +1554,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <button
                   onClick={() => {
                     const coords = `${selectedHost.lat}, ${selectedHost.lng}`;
+                    trackEvent('copy_coordinates', {
+                      event_category: 'Directions',
+                      event_label: 'Copy Coordinates',
+                      host_name: selectedHost.name,
+                      host_area: selectedHost.area
+                    });
                     navigator.clipboard.writeText(coords).then(() => {
                       alert(`Coordinates copied to clipboard:\n${coords}`);
                     }).catch(() => {
