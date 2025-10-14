@@ -906,7 +906,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
           {/* View Toggle */}
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => {
+                setViewMode('list');
+                trackEvent('view_mode_change', {
+                  event_category: 'View',
+                  event_label: 'List View Selected'
+                });
+              }}
               className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
                 viewMode === 'list' || viewMode === 'proximity' ? 'active' : ''
               }`}
@@ -918,7 +924,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
               📋 List View
             </button>
             <button
-              onClick={() => setViewMode('map')}
+              onClick={() => {
+                setViewMode('map');
+                trackEvent('view_mode_change', {
+                  event_category: 'View',
+                  event_label: 'Map View Selected'
+                });
+              }}
               className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
                 viewMode === 'map' ? 'active' : ''
               }`}
@@ -972,7 +984,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Toggle for showing all hosts on map */}
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setShowAllHostsOnMap(!showAllHostsOnMap)}
+                    onClick={() => {
+                      const newValue = !showAllHostsOnMap;
+                      setShowAllHostsOnMap(newValue);
+                      trackEvent('map_hosts_toggle', {
+                        event_category: 'Map',
+                        event_label: newValue ? 'Show All Hosts' : 'Show Closest 3'
+                      });
+                    }}
                     className="premium-badge px-4 py-2 rounded-xl font-semibold text-sm transition-all hover:shadow-md"
                     style={{
                       backgroundColor: showAllHostsOnMap ? '#007E8C' : 'white',
@@ -983,7 +1002,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     {showAllHostsOnMap ? `Showing All ${availableHosts.length} Hosts` : 'Showing Closest 3 Hosts'}
                   </button>
                   <button
-                    onClick={() => setShowAllHostsOnMap(!showAllHostsOnMap)}
+                    onClick={() => {
+                      const newValue = !showAllHostsOnMap;
+                      setShowAllHostsOnMap(newValue);
+                      trackEvent('map_hosts_toggle', {
+                        event_category: 'Map',
+                        event_label: newValue ? 'Show All Hosts' : 'Show Closest 3'
+                      });
+                    }}
                     className="text-xs font-semibold hover:underline transition-all"
                     style={{color: '#007E8C'}}
                   >
