@@ -45,8 +45,9 @@
                 border-bottom: 3px solid #236383 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 30px 40px !important;
-                min-height: 140px !important;
+                padding: 30px 40px 25px !important;
+                min-height: 160px !important;
+                flex-shrink: 0 !important;
             }
 
             .main-logo {
@@ -89,11 +90,12 @@
             }
 
             .content-area {
-                padding: 20px 35px 20px !important;
+                padding: 30px 35px 25px !important;
                 flex: 1 !important;
                 display: flex !important;
                 flex-direction: column !important;
-                justify-content: space-around !important;
+                justify-content: space-evenly !important;
+                min-height: 0 !important;
             }
 
             .qr-container {
@@ -104,7 +106,7 @@
 
             .qr-container-row-2 {
                 gap: 45px !important;
-                margin-top: 25px !important;
+                margin-top: 30px !important;
                 max-width: 80% !important;
             }
 
@@ -157,6 +159,7 @@
                 border-top: 3px solid #FBAD3F !important;
                 padding: 20px 50px 20px !important;
                 min-height: auto !important;
+                flex-shrink: 0 !important;
             }
 
             .cta-button {
@@ -187,6 +190,7 @@
                 padding: 18px !important;
                 font-size: 30px !important;
                 font-weight: 800 !important;
+                flex-shrink: 0 !important;
             }
 
             .website-footer a {
