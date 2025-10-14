@@ -448,13 +448,13 @@
         /* Print Optimization */
         @media print {
             @page {
-                margin: 0;
+                margin: 0.25in;
                 size: 8.5in 11in;
             }
 
             .container {
-                width: 8.5in;
-                height: 11in;
+                width: 100%;
+                min-height: auto;
                 page-break-inside: avoid;
             }
 
