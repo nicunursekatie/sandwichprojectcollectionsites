@@ -18,6 +18,13 @@ const HostAvailabilityApp = () => {
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
 
+  // Google Analytics tracking helper
+  const trackEvent = (eventName, eventParams = {}) => {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', eventName, eventParams);
+    }
+  };
+
   // Get next Wednesday's date
   const getNextWednesday = () => {
     const today = new Date();
@@ -322,6 +329,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Get user's current location
   const getCurrentLocation = () => {
+    trackEvent('get_current_location', {
+      event_category: 'Location',
+      event_label: 'Use Current Location Button'
+    });
+    
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -331,13 +343,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
           });
           setUserAddress('Current Location');
           setViewMode('list');
+          
+          trackEvent('location_success', {
+            event_category: 'Location',
+            event_label: 'Current Location Retrieved'
+          });
         },
         (error) => {
           alert('Could not get your location. Please enter an address instead.');
+          trackEvent('location_error', {
+            event_category: 'Location',
+            event_label: 'Location Permission Denied'
+          });
         }
       );
     } else {
       alert('Location services not available. Please enter an address.');
+      trackEvent('location_unavailable', {
+        event_category: 'Location',
+        event_label: 'Geolocation Not Supported'
+      });
     }
   };
 
@@ -409,6 +434,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
       setUserCoords(null);
       setUserAddress('');
       setViewMode('list');
+      
+      trackEvent('search_by_name', {
+        event_category: 'Search',
+        event_label: 'Name/Area Filter',
+        search_term: input
+      });
     } else {
       // Try geocoding as an address
       const success = await geocodeAddress(input);
@@ -416,6 +447,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
         setUserAddress(input);
         setNameSearch(''); // Clear any name filter
         setViewMode('proximity');
+        
+        trackEvent('search_by_address', {
+          event_category: 'Search',
+          event_label: 'Address Geocoded',
+          search_term: input
+        });
       } else {
         // Geocoding failed, fall back to name search if we have matches
         if (matchingHosts.length > 0) {
@@ -423,6 +460,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
           setUserCoords(null);
           setUserAddress('');
           setViewMode('list');
+          
+          trackEvent('search_fallback', {
+            event_category: 'Search',
+            event_label: 'Geocode Failed - Used Name Search',
+            search_term: input
+          });
         }
       }
     }
@@ -629,6 +672,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
   const showDirections = (host) => {
     if (!directionsService || !directionsRenderer || !userCoords) return;
 
+    trackEvent('show_directions', {
+      event_category: 'Directions',
+      event_label: 'Show Route on Map',
+      host_name: host.name,
+      host_area: host.area
+    });
+
     const request = {
       origin: userCoords,
       destination: { lat: host.lat, lng: host.lng },
@@ -658,8 +708,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
           distance: step.distance.text,
           duration: step.duration.text
         })));
+        
+        trackEvent('directions_calculated', {
+          event_category: 'Directions',
+          event_label: 'Route Displayed',
+          host_name: host.name,
+          distance: leg.distance.text,
+          duration: leg.duration.text
+        });
       } else {
         alert('Could not calculate driving directions. Please use the external map links instead.');
+        trackEvent('directions_error', {
+          event_category: 'Directions',
+          event_label: 'Route Calculation Failed',
+          host_name: host.name
+        });
       }
     });
   };
@@ -676,6 +739,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Open Google Maps with directions
   const openGoogleMapsDirections = (host) => {
+    trackEvent('open_google_maps', {
+      event_category: 'External Navigation',
+      event_label: 'Google Maps',
+      host_name: host.name,
+      host_area: host.area
+    });
+    
     if (userCoords) {
       const url = `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}`;
       window.open(url, '_blank');
@@ -689,6 +759,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
   // Email directions
   const emailDirections = () => {
     if (!routeInfo || !directionSteps) return;
+
+    trackEvent('email_directions', {
+      event_category: 'Directions',
+      event_label: 'Email Directions',
+      host_name: routeInfo.hostName,
+      distance: routeInfo.distance,
+      duration: routeInfo.duration
+    });
 
     const subject = encodeURIComponent(`Directions to ${routeInfo.hostName} - Sandwich Drop-Off`);
 
