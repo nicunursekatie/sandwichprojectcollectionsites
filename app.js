@@ -56,10 +56,18 @@ const HostAvailabilityApp = () => {
 
   // Initialize hosts from localStorage or use default data
   const getInitialHosts = () => {
+    const DATA_VERSION = '2025-10-16'; // Update this when host availability changes
+    const savedVersion = localStorage.getItem('sandwichHostsVersion');
     const savedHosts = localStorage.getItem('sandwichHosts');
-    if (savedHosts) {
+
+    // If version doesn't match, clear old data and use defaults
+    if (savedHosts && savedVersion === DATA_VERSION) {
       return JSON.parse(savedHosts);
     }
+
+    // Clear old data and set new version
+    localStorage.setItem('sandwichHostsVersion', DATA_VERSION);
+
     // Default host data with actual coordinates from your spreadsheet
     return [
     { id: 1, name: 'Karen C.', area: 'Johns Creek', neighborhood: 'Glenn Abbey', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
