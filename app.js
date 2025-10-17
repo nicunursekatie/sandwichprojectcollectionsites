@@ -507,11 +507,23 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Initialize Google Map
   const initializeMap = React.useCallback(() => {
-    if (!userCoords || !window.google || map) return;
+    if (!window.google || map) return;
+
+    // Calculate map center: use user location if available, otherwise center on Atlanta
+    const atlBounds = window.CONFIG?.ATLANTA_BOUNDS || {
+      southwest: { lat: 33.4734, lng: -84.8882 },
+      northeast: { lat: 34.1620, lng: -83.9937 }
+    };
+    const atlCenter = {
+      lat: (atlBounds.southwest.lat + atlBounds.northeast.lat) / 2,
+      lng: (atlBounds.southwest.lng + atlBounds.northeast.lng) / 2
+    };
+    const mapCenter = userCoords || atlCenter;
+    const mapZoom = userCoords ? 11 : 10;
 
     const mapInstance = new window.google.maps.Map(document.getElementById('map'), {
-      center: userCoords,
-      zoom: 11,
+      center: mapCenter,
+      zoom: mapZoom,
       mapId: 'SANDWICH_DROP_OFF_MAP',
       styles: [
         {
@@ -521,80 +533,135 @@ This is safe because your API key is already restricted to only the Geocoding AP
       ]
     });
 
-    // Create user location marker content (blue)
-    const userMarkerContent = document.createElement('div');
-    userMarkerContent.innerHTML = `
-      <div style="
-        width: 24px; 
-        height: 24px; 
-        background: #47B3CB; 
-        border: 3px solid white; 
-        border-radius: 50%; 
-        position: relative;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      ">
+    // Add user location marker only if we have user coordinates
+    if (userCoords) {
+      const userMarkerContent = document.createElement('div');
+      userMarkerContent.innerHTML = `
         <div style="
-          width: 8px; 
-          height: 8px; 
-          background: white; 
-          border-radius: 50%; 
-          position: absolute; 
-          top: 50%; 
-          left: 50%; 
-          transform: translate(-50%, -50%);
-        "></div>
-      </div>
-    `;
+          width: 24px;
+          height: 24px;
+          background: #47B3CB;
+          border: 3px solid white;
+          border-radius: 50%;
+          position: relative;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        ">
+          <div style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+          "></div>
+        </div>
+      `;
 
-    // Add user location marker (blue)
-    new google.maps.marker.AdvancedMarkerElement({
-      position: userCoords,
-      map: mapInstance,
-      title: 'Your Location',
-      content: userMarkerContent
-    });
+      new google.maps.marker.AdvancedMarkerElement({
+        position: userCoords,
+        map: mapInstance,
+        title: 'Your Location',
+        content: userMarkerContent
+      });
+    }
 
-    // Sort hosts by distance and determine which to show on map
-    const hostsWithDistance = availableHosts.map(host => ({
-      ...host,
-      distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
-    })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+    // Prepare host data: sort by distance if user coords available, otherwise show all
+    let hostsToShowOnMap;
+    let hostsWithDistance;
 
-    const hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
+    if (userCoords) {
+      hostsWithDistance = availableHosts.map(host => ({
+        ...host,
+        distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
+      })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
+    } else {
+      // No user location - show all hosts without distance sorting
+      hostsToShowOnMap = availableHosts;
+      hostsWithDistance = availableHosts;
+    }
 
     // Add host markers with numbered labels
     hostsToShowOnMap.forEach((host, index) => {
       const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
 
-      // Determine marker color based on rank
-      let markerColor = '#A31C41'; // Default red
-      let badgeColor = '#FFFFFF';
-      let badgeTextColor = '#236383';
+      // Determine marker styling based on whether we have user location
+      let markerColor = '#007E8C'; // Default teal
+      let badgeColor = '#007E8C';
+      let badgeTextColor = '#FFFFFF';
 
-      if (rank === 1) {
-        markerColor = '#FBBF24'; // Gold
-        badgeColor = '#FBBF24';
-        badgeTextColor = '#000000';
-      } else if (rank === 2) {
-        markerColor = '#9CA3AF'; // Silver
-        badgeColor = '#9CA3AF';
-        badgeTextColor = '#000000';
-      } else if (rank === 3) {
-        markerColor = '#F59E0B'; // Bronze
-        badgeColor = '#F59E0B';
-        badgeTextColor = '#000000';
+      if (userCoords) {
+        // With user location, use ranking colors
+        markerColor = '#A31C41'; // Default red
+        badgeColor = '#FFFFFF';
+        badgeTextColor = '#236383';
+
+        if (rank === 1) {
+          markerColor = '#FBBF24'; // Gold
+          badgeColor = '#FBBF24';
+          badgeTextColor = '#000000';
+        } else if (rank === 2) {
+          markerColor = '#9CA3AF'; // Silver
+          badgeColor = '#9CA3AF';
+          badgeTextColor = '#000000';
+        } else if (rank === 3) {
+          markerColor = '#F59E0B'; // Bronze
+          badgeColor = '#F59E0B';
+          badgeTextColor = '#000000';
+        }
       }
 
-      // Create host marker content with numbered label
+      // Create host marker content
       const hostMarkerContent = document.createElement('div');
-      hostMarkerContent.innerHTML = `
-        <div style="
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          cursor: pointer;
-        ">
-          <!-- Numbered badge -->
+
+      if (userCoords) {
+        // Show numbered markers with distance when user location is known
+        hostMarkerContent.innerHTML = `
+          <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+          ">
+            <!-- Numbered badge -->
+            <div style="
+              width: 32px;
+              height: 32px;
+              background: ${badgeColor};
+              border: 3px solid white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 700;
+              font-size: 14px;
+              color: ${badgeTextColor};
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              margin-bottom: 4px;
+            ">
+              ${rank}
+            </div>
+            <!-- Info label -->
+            <div style="
+              background: white;
+              border: 2px solid ${markerColor};
+              border-radius: 8px;
+              padding: 4px 8px;
+              font-size: 11px;
+              font-weight: bold;
+              color: #236383;
+              white-space: nowrap;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            ">
+              ${host.distance}mi
+            </div>
+          </div>
+        `;
+      } else {
+        // Show simple markers without distance when no user location
+        hostMarkerContent.innerHTML = `
           <div style="
             width: 32px;
             height: 32px;
@@ -604,35 +671,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-            color: ${badgeTextColor};
+            cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            margin-bottom: 4px;
           ">
-            ${rank}
+            <div style="
+              width: 12px;
+              height: 12px;
+              background: white;
+              border-radius: 50%;
+            "></div>
           </div>
-          <!-- Info label -->
-          <div style="
-            background: white;
-            border: 2px solid ${markerColor};
-            border-radius: 8px;
-            padding: 4px 8px;
-            font-size: 11px;
-            font-weight: bold;
-            color: #236383;
-            white-space: nowrap;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-          ">
-            ${host.distance}mi
-          </div>
-        </div>
-      `;
+        `;
+      }
+
+      const markerTitle = userCoords
+        ? `#${rank}: ${host.name} - ${host.distance} miles away`
+        : host.name;
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
         map: mapInstance,
-        title: `#${rank}: ${host.name} - ${host.distance} miles away`,
+        title: markerTitle,
         content: hostMarkerContent
       });
 
@@ -1090,34 +1149,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
               <div className="relative">
                 <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
-
-                {/* Friendly Pre-Permission Overlay */}
-                {!userCoords && !geocoding && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)'}}>
-                    <div className="text-center px-6 py-8 max-w-md">
-                      <div className="text-5xl mb-4">📍</div>
-                      <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>
-                        Find a Nearby Drop-Off
-                      </h3>
-                      <p className="text-lg mb-6" style={{color: '#007E8C'}}>
-                        Tap <span className="font-semibold">"Use My Location"</span> or enter your ZIP code to get started.
-                      </p>
-                      <div className="flex flex-col gap-3 pointer-events-auto">
-                        <button
-                          onClick={getUserLocation}
-                          className="btn-primary px-8 py-4 rounded-xl font-semibold text-white text-lg flex items-center justify-center"
-                          style={{backgroundColor: '#007E8C'}}
-                        >
-                          <i className="lucide-locate w-5 h-5 mr-2"></i>
-                          Use My Location
-                        </button>
-                        <p className="text-sm" style={{color: '#666'}}>
-                          or scroll up to search by address
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Turn-by-Turn Directions */}
