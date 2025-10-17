@@ -697,9 +697,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   }, [showAllHostsOnMap]);
 
-  // Initialize map when API is loaded, user has location, AND map div exists
+  // Initialize map when API is loaded AND map div exists (works with or without user location)
   React.useEffect(() => {
-    if (mapLoaded && userCoords && viewMode !== 'list') {
+    if (mapLoaded && viewMode !== 'list') {
       // Check if map element exists in DOM before initializing
       const mapElement = document.getElementById('map');
       if (mapElement) {
