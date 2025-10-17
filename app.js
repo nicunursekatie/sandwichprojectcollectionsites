@@ -397,12 +397,28 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   const sortedHosts = React.useMemo(() => {
     if (!userCoords || viewMode !== 'proximity') return availableHosts;
-    
-    return availableHosts.map(host => ({
+
+    const sorted = availableHosts.map(host => ({
       ...host,
       distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
     })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-  }, [userCoords, viewMode, availableHosts]);
+
+    // Track the top 3 closest hosts for analytics
+    if (sorted.length > 0) {
+      trackEvent('proximity_search_results', {
+        event_category: 'Search',
+        event_label: 'Closest Hosts',
+        closest_host: sorted[0].name,
+        closest_host_area: sorted[0].area,
+        closest_host_distance: sorted[0].distance.toFixed(2),
+        second_closest: sorted[1]?.name || 'N/A',
+        third_closest: sorted[2]?.name || 'N/A',
+        search_location: userAddress
+      });
+    }
+
+    return sorted;
+  }, [userCoords, viewMode, availableHosts, userAddress]);
 
   const filteredHosts = React.useMemo(() => {
     let filtered = viewMode === 'proximity' ? sortedHosts : availableHosts;
@@ -1214,7 +1230,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
               </div>
             ) : (
-              filteredHosts.map((host, index) => (
+              filteredHosts.map((host, index) => {
+                // Track host card impressions for top 5 results
+                React.useEffect(() => {
+                  if (index < 5) {
+                    trackEvent('host_card_viewed', {
+                      event_category: 'Host Visibility',
+                      event_label: `Position ${index + 1}`,
+                      host_name: host.name,
+                      host_area: host.area,
+                      view_mode: viewMode,
+                      position: index + 1,
+                      has_distance: !!host.distance,
+                      distance: host.distance?.toFixed(2) || 'N/A'
+                    });
+                  }
+                }, [host.id, index, viewMode]);
+
+                return (
                 <div
                   key={host.id}
                   className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow ${
@@ -1381,7 +1414,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
               </div>
             )}
@@ -1413,7 +1447,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
               </div>
             ) : (
-              filteredHosts.map((host, index) => (
+              filteredHosts.map((host, index) => {
+                // Track host card impressions for top 5 results
+                React.useEffect(() => {
+                  if (index < 5) {
+                    trackEvent('host_card_viewed', {
+                      event_category: 'Host Visibility',
+                      event_label: `Position ${index + 1}`,
+                      host_name: host.name,
+                      host_area: host.area,
+                      view_mode: viewMode,
+                      position: index + 1,
+                      has_distance: !!host.distance,
+                      distance: host.distance?.toFixed(2) || 'N/A'
+                    });
+                  }
+                }, [host.id, index, viewMode]);
+
+                return (
                 <div
                   key={host.id}
                   className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow ${
