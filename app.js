@@ -955,74 +955,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
             )}
           </div>
 
-          {/* Resources Section */}
-          <div className="info-box p-5 mb-6" style={{background: 'linear-gradient(135deg, rgba(251, 173, 63, 0.05) 0%, rgba(35, 99, 131, 0.05) 100%)', border: '2px solid rgba(251, 173, 63, 0.3)'}}>
-            <h3 className="text-xl font-bold mb-2" style={{color: '#236383'}}>
-              📚 Sandwich Making Resources
-            </h3>
-            <p className="text-base mb-3" style={{color: '#007E8C'}}>
-              Everything you need to make safe, delicious sandwiches for our community
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <a
-                href="https://images.squarespace-cdn.com/content/644c1a7612e58c4d658841f5/65728819-6fb4-49af-a3ac-c98e11e3ac07/20240622-TSP-Deli+Sandwich+Making+101.png?content-type=image%2Fpng"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
-                style={{backgroundColor: 'white', border: '1.5px solid #e0e0e0'}}
-                onClick={() => trackEvent('resource_click', {event_category: 'Resources', event_label: 'Deli Sandwich Guide'})}
-              >
-                <div className="text-2xl">🥪</div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-base" style={{color: '#236383'}}>Deli Sandwich Making 101</div>
-                  <div className="text-sm" style={{color: '#666'}}>Step-by-step guide</div>
-                </div>
-              </a>
-              <a
-                href="https://images.squarespace-cdn.com/content/644c1a7612e58c4d658841f5/145e50cb-547e-4f35-b703-e69c39d6d309/20250622-TSP-PBJ+Sandwich+Making+101.png?content-type=image%2Fpng"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
-                style={{backgroundColor: 'white', border: '1.5px solid #e0e0e0'}}
-                onClick={() => trackEvent('resource_click', {event_category: 'Resources', event_label: 'PBJ Sandwich Guide'})}
-              >
-                <div className="text-2xl">🥜</div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-base" style={{color: '#236383'}}>PB&J Sandwich Making 101</div>
-                  <div className="text-sm" style={{color: '#666'}}>Quick & easy instructions</div>
-                </div>
-              </a>
-              <a
-                href="https://static1.squarespace.com/static/644c1a7612e58c4d658841f5/t/689e37912777ae317d08033a/1755199378103/20250205-TSP-Food%2BSafety%2BVolunteers.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
-                style={{backgroundColor: 'white', border: '1.5px solid #e0e0e0'}}
-                onClick={() => trackEvent('resource_click', {event_category: 'Resources', event_label: 'Food Safety Guidelines'})}
-              >
-                <div className="text-2xl">🧼</div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-base" style={{color: '#236383'}}>Food Safety Guidelines</div>
-                  <div className="text-sm" style={{color: '#666'}}>Keep everyone safe & healthy</div>
-                </div>
-              </a>
-              <a
-                href="https://nicunursekatie.github.io/sandwichinventory/inventorycalculator.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
-                style={{backgroundColor: 'white', border: '1.5px solid #e0e0e0'}}
-                onClick={() => trackEvent('resource_click', {event_category: 'Resources', event_label: 'Shopping Planner'})}
-              >
-                <div className="text-2xl">🛒</div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-base" style={{color: '#236383'}}>Shopping Planner Tool</div>
-                  <div className="text-sm" style={{color: '#666'}}>Budget & plan your supplies</div>
-                </div>
-              </a>
-            </div>
-          </div>
-
           {/* View Toggle */}
           <div className="flex flex-wrap gap-3">
             <button
@@ -1740,6 +1672,76 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
           </div>
         )}
+
+        {/* Resources Section - Moved to bottom for better UX */}
+        <div className="max-w-4xl mx-auto mt-8 px-4">
+          <div className="info-box p-5 mb-6" style={{background: 'linear-gradient(135deg, rgba(251, 173, 63, 0.05) 0%, rgba(35, 99, 131, 0.05) 100%)', border: '2px solid rgba(251, 173, 63, 0.3)'}}>
+            <h3 className="text-xl font-bold mb-2" style={{color: '#236383'}}>
+              📚 Sandwich Making Resources
+            </h3>
+            <p className="text-base mb-3" style={{color: '#007E8C'}}>
+              Everything you need to make safe, delicious sandwiches for our community
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <a
+                href="https://images.squarespace-cdn.com/content/644c1a7612e58c4d658841f5/65728819-6fb4-49af-a3ac-c98e11e3ac07/20240622-TSP-Deli+Sandwich+Making+101.png?content-type=image%2Fpng"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
+                style={{backgroundColor: 'white', border: '1.5px solid #e0e0e0'}}
+                onClick={() => trackEvent('resource_click', {event_category: 'Resources', event_label: 'Deli Sandwich Guide'})}
+              >
+                <div className="text-2xl">🥪</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-base" style={{color: '#236383'}}>Deli Sandwich Making 101</div>
+                  <div className="text-sm" style={{color: '#666'}}>Step-by-step guide</div>
+                </div>
+              </a>
+              <a
+                href="https://images.squarespace-cdn.com/content/644c1a7612e58c4d658841f5/145e50cb-547e-4f35-b703-e69c39d6d309/20250622-TSP-PBJ+Sandwich+Making+101.png?content-type=image%2Fpng"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
+                style={{backgroundColor: 'white', border: '1.5px solid #e0e0e0'}}
+                onClick={() => trackEvent('resource_click', {event_category: 'Resources', event_label: 'PBJ Sandwich Guide'})}
+              >
+                <div className="text-2xl">🥜</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-base" style={{color: '#236383'}}>PB&J Sandwich Making 101</div>
+                  <div className="text-sm" style={{color: '#666'}}>Quick & easy instructions</div>
+                </div>
+              </a>
+              <a
+                href="https://static1.squarespace.com/static/644c1a7612e58c4d658841f5/t/689e37912777ae317d08033a/1755199378103/20250205-TSP-Food%2BSafety%2BVolunteers.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
+                style={{backgroundColor: 'white', border: '1.5px solid #e0e0e0'}}
+                onClick={() => trackEvent('resource_click', {event_category: 'Resources', event_label: 'Food Safety Guidelines'})}
+              >
+                <div className="text-2xl">🧼</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-base" style={{color: '#236383'}}>Food Safety Guidelines</div>
+                  <div className="text-sm" style={{color: '#666'}}>Keep everyone safe & healthy</div>
+                </div>
+              </a>
+              <a
+                href="https://nicunursekatie.github.io/sandwichinventory/inventorycalculator.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
+                style={{backgroundColor: 'white', border: '1.5px solid #e0e0e0'}}
+                onClick={() => trackEvent('resource_click', {event_category: 'Resources', event_label: 'Shopping Planner'})}
+              >
+                <div className="text-2xl">🛒</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-base" style={{color: '#236383'}}>Shopping Planner Tool</div>
+                  <div className="text-sm" style={{color: '#666'}}>Budget & plan your supplies</div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
 
         {/* Admin Modal */}
         {showAdmin && (
