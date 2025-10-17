@@ -1181,24 +1181,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
               </div>
             ) : (
-              filteredHosts.map((host, index) => {
-                // Track host card impressions for top 5 results
-                React.useEffect(() => {
-                  if (index < 5) {
-                    trackEvent('host_card_viewed', {
-                      event_category: 'Host Visibility',
-                      event_label: `Position ${index + 1}`,
-                      host_name: host.name,
-                      host_area: host.area,
-                      view_mode: viewMode,
-                      position: index + 1,
-                      has_distance: !!host.distance,
-                      distance: host.distance?.toFixed(2) || 'N/A'
-                    });
-                  }
-                }, [host.id, index, viewMode]);
-
-                return (
+              filteredHosts.map((host, index) => (
                 <div
                   key={host.id}
                   className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow ${
@@ -1365,8 +1348,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 </div>
               </div>
-              );
-            })
+              ))
           )}
               </div>
             )}
@@ -1398,24 +1380,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
               </div>
             ) : (
-              filteredHosts.map((host, index) => {
-                // Track host card impressions for top 5 results
-                React.useEffect(() => {
-                  if (index < 5) {
-                    trackEvent('host_card_viewed', {
-                      event_category: 'Host Visibility',
-                      event_label: `Position ${index + 1}`,
-                      host_name: host.name,
-                      host_area: host.area,
-                      view_mode: viewMode,
-                      position: index + 1,
-                      has_distance: !!host.distance,
-                      distance: host.distance?.toFixed(2) || 'N/A'
-                    });
-                  }
-                }, [host.id, index, viewMode]);
-
-                return (
+              filteredHosts.map((host, index) => (
                 <div
                   key={host.id}
                   className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow ${
@@ -1582,8 +1547,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                   </div>
                 </div>
-              );
-            })
+              ))
             )}
           </div>
         )}
