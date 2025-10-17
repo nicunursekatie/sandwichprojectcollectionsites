@@ -90,7 +90,7 @@ function formatTime(time24) {
  * @param {number} lon1 - Longitude of first point
  * @param {number} lat2 - Latitude of second point
  * @param {number} lon2 - Longitude of second point
- * @returns {string} - Distance in miles, formatted to 1 decimal place
+ * @returns {number} - Distance in miles (raw number for sorting/calculations)
  */
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 3959; // Earth's radius in miles
@@ -104,7 +104,8 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
 
-  return distance.toFixed(1);
+  // Return as number (not string) so .toFixed() can be called on it later
+  return parseFloat(distance.toFixed(1));
 }
 
 /**
