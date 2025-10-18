@@ -1206,8 +1206,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 </div>
               )}
-              </div>
-            )}
+            </div>
+          )}
 
             {/* Host List */}
             {viewMode !== 'map' && (
