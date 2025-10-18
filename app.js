@@ -729,9 +729,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
     setMap(mapInstance);
   }, [userCoords, availableHosts, map, showAllHostsOnMap]);
 
-  // Load Google Maps API when user has location (load API, but don't initialize map yet)
+  // Load Google Maps API on component mount
   React.useEffect(() => {
-    if (mapLoaded || !userCoords) return;
+    if (mapLoaded) return;
 
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=marker,geometry`;
@@ -747,7 +747,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         document.head.removeChild(existingScript);
       }
     };
-  }, [userCoords, GOOGLE_MAPS_API_KEY, mapLoaded]);
+  }, [GOOGLE_MAPS_API_KEY, mapLoaded]);
 
   // Reset map when toggle changes
   React.useEffect(() => {
