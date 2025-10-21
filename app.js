@@ -517,7 +517,7 @@ const HostAvailabilityApp = () => {
     ];
   };
 
-  const [allHosts, setAllHosts] = React.useState(getInitialHosts);
+  const [allHosts, setAllHosts] = React.useState(getInitialHosts());
 
   // Save hosts to localStorage whenever they change
   React.useEffect(() => {
