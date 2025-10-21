@@ -69,7 +69,7 @@ const HostAvailabilityApp = () => {
     localStorage.setItem('sandwichHostsVersion', DATA_VERSION);
 
     // Default host data with actual coordinates from your spreadsheet
-    [
+    return [
       {
         "id": 1,
         "name": "Karen C.",
