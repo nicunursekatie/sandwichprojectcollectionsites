@@ -514,8 +514,7 @@ const HostAvailabilityApp = () => {
         "notes": "",
         "available": true
       }
-    ]
-        ];
+    ];
   };
 
   const [allHosts, setAllHosts] = React.useState(getInitialHosts);
