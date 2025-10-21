@@ -528,15 +528,15 @@ const HostAvailabilityApp = () => {
   const addHost = (hostData) => {
     const newHost = {
       ...hostData,
-      id: Math.max(...allHosts.map(h => h.id)) + 1,
+      id: Math.max(...(allHosts || []).map(h => h.id)) + 1,
       lat: parseFloat(hostData.lat),
       lng: parseFloat(hostData.lng)
     };
-    setAllHosts([...allHosts, newHost]);
+    setAllHosts([...(allHosts || []), newHost]);
   };
 
   const updateHost = (hostId, hostData) => {
-    setAllHosts(allHosts.map(host => 
+    setAllHosts((allHosts || []).map(host => 
       host.id === hostId 
         ? { ...hostData, id: hostId, lat: parseFloat(hostData.lat), lng: parseFloat(hostData.lng) }
         : host
@@ -544,11 +544,11 @@ const HostAvailabilityApp = () => {
   };
 
   const deleteHost = (hostId) => {
-    setAllHosts(allHosts.filter(host => host.id !== hostId));
+    setAllHosts((allHosts || []).filter(host => host.id !== hostId));
   };
 
   const toggleHostAvailability = (hostId) => {
-    setAllHosts(allHosts.map(host => 
+    setAllHosts((allHosts || []).map(host => 
       host.id === hostId ? { ...host, available: !host.available } : host
     ));
   };
@@ -557,7 +557,7 @@ const HostAvailabilityApp = () => {
     trackEvent('admin_export_hosts', {
       event_category: 'Admin',
       event_label: 'Export Hosts JSON',
-      host_count: allHosts.length
+      host_count: (allHosts || []).length
     });
     
     const dataStr = JSON.stringify(allHosts, null, 2);
@@ -574,10 +574,10 @@ const HostAvailabilityApp = () => {
     trackEvent('admin_copy_code', {
       event_category: 'Admin',
       event_label: 'Copy Hosts as Code',
-      host_count: allHosts.length
+      host_count: (allHosts || []).length
     });
     
-    const codeStr = `    return [\n${allHosts.map(host =>
+    const codeStr = `    return [\n${(allHosts || []).map(host =>
       `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}', openTime: '${host.openTime}', closeTime: '${host.closeTime}'${host.thursdayOpenTime ? `, thursdayOpenTime: '${host.thursdayOpenTime}', thursdayCloseTime: '${host.thursdayCloseTime}'` : ''}, notes: '${host.notes}', available: ${host.available} }`
     ).join(',\n')}\n    ];`;
 
@@ -619,7 +619,7 @@ const HostAvailabilityApp = () => {
   };
 
   // Only show available hosts
-  const availableHosts = allHosts.filter(h => h.available);
+  const availableHosts = (allHosts || []).filter(h => h.available);
   const areas = [...new Set(availableHosts.map(h => h.area))].sort();
 
   // Use centralized distance calculation utility
@@ -2019,8 +2019,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                 {/* Hosts List */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-lg mb-3" style={{color: '#236383'}}>All Hosts ({allHosts.length})</h3>
-                  {allHosts.map(host => (
+                  <h3 className="font-semibold text-lg mb-3" style={{color: '#236383'}}>All Hosts ({(allHosts || []).length})</h3>
+                  {(allHosts || []).map(host => (
                     <div key={host.id} className={`p-4 rounded-xl border-2 ${host.available ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
