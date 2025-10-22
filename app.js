@@ -772,7 +772,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             lng: position.coords.longitude
           });
           setUserAddress('Current Location');
-          setViewMode('list');
+          setViewMode('proximity');
           
           trackEvent('location_success', {
             event_category: 'Location',
