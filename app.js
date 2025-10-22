@@ -18,11 +18,13 @@ const HostAvailabilityApp = () => {
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
 
-  // Google Analytics tracking helper
+  // Google Tag Manager tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
-    if (typeof window.gtag === 'function') {
-      window.gtag('event', eventName, eventParams);
-    }
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: eventName,
+      ...eventParams
+    });
   };
 
   // Scroll depth tracking
