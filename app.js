@@ -1521,7 +1521,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         border: `2px solid ${showAllHostsOnMap ? '#007E8C' : 'rgba(0, 126, 140, 0.3)'}`
                       }}
                     >
-                      {showAllHostsOnMap ? `Showing All ${availableHosts.length} Hosts` : 'Showing Closest 3 Hosts'}
+                      {showAllHostsOnMap ? `Showing All ${availableHosts.length} Hosts` : 'Show Closest 3 Hosts'}
                     </button>
                     <button
                       onClick={() => {
