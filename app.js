@@ -25,19 +25,16 @@ const HostAvailabilityApp = () => {
     }
   };
 
-  // Get next Wednesday's date
+  // Get next Wednesday's date (or today if today is Wednesday)
   const getNextWednesday = () => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 3 = Wednesday
     let daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
 
-    // If today is Wednesday, get next week's Wednesday
-    if (daysUntilWednesday === 0) {
-      daysUntilWednesday = 7;
-    }
-
+    // If today is Wednesday, return today (daysUntilWednesday will be 0)
     const nextWednesday = new Date(today);
     nextWednesday.setDate(today.getDate() + daysUntilWednesday);
+
     return nextWednesday;
   };
 
