@@ -1163,10 +1163,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Reset map when toggle changes
   React.useEffect(() => {
-    if (map && showAllHostsOnMap !== undefined) {
+    if (map) {
       setMap(null); // Force map re-initialization
     }
   }, [showAllHostsOnMap]);
+
+  // Reset map when user coordinates change (to re-center and add user marker)
+  const prevUserCoords = React.useRef(userCoords);
+  React.useEffect(() => {
+    if (userCoords && prevUserCoords.current !== userCoords && map) {
+      setMap(null); // Force map re-initialization with new user location
+    }
+    prevUserCoords.current = userCoords;
+  }, [userCoords, map]);
 
   // Initialize map when API is loaded AND map div exists (works with or without user location)
   React.useEffect(() => {
