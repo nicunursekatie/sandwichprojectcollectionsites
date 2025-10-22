@@ -1511,7 +1511,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         setShowAllHostsOnMap(newValue);
                         trackEvent('map_hosts_toggle', {
                           event_category: 'Map',
-                          event_label: newValue ? 'Show All Hosts' : 'Show Closest 3'
+                          event_label: newValue ? 'Show All Hosts' : 'Showing Closest 3'
                         });
                       }}
                       className="premium-badge px-4 py-2 rounded-xl font-semibold text-sm transition-all hover:shadow-md"
