@@ -28,6 +28,7 @@ const HostAvailabilityApp = () => {
   // Scroll depth tracking
   React.useEffect(() => {
     const scrollDepths = { 25: false, 50: false, 75: false, 100: false };
+    const sectionsViewed = {};
 
     const handleScroll = () => {
       const windowHeight = window.innerHeight;
@@ -46,9 +47,35 @@ const HostAvailabilityApp = () => {
           });
         }
       });
+
+      // Track specific section views
+      const sections = [
+        { id: 'map', name: 'Map Section' },
+        { id: 'root', name: 'Host List' }
+      ];
+
+      sections.forEach(section => {
+        const element = document.getElementById(section.id);
+        if (element && !sectionsViewed[section.id]) {
+          const rect = element.getBoundingClientRect();
+          const isInViewport = rect.top < windowHeight && rect.bottom > 0;
+
+          if (isInViewport) {
+            sectionsViewed[section.id] = true;
+            trackEvent('section_view', {
+              event_category: 'Engagement',
+              event_label: section.name,
+              section_id: section.id
+            });
+          }
+        }
+      });
     };
 
     window.addEventListener('scroll', handleScroll);
+    // Trigger once on mount to catch initial viewport
+    handleScroll();
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
