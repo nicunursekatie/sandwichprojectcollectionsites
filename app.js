@@ -25,6 +25,33 @@ const HostAvailabilityApp = () => {
     }
   };
 
+  // Scroll depth tracking
+  React.useEffect(() => {
+    const scrollDepths = { 25: false, 50: false, 75: false, 100: false };
+
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollPercent = (scrollTop / (documentHeight - windowHeight)) * 100;
+
+      // Track scroll depth milestones
+      [25, 50, 75, 100].forEach(depth => {
+        if (scrollPercent >= depth && !scrollDepths[depth]) {
+          scrollDepths[depth] = true;
+          trackEvent('scroll_depth', {
+            event_category: 'Engagement',
+            event_label: `${depth}% Scrolled`,
+            value: depth
+          });
+        }
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Get next Wednesday's date (or today if it's Wednesday and still drop-off day)
   const getNextWednesday = () => {
     const today = new Date();
