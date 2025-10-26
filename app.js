@@ -632,7 +632,7 @@ const HostAvailabilityApp = () => {
     });
     
     const codeStr = `    return [\n${(allHosts || []).map(host =>
-      `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}', openTime: '${host.openTime}', closeTime: '${host.closeTime}'${host.thursdayOpenTime ? `, thursdayOpenTime: '${host.thursdayOpenTime}', thursdayCloseTime: '${host.thursdayCloseTime}'` : ''}, notes: '${host.notes}', available: ${host.available} }`
+      `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}', openTime: '${host.openTime}', closeTime: '${host.closeTime}'${host.thursdayOpenTime ? `, thursdayOpenTime: '${host.thursdayOpenTime}', thursdayCloseTime: '${host.thursdayCloseTime}'` : ''}${host.customDropoffDays ? `, customDropoffDays: '${host.customDropoffDays}'` : ''}, notes: '${host.notes}', available: ${host.available} }`
     ).join(',\n')}\n    ];`;
 
     navigator.clipboard.writeText(codeStr).then(() => {
@@ -1399,8 +1399,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
                 Sandwich Drop-Off Locations
               </h1>
-              <p className="text-2xl font-bold" style={{color: '#007E8C'}}>
+              <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
                 {dropOffDate}
+              </p>
+              <p className="text-lg font-semibold" style={{color: '#A31C41'}}>
+                We only collect sandwiches on Wednesdays (some hosts may accept early Thursday AM drop-offs)
               </p>
             </div>
             <button
@@ -1798,6 +1801,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <div className="flex-1">
                               <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours</div>
                               <div className="font-medium mb-2" style={{color: '#007E8C'}}>{host.hours}</div>
+                              {host.customDropoffDays && (
+                                <div className="mb-2 p-2 rounded-lg" style={{backgroundColor: 'rgba(251, 173, 63, 0.1)', border: '1px solid #FBAD3F'}}>
+                                  <div className="text-sm font-semibold" style={{color: '#A31C41'}}>
+                                    ⭐ {host.customDropoffDays}
+                                  </div>
+                                </div>
+                              )}
                               {/* Availability Status */}
                               {(() => {
                                 const availability = getHostAvailability(host);
