@@ -176,7 +176,7 @@ const HostAvailabilityApp = () => {
         "openTime": "09:00",
         "closeTime": "17:00",
         "notes": "Please text prior to delivering to make sure host is available to receive sandwiches.",
-        "available": false
+        "available": true
       },
       {
         "id": 5,
@@ -386,7 +386,7 @@ const HostAvailabilityApp = () => {
         "openTime": "08:00",
         "closeTime": "18:00",
         "notes": "Tell the gatehouse guard you are going to Walter's home. Text Jenny when you arrive.",
-        "available": false
+        "available": true
       },
       {
         "id": 21,
@@ -483,7 +483,7 @@ const HostAvailabilityApp = () => {
         "openTime": "08:00",
         "closeTime": "19:00",
         "notes": "Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.",
-        "available": true
+        "available": false
       },
       {
         "id": 28,
