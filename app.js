@@ -386,7 +386,7 @@ const HostAvailabilityApp = () => {
         "openTime": "08:00",
         "closeTime": "18:00",
         "notes": "Tell the gatehouse guard you are going to Walter's home. Text Jenny when you arrive.",
-        "available": false
+        "available": true
       },
       {
         "id": 21,
