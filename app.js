@@ -483,7 +483,7 @@ const HostAvailabilityApp = () => {
         "openTime": "08:00",
         "closeTime": "19:00",
         "notes": "Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.",
-        "available": true
+        "available": false
       },
       {
         "id": 28,
