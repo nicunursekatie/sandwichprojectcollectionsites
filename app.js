@@ -1383,7 +1383,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 The following hosts are <strong>NOT available</strong> for drop-offs this week:
               </p>
               <p className="text-lg font-bold" style={{color: '#A31C41'}}>
-                Kate D, Jenny VW
+                Della
               </p>
               <p className="text-base mt-2" style={{color: '#007E8C'}}>
                 Please choose a different host from the available list below.
