@@ -1012,14 +1012,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </div>
 
           {/* Sign-in Reminder */}
-          <div className="info-box p-5 mb-6" style={{background: 'linear-gradient(135deg, rgba(71, 179, 203, 0.08) 0%, rgba(71, 179, 203, 0.04) 100%)', border: '2px solid rgba(71, 179, 203, 0.3)'}}>
+          <div className="p-5 mb-6 rounded-xl" style={{background: 'linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%)', border: '2px solid #FBAD3F', boxShadow: '0 2px 8px rgba(251, 173, 63, 0.15)'}}>
             <div className="flex items-start gap-3">
               <div className="text-2xl flex-shrink-0">📝</div>
               <div>
-                <h3 className="text-lg font-bold mb-1" style={{color: '#236383'}}>
+                <h3 className="text-lg font-bold mb-1" style={{color: '#A31C41'}}>
                   Don't Forget to Sign In!
                 </h3>
-                <p className="text-base font-medium" style={{color: '#007E8C'}}>
+                <p className="text-base font-medium" style={{color: '#236383'}}>
                   Please record your sandwich type, count, and contact info on the sign-in sheet at your host home.
                 </p>
               </div>
