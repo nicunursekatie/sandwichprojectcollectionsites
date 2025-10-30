@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Sandwich Project</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: auto;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #007E8C 0%, #236383 100%);
+            width: 8.5in;
+            min-height: auto;
+            color: white;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        /* Decorative corner flourishes */
+        body::before,
+        body::after {
+            content: '';
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-style: solid;
+            border-color: rgba(251, 173, 63, 0.5);
+            z-index: 1;
+        }
+
+        body::before {
+            top: 0.3in;
+            left: 0.3in;
+            border-width: 3px 0 0 3px;
+            border-radius: 20px 0 0 0;
+        }
+
+        body::after {
+            bottom: 0.3in;
+            right: 0.3in;
+            border-width: 0 3px 3px 0;
+            border-radius: 0 0 20px 0;
+        }
+
+        .container {
+            width: 100%;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            position: relative;
+            z-index: 2;
+        }
+
+        .container::before,
+        .container::after {
+            content: '';
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-style: solid;
+            border-color: rgba(251, 173, 63, 0.5);
+            z-index: 1;
+        }
+
+        .container::before {
+            top: 0.3in;
+            right: 0.3in;
+            border-width: 3px 3px 0 0;
+            border-radius: 0 20px 0 0;
+        }
+
+        .container::after {
+            bottom: 0.3in;
+            left: 0.3in;
+            border-width: 0 0 3px 3px;
+            border-radius: 0 0 0 20px;
+        }
+
+        .content-wrapper {
+            padding: 0.5in 0.5in 15px 0.5in;
+        }
+
+        /* Header Section */
+        .header {
+            text-align: center;
+            flex-shrink: 0;
+            margin-bottom: 25px;
+        }
+
+        .logo-container {
+            background: white;
+            border-radius: 20px;
+            padding: 15px 30px;
+            display: inline-block;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e5e7eb;
+            position: relative;
+        }
+
+        .logo-container::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent 0%, #FBAD3F 50%, transparent 100%);
+            border-radius: 2px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo img {
+            max-width: 350px;
+            height: auto;
+            max-height: 100px;
+        }
+
+        .tagline {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* QR Code Section */
+        .qr-section {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            gap: 25px;
+            align-items: start;
+            margin-bottom: 0;
+        }
+
+        .qr-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+            border: 2px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .qr-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #007E8C 0%, #236383 100%);
+        }
+
+        .qr-card.featured {
+            border: 3px solid #FBAD3F;
+            background: white;
+            box-shadow: 0 6px 30px rgba(251, 173, 63, 0.25);
+        }
+
+        .qr-card.featured::before {
+            height: 5px;
+            background: linear-gradient(90deg, #FBAD3F 0%, #FFC966 100%);
+        }
+
+        .qr-placeholder {
+            width: 140px;
+            height: 140px;
+            background: #f9fafb;
+            border-radius: 12px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e5e7eb;
+            padding: 8px;
+        }
+
+        .qr-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .qr-card.featured .qr-placeholder {
+            width: 200px;
+            height: 200px;
+            border: 3px solid #FBAD3F;
+            background: white;
+            padding: 10px;
+        }
+
+        .qr-card.side .qr-placeholder {
+            width: 120px;
+            height: 120px;
+        }
+
+        .qr-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #236383;
+            margin-bottom: 10px;
+        }
+
+        .qr-card.featured .qr-title {
+            font-size: 24px;
+            color: #A31C41;
+        }
+
+        .qr-description {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.3;
+        }
+
+        .qr-card.featured .qr-description {
+            font-size: 15px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* Footer Section */
+        .footer {
+            background: linear-gradient(135deg, #A31C41 0%, #8B1736 100%);
+            padding: 25px 0.5in;
+            text-align: center;
+            flex-shrink: 0;
+            width: 100%;
+            margin-top: 30px;
+            position: relative;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #FBAD3F 0%, #FFC966 50%, #FBAD3F 100%);
+        }
+
+        .footer h2 {
+            font-size: 26px;
+            margin-bottom: 10px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+        }
+
+        .footer p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: white;
+            margin: 0 auto;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .qr-card {
+                box-shadow: none !important;
+                page-break-inside: avoid;
+            }
+
+            .qr-card:hover {
+                transform: none !important;
+            }
+        }
+
+        /* Responsive Design */
+        @media screen and (max-width: 768px) {
+            body {
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            .qr-section {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .qr-card.featured {
+                order: -1;
+            }
+
+            .logo img {
+                max-width: 250px;
+            }
+
+            .tagline {
+                font-size: 18px;
+                letter-spacing: 1px;
+            }
+
+            .footer h2 {
+                font-size: 24px;
+            }
+
+            .footer p {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content-wrapper">
+            <!-- Header -->
+            <div class="header">
+                <div class="logo-container">
+                    <div class="logo">
+                        <img src="../LOGOS/CMYK_PRINT_TSP-01-01.jpg" alt="The Sandwich Project Logo">
+                    </div>
+                </div>
+                <div class="tagline">NOURISH THE HUNGRY, FEED THE SOUL</div>
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="qr-section">
+            <!-- Amazon Wishlist -->
+            <div class="qr-card side">
+                <div class="qr-placeholder">
+                    <img src="../QR codes/sandwich_amazon_wishlist_qr_with_white_space_logo.png" alt="Amazon Wishlist QR Code">
+                </div>
+                <h3 class="qr-title">Support Our Mission</h3>
+                <p class="qr-description">Shop our Amazon Wishlist for essential supplies</p>
+            </div>
+
+            <!-- Host Finder Tool (Featured) -->
+            <div class="qr-card featured">
+                <div class="qr-placeholder">
+                    <img src="../QR codes/sandwich_project_qr_with_white_space_logo.png" alt="Host Finder QR Code">
+                </div>
+                <h3 class="qr-title">Find Your Closest Host</h3>
+                <p class="qr-description">Just plug in your address and find the host closest to your location!</p>
+            </div>
+
+            <!-- Food Safety Guide -->
+            <div class="qr-card side">
+                <div class="qr-placeholder">
+                    <img src="../QR codes/sandwich_toolkit_qr_with_white_space_logo.png" alt="Food Safety Guide QR Code">
+                </div>
+                <h3 class="qr-title">Food Safety Guide</h3>
+                <p class="qr-description">Quick refresh on best practices for sandwich-making</p>
+            </div>
+        </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <h2>Everything you need for TSP in one place!</h2>
+            <p>Use our host finder tool to find the TSP host closest to you for convenient dropoffs! Scan the Food Safety Guide QR code to get a quick refresh on best practices for sandwich-making! Visit our amazon wish list or just bring fresh fruit or snack bars with you to your drop-off to help round out more of our meals!</p>
+        </div>
+    </div>
+</body>
+</html>
