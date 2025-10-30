@@ -17,6 +17,8 @@ const HostAvailabilityApp = () => {
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
+  const [highlightedHostId, setHighlightedHostId] = React.useState(null);
+  const markersRef = React.useRef({});
 
   // Google Tag Manager tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
@@ -637,6 +639,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
       hostsWithDistance = availableHosts;
     }
 
+    // Clear previous markers
+    markersRef.current = {};
+
     // Add host markers with numbered labels
     hostsToShowOnMap.forEach((host, index) => {
       const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
@@ -673,14 +678,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
       if (userCoords) {
         // Show numbered markers with distance when user location is known
         hostMarkerContent.innerHTML = `
-          <div style="
+          <div class="marker-wrapper" style="
             display: flex;
             flex-direction: column;
             align-items: center;
             cursor: pointer;
+            transition: transform 0.2s ease;
           ">
             <!-- Numbered badge -->
-            <div style="
+            <div class="marker-badge" style="
               width: 32px;
               height: 32px;
               background: ${badgeColor};
@@ -694,11 +700,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
               color: ${badgeTextColor};
               box-shadow: 0 2px 8px rgba(0,0,0,0.3);
               margin-bottom: 4px;
+              transition: transform 0.2s ease, box-shadow 0.2s ease;
             ">
               ${rank}
             </div>
             <!-- Info label -->
-            <div style="
+            <div class="marker-label" style="
               background: white;
               border: 2px solid ${markerColor};
               border-radius: 8px;
@@ -708,6 +715,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               color: #236383;
               white-space: nowrap;
               box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+              transition: transform 0.2s ease, box-shadow 0.2s ease;
             ">
               ${host.distance}mi
             </div>
@@ -716,7 +724,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
       } else {
         // Show simple markers without distance when no user location
         hostMarkerContent.innerHTML = `
-          <div style="
+          <div class="marker-wrapper" style="
             width: 32px;
             height: 32px;
             background: ${badgeColor};
@@ -727,6 +735,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             justify-content: center;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
           ">
             <div style="
               width: 12px;
@@ -749,9 +758,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
         content: hostMarkerContent
       });
 
+      // Store marker reference
+      markersRef.current[host.id] = { marker, content: hostMarkerContent };
+
       // Add click listener to show host info
       marker.addListener('click', () => {
         setSelectedHost(host);
+        setHighlightedHostId(host.id);
         trackEvent('map_marker_click', {
           event_category: 'Map',
           event_label: 'Marker Clicked',
@@ -830,6 +843,53 @@ This is safe because your API key is already restricted to only the Geocoding AP
       }
     }
   }, [mapLoaded, userCoords, viewMode, initializeMap]);
+
+  // Handle marker highlighting when highlightedHostId changes
+  React.useEffect(() => {
+    // Remove highlight from all markers
+    Object.values(markersRef.current).forEach(({ content }) => {
+      const wrapper = content.querySelector('.marker-wrapper');
+      const badge = content.querySelector('.marker-badge');
+      const label = content.querySelector('.marker-label');
+
+      if (wrapper) {
+        wrapper.style.transform = 'scale(1)';
+      }
+      if (badge) {
+        badge.style.transform = 'scale(1)';
+        badge.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+      }
+      if (label) {
+        label.style.transform = 'scale(1)';
+        label.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+      }
+    });
+
+    // Apply highlight to the selected marker
+    if (highlightedHostId && markersRef.current[highlightedHostId]) {
+      const { content, marker } = markersRef.current[highlightedHostId];
+      const wrapper = content.querySelector('.marker-wrapper');
+      const badge = content.querySelector('.marker-badge');
+      const label = content.querySelector('.marker-label');
+
+      if (wrapper) {
+        wrapper.style.transform = 'scale(1.3)';
+      }
+      if (badge) {
+        badge.style.transform = 'scale(1.3)';
+        badge.style.boxShadow = '0 4px 16px rgba(251, 173, 63, 0.8)';
+      }
+      if (label) {
+        label.style.transform = 'scale(1.3)';
+        label.style.boxShadow = '0 4px 12px rgba(251, 173, 63, 0.6)';
+      }
+
+      // Pan map to marker
+      if (map && marker) {
+        map.panTo(marker.position);
+      }
+    }
+  }, [highlightedHostId, map]);
 
   // Show driving directions on map
   const showDirections = (host) => {
@@ -1311,11 +1371,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
               filteredHosts.map((host, index) => (
                 <div
                   key={host.id}
-                  className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow ${
+                  className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow cursor-pointer ${
                     userCoords && viewMode === 'proximity' && index < 3
                       ? `top-host-card top-host-${index + 1}`
                       : ''
-                  }`}
+                  } ${highlightedHostId === host.id ? 'ring-4 ring-yellow-400' : ''}`}
+                  onClick={() => {
+                    setHighlightedHostId(host.id);
+                    trackEvent('host_card_click', {
+                      event_category: 'Host List',
+                      event_label: 'Host Card Clicked',
+                      host_name: host.name,
+                      host_area: host.area
+                    });
+                    // Scroll map into view if on mobile
+                    if (viewMode !== 'list' && window.innerWidth < 768) {
+                      document.getElementById('map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }}
                 >
                   <div className="flex gap-5 items-start">
                     {/* Only show map thumbnail if map view is NOT active */}
