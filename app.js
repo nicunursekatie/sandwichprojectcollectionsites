@@ -1034,6 +1034,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 Silke S.
               </p>
               <p className="text-base mt-2" style={{color: '#007E8C'}}>
+                Availability for hosts may change until Monday, please check back Monday morning for official host availability for Wednesday 11/5.
                 Please choose a different host from the available list below.
               </p>
             </div>
