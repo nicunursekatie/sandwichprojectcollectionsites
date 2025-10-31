@@ -1052,7 +1052,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {dropOffDate}
               </p>
               <p className="text-lg font-semibold" style={{color: '#A31C41'}}>
-                We only collect sandwiches on Wednesdays (some hosts may accept early Thursday AM drop-offs). Della is unavailable this week.
+                We only collect sandwiches on Wednesdays (some hosts may accept early Thursday AM drop-offs).
               </p>
             </div>
             <button
