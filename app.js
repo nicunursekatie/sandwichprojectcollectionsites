@@ -112,7 +112,7 @@ const HostAvailabilityApp = () => {
 
   // Initialize hosts from localStorage or use default data
   const getInitialHosts = () => {
-    const DATA_VERSION = window.CONFIG?.DATA_VERSION || '2025-10-16';
+    const DATA_VERSION = window.CONFIG?.DATA_VERSION || '2025-11-03';
     const savedVersion = localStorage.getItem('sandwichHostsVersion');
     const savedHosts = localStorage.getItem('sandwichHosts');
 
