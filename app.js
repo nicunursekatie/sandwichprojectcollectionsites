@@ -119,8 +119,8 @@ const HostAvailabilityApp = () => {
     // If version doesn't match, clear old data and use defaults
     if (savedHosts && savedVersion === DATA_VERSION) {
       const parsedHosts = JSON.parse(savedHosts);
-      // Filter to only return active hosts to prevent inactive hosts from appearing
-      return parsedHosts.filter(h => h.available);
+      // Return all hosts from localStorage (including inactive) for admin management
+      return parsedHosts;
     }
 
     // Clear old data and set new version
