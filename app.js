@@ -162,8 +162,8 @@ const HostAvailabilityApp = () => {
       { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: true }
     ];
     
-    // Filter to only return active hosts to prevent inactive hosts from appearing on initial load
-    return defaultHosts.filter(h => h.available);
+    // Return all hosts (including inactive) so admin management is possible after a version update
+    return defaultHosts;
   };
 
   const [allHosts, setAllHosts] = React.useState(getInitialHosts());
