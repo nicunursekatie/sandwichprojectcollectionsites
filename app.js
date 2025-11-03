@@ -118,14 +118,17 @@ const HostAvailabilityApp = () => {
 
     // If version doesn't match, clear old data and use defaults
     if (savedHosts && savedVersion === DATA_VERSION) {
-      return JSON.parse(savedHosts);
+      const parsedHosts = JSON.parse(savedHosts);
+      // Filter to only return active hosts to prevent inactive hosts from appearing
+      return parsedHosts.filter(h => h.available);
     }
 
     // Clear old data and set new version
     localStorage.setItem('sandwichHostsVersion', DATA_VERSION);
 
     // Default host data with actual coordinates from your spreadsheet
-    return [
+    // Only include active hosts in initial state
+    const defaultHosts = [
       { id: 1, name: 'Karen C.', area: 'Johns Creek', neighborhood: 'Glenn Abbey', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
       { id: 2, name: 'Nancy M.', area: 'Johns Creek', neighborhood: 'Chartwell', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
       { id: 3, name: 'Julie B.', area: 'Buckhead', lat: 33.8543082, lng: -84.3709417, phone: '404.808.2560', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Please pull up driveway in back. Refrigerator in garage.', available: false },
@@ -159,6 +162,9 @@ const HostAvailabilityApp = () => {
       { id: 32, name: 'Angie B.', area: 'Intown (Candler Park)', neighborhood: 'Candler Park', lat: 33.7633147, lng: -84.3440672755145, phone: '404.668.6886', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: true },
       { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: true }
     ];
+    
+    // Filter to only return active hosts to prevent inactive hosts from appearing on initial load
+    return defaultHosts.filter(h => h.available);
   };
 
   const [allHosts, setAllHosts] = React.useState(getInitialHosts());
