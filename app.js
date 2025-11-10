@@ -83,19 +83,52 @@ const HostAvailabilityApp = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Get next Wednesday's date (or today if it's Wednesday and still drop-off day)
-  const getNextWednesday = () => {
+  const helperRefs = window.AppHelpers || {};
+  const getNextWednesday = helperRefs.getNextWednesday || (() => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 3 = Wednesday
-    let daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
-
-    // If today is Wednesday (daysUntilWednesday === 0), return today
-    // Otherwise return the next Wednesday
+    const daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
     const nextWednesday = new Date(today);
     nextWednesday.setDate(today.getDate() + daysUntilWednesday);
-
     return nextWednesday;
-  };
+  });
+  const formatTime = helperRefs.formatTime || ((time24) => {
+    if (!time24 || typeof time24 !== 'string') return '';
+    const [hours, minutes = '00'] = time24.split(':');
+    const hour = parseInt(hours, 10);
+    if (Number.isNaN(hour)) return time24;
+    const ampm = hour >= 12 ? 'pm' : 'am';
+    const hour12 = hour % 12 || 12;
+    return minutes === '00' ? `${hour12}${ampm}` : `${hour12}:${minutes}${ampm}`;
+  });
+  const getDateWithTime = helperRefs.getDateWithTime || ((baseDate, timeString) => {
+    const date = new Date(baseDate);
+    if (!timeString) {
+      date.setHours(9, 0, 0, 0);
+      return date;
+    }
+    const [hoursRaw, minutesRaw] = timeString.split(':');
+    const hours = parseInt(hoursRaw, 10);
+    const minutes = parseInt(minutesRaw ?? '0', 10);
+    date.setHours(Number.isFinite(hours) ? hours : 9, Number.isFinite(minutes) ? minutes : 0, 0, 0);
+    return date;
+  });
+  const formatDateForICS = helperRefs.formatDateForICS || ((date) => {
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  });
+  const formatDateForICSUtc = helperRefs.formatDateForICSUtc || ((date) => {
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+  });
+  const escapeICSValue = helperRefs.escapeICSValue || ((value = '') =>
+    String(value)
+      .replace(/\\/g, '\\\\')
+      .replace(/\n/g, '\\n')
+      .replace(/,/g, '\\,')
+      .replace(/;/g, '\\;')
+  );
+  const buildCalendarEvent = helperRefs.buildCalendarEvent;
 
   const nextWednesday = getNextWednesday();
   const dropOffDate = nextWednesday.toLocaleDateString('en-US', {
@@ -276,6 +309,81 @@ const HostAvailabilityApp = () => {
 
   // Get Google Maps API key from config
   const GOOGLE_MAPS_API_KEY = window.CONFIG?.GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
+
+  const CALENDAR_TIMEZONE = 'America/New_York';
+
+  const handleAddToCalendar = (host) => {
+    let event;
+
+    if (typeof buildCalendarEvent === 'function') {
+      event = buildCalendarEvent(host, {
+        baseDate: nextWednesday,
+        timezone: CALENDAR_TIMEZONE
+      });
+    } else {
+      const eventStart = getDateWithTime(nextWednesday, host.openTime);
+      let eventEnd = host.closeTime
+        ? getDateWithTime(nextWednesday, host.closeTime)
+        : new Date(eventStart.getTime() + 60 * 60 * 1000);
+
+      if (eventEnd <= eventStart) {
+        eventEnd = new Date(eventStart.getTime() + 30 * 60 * 1000);
+      }
+
+      const summary = `Sandwich Drop-Off: ${host.name}`;
+      const descriptionParts = [
+        `Area: ${host.area}`,
+        host.neighborhood ? `Neighborhood: ${host.neighborhood}` : null,
+        host.notes ? `Notes: ${host.notes}` : null,
+        `Drop-off hours: ${host.hours || formatTime(host.openTime)}`
+      ].filter(Boolean);
+      const description = descriptionParts.join('\n');
+      const location = host.neighborhood
+        ? `${host.neighborhood}, ${host.area}`
+        : host.area;
+
+      const icsLines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//The Sandwich Project//Host Availability//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${host.id}-${formatDateForICS(eventStart)}@sandwichproject.org`,
+        `DTSTAMP:${formatDateForICSUtc(new Date())}`,
+        `DTSTART;TZID=${CALENDAR_TIMEZONE}:${formatDateForICS(eventStart)}`,
+        `DTEND;TZID=${CALENDAR_TIMEZONE}:${formatDateForICS(eventEnd)}`,
+        `SUMMARY:${escapeICSValue(summary)}`,
+        `DESCRIPTION:${escapeICSValue(description)}`,
+        `LOCATION:${escapeICSValue(location)}`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ];
+
+      event = {
+        summary,
+        icsContent: icsLines.join('\r\n'),
+        fileName: `${summary.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')}.ics`
+      };
+    }
+
+    const blob = new Blob([event.icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = event.fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    trackEvent('add_to_calendar', {
+      event_category: 'Calendar',
+      event_label: 'Add to Calendar',
+      host_name: host.name,
+      host_area: host.area
+    });
+  };
   
   // Geocode address using Google Maps Geocoding API
   const geocodeAddress = async (address) => {
@@ -396,16 +504,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
       };
     }
   };
-
-  // Format time from 24hr to 12hr
-  const formatTime = (time24) => {
-    const [hours, minutes] = time24.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'pm' : 'am';
-    const hour12 = hour % 12 || 12;
-    return minutes === '00' ? `${hour12}${ampm}` : `${hour12}:${minutes}${ampm}`;
-  };
-
   // Get user's current location
   const getCurrentLocation = () => {
     trackEvent('get_current_location', {
@@ -1470,6 +1568,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           >
                             <i className="lucide-navigation w-4 h-4 mr-1.5"></i>
                             Get Directions
+                          </button>
+                          <button
+                            onClick={() => handleAddToCalendar(host)}
+                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
+                            style={{backgroundColor: '#236383'}}
+                            title="Download an event reminder for this host"
+                          >
+                            <i className="lucide-calendar-plus w-4 h-4 mr-1.5"></i>
+                            Add to Calendar
                           </button>
                         </div>
                       </div>

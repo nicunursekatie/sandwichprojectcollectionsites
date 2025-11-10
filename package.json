@@ -1,10 +1,19 @@
 {
+  "scripts": {
+    "test": "vitest"
+  },
   "dependencies": {
     "typescript": "^5.9.3"
   },
   "devDependencies": {
+    "@babel/preset-react": "^7.24.7",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.6.1",
     "autoprefixer": "^10.4.21",
+    "jsdom": "^25.0.1",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.15"
+    "tailwindcss": "^4.1.15",
+    "vitest": "^2.1.1"
   }
 }
