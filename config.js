@@ -65,7 +65,7 @@ const CONFIG = {
   },
 
   // Data Version (increment when host data changes to force cache refresh)
-  DATA_VERSION: '2025-10-27',
+  DATA_VERSION: '2025-11-10',
 };
 
 // Make config available globally
