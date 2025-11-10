@@ -1183,7 +1183,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <div className="text-2xl flex-shrink-0">📝</div>
               <div>
                 <h3 className="text-lg font-bold mb-1" style={{color: '#A31C41'}}>
-                  Don't Forget to Sign In!
+                  Don't Forget to Sign In When You Drop Off At Your Host Home!!
                 </h3>
                 <p className="text-base font-medium" style={{color: '#236383'}}>
                   Please record your sandwich type, count, and contact info on the sign-in sheet at your host home.
