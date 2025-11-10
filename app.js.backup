@@ -40,7 +40,7 @@ const HostAvailabilityApp = () => {
     { id: 20, name: 'Jenny V.W.', area: 'Roswell', lat: 34.0864211, lng: -84.4086078, phone: '703.403.0711', hours: '8 am to 6 pm', notes: 'Tell gate: going to Walter home. Text on arrival.', available: true },
     { id: 21, name: 'Jen C.', area: 'Sandy Springs', lat: 33.9311095, lng: -84.4050578, phone: '404.918.9933', hours: '8 am to 6 pm', notes: '', available: true },
     { id: 22, name: 'Sarah K.', area: 'Sandy Springs', lat: 33.9529678, lng: -84.3758284, phone: '404.455.6743', hours: '9 am to 5 pm', notes: '', available: true },
-    { id: 23, name: 'Allison T.', area: 'Sandy Springs', lat: 33.91549, lng: -84.3968077, phone: '770.355.8876', hours: '9:30 am to 7 pm', notes: '', available: true },
+    { id: 23, name: 'Allison T.', area: 'Sandy Springs', lat: 33.91549, lng: -84.3968077, phone: '770.355.8876', hours: '9:30 am to 7 pm', notes: '', available: false },
     { id: 24, name: 'Cynthia C.', area: 'Southwest Atlanta', lat: 33.7286854, lng: -84.5622846, phone: '678.860.6442', hours: '8 am to 7 pm', notes: '', available: true },
     { id: 25, name: 'Jason S.', area: 'Suwanee/Johns Creek', lat: 34.065908, lng: -84.160894, phone: '678.245.2110', hours: '7 am to 6 pm', notes: 'Business location', available: true },
     { id: 26, name: 'Stacey & Jack G.', area: 'Virginia Highland', lat: 33.77723595, lng: -84.362274174978, phone: '404.451.7648', hours: '8am-noon / 5-8pm', notes: '', available: true },
