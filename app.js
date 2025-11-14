@@ -611,18 +611,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
       (h.neighborhood && h.neighborhood.toLowerCase().includes(input.toLowerCase()))
     );
 
-    // Heuristics to detect if it's likely an address:
-    // - Contains numbers (street address or ZIP)
-    // - Contains common address keywords
-    // - Is a 5-digit ZIP code
-    const hasNumbers = /\d/.test(input);
-    const isZipCode = /^\d{5}$/.test(input);
-    const hasAddressKeywords = /\b(street|st|road|rd|drive|dr|avenue|ave|lane|ln|way|court|ct|circle|blvd|boulevard|parkway|pkwy)\b/i.test(input);
-
-    const looksLikeAddress = isZipCode || hasNumbers || hasAddressKeywords;
-
-    // If it matches hosts AND doesn't look like an address, use name search
-    if (matchingHosts.length > 0 && !looksLikeAddress) {
+    // Prioritize name/area matching - if input matches a host, use name search first
+    if (matchingHosts.length > 0) {
       setNameSearch(input);
       setUserCoords(null);
       setUserAddress('');
@@ -633,8 +623,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
         event_label: 'Name/Area Filter',
         search_term: input
       });
-    } else {
-      // Try geocoding as an address
+      return; // Exit early - don't try geocoding if we found a name match
+    }
+
+    // Heuristics to detect if it's likely an address:
+    // - Contains numbers (street address or ZIP)
+    // - Contains common address keywords
+    // - Is a 5-digit ZIP code
+    const hasNumbers = /\d/.test(input);
+    const isZipCode = /^\d{5}$/.test(input);
+    const hasAddressKeywords = /\b(street|st|road|rd|drive|dr|avenue|ave|lane|ln|way|court|ct|circle|blvd|boulevard|parkway|pkwy)\b/i.test(input);
+
+    const looksLikeAddress = isZipCode || hasNumbers || hasAddressKeywords;
+
+    // If it looks like an address, try geocoding
+    if (looksLikeAddress) {
       const success = await geocodeAddress(input);
       if (success) {
         setUserAddress(input);
@@ -646,21 +649,23 @@ This is safe because your API key is already restricted to only the Geocoding AP
           event_label: 'Address Geocoded',
           search_term: input
         });
-      } else {
-        // Geocoding failed, fall back to name search if we have matches
-        if (matchingHosts.length > 0) {
-          setNameSearch(input);
-          setUserCoords(null);
-          setUserAddress('');
-          setViewMode('list');
-          
-          trackEvent('search_fallback', {
-            event_category: 'Search',
-            event_label: 'Geocode Failed - Used Name Search',
-            search_term: input
-          });
-        }
       }
+      // If geocoding fails and no matches, user will see "No hosts found"
+    } else {
+      // Doesn't look like address and no name match - try geocoding anyway as fallback
+      const success = await geocodeAddress(input);
+      if (success) {
+        setUserAddress(input);
+        setNameSearch('');
+        setViewMode('proximity');
+        
+        trackEvent('search_by_address', {
+          event_category: 'Search',
+          event_label: 'Address Geocoded (Fallback)',
+          search_term: input
+        });
+      }
+      // If geocoding fails, user will see "No hosts found"
     }
   };
 
