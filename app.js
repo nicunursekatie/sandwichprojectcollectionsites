@@ -23,6 +23,7 @@ const HostAvailabilityApp = () => {
   const [mapTooltipMenuOpen, setMapTooltipMenuOpen] = React.useState(false);
   const [initialMapCenter, setInitialMapCenter] = React.useState(null);
   const [initialMapZoom, setInitialMapZoom] = React.useState(null);
+  const [hostDriveTimes, setHostDriveTimes] = React.useState({});
   const directionsButtonRef = React.useRef(null);
   const markersRef = React.useRef({});
 
@@ -1049,6 +1050,39 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   }, [mapLoaded, userCoords, viewMode, initializeMap, map]);
 
+  // Calculate drive times for all hosts when user enters address
+  React.useEffect(() => {
+    if (!userCoords || !directionsService || !availableHosts.length) {
+      setHostDriveTimes({});
+      return;
+    }
+
+    const origin = { lat: userCoords.lat, lng: userCoords.lng };
+    const newDriveTimes = {};
+
+    // Calculate drive time for each host
+    availableHosts.forEach(host => {
+      const destination = { lat: host.lat, lng: host.lng };
+
+      directionsService.route(
+        {
+          origin: origin,
+          destination: destination,
+          travelMode: google.maps.TravelMode.DRIVING
+        },
+        (result, status) => {
+          if (status === 'OK') {
+            const duration = result.routes[0].legs[0].duration.text;
+            setHostDriveTimes(prev => ({
+              ...prev,
+              [host.id]: duration
+            }));
+          }
+        }
+      );
+    });
+  }, [userCoords, directionsService, availableHosts]);
+
   // Handle marker highlighting when highlightedHostId changes
   React.useEffect(() => {
     // Remove highlight from all markers
@@ -2050,8 +2084,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               <div>
                                 <span className="font-semibold" style={{color: '#236383'}}>Distance: </span>
                                 <span className="font-medium" style={{color: '#007E8C'}}>{host.distance} miles</span>
-                                {routeInfo && routeInfo.hostId === host.id && (
-                                  <span className="font-medium" style={{color: '#007E8C'}}> • {routeInfo.duration}</span>
+                                {hostDriveTimes[host.id] && (
+                                  <span className="font-medium" style={{color: '#007E8C'}}> • {hostDriveTimes[host.id]} drive</span>
                                 )}
                               </div>
                             </div>
