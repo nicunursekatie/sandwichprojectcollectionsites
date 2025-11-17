@@ -19,9 +19,11 @@ const HostAvailabilityApp = () => {
   const [editingHost, setEditingHost] = React.useState(null);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
   const [directionsMenuOpen, setDirectionsMenuOpen] = React.useState(null);
+  const [directionsMenuPosition, setDirectionsMenuPosition] = React.useState({ top: 0, left: 0 });
   const [mapTooltipMenuOpen, setMapTooltipMenuOpen] = React.useState(false);
   const [initialMapCenter, setInitialMapCenter] = React.useState(null);
   const [initialMapZoom, setInitialMapZoom] = React.useState(null);
+  const directionsButtonRef = React.useRef(null);
   const markersRef = React.useRef({});
 
   // Google Tag Manager tracking helper
@@ -1575,7 +1577,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                       <div className="relative" data-map-tooltip-menu>
                         <button
+                          type="button"
                           onClick={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
                             setMapTooltipMenuOpen(!mapTooltipMenuOpen);
                           }}
@@ -1583,13 +1587,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           style={{backgroundColor: '#007E8C'}}
                         >
                           <i className="lucide-navigation w-4 h-4"></i>
-                          <span>Open in Maps</span>
+                          <span>Get Directions</span>
                           <i className={`lucide-chevron-down w-3 h-3 transition-transform ${mapTooltipMenuOpen ? 'rotate-180' : ''}`}></i>
                         </button>
                         {mapTooltipMenuOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-50 overflow-hidden min-w-[280px]" style={{borderColor: '#007E8C'}}>
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden min-w-[280px]" style={{borderColor: '#007E8C'}}>
                             <button
+                              type="button"
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 openGoogleMapsDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
@@ -1603,7 +1609,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               <div className="text-sm text-gray-600">Works on all devices</div>
                             </button>
                             <button
+                              type="button"
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 openAppleMapsDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
@@ -1806,11 +1814,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <i className="lucide-route w-5 h-5"></i>
                             <span>{showingDirections === host.id ? 'Clear Route' : 'Show Route'}</span>
                           </button>
-                          <div className="relative" data-directions-menu>
+                          <div className="relative" data-directions-menu style={{zIndex: directionsMenuOpen === host.id ? 1000 : 'auto'}}>
                             <button
+                              ref={directionsMenuOpen === host.id ? directionsButtonRef : null}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setDirectionsMenuOpen(directionsMenuOpen === host.id ? null : host.id);
+                                const buttonRect = e.currentTarget.getBoundingClientRect();
+                                const isOpening = directionsMenuOpen !== host.id;
+                                setDirectionsMenuOpen(isOpening ? host.id : null);
+                                if (isOpening) {
+                                  setDirectionsMenuPosition({
+                                    top: buttonRect.bottom + 4,
+                                    left: buttonRect.left
+                                  });
+                                }
                                 trackEvent('get_directions_click', {
                                   event_category: 'Directions',
                                   event_label: 'Get Directions Button',
@@ -1827,7 +1844,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               <i className={`lucide-chevron-down w-4 h-4 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
                             </button>
                             {directionsMenuOpen === host.id && (
-                              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-50 overflow-hidden min-w-[280px]" style={{borderColor: '#007E8C'}}>
+                              <div 
+                                className="fixed bg-white rounded-lg shadow-xl border-2 overflow-hidden"
+                                style={{
+                                  borderColor: '#007E8C',
+                                  minWidth: '280px',
+                                  width: 'max-content',
+                                  maxWidth: 'calc(100vw - 2rem)',
+                                  zIndex: 10000,
+                                  top: `${directionsMenuPosition.top}px`,
+                                  left: `${directionsMenuPosition.left}px`
+                                }}
+                              >
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
