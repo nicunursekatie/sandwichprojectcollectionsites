@@ -1184,6 +1184,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </button>
           </div>
 
+          {/* How to Use This App - Primary Instructions */}
+          <div className="p-6 mb-6 rounded-xl" style={{background: 'linear-gradient(135deg, #E6F7F9 0%, #D4F1F4 100%)', border: '3px solid #007E8C', boxShadow: '0 4px 12px rgba(0, 126, 140, 0.2)'}}>
+            <div className="flex items-start gap-4">
+              <div className="text-3xl flex-shrink-0">🎯</div>
+              <div>
+                <h3 className="text-2xl font-bold mb-2" style={{color: '#236383'}}>
+                  How to Use This App
+                </h3>
+                <p className="text-lg font-semibold mb-2" style={{color: '#007E8C'}}>
+                  Type in your address below and we'll show you the 3 closest host homes to you.
+                </p>
+                <p className="text-base font-medium" style={{color: '#236383'}}>
+                  That's it! Super simple. Just enter your address, ZIP code, or use your current location to find the most convenient drop-off spot.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Sign-in Reminder */}
           <div className="p-5 mb-6 rounded-xl" style={{background: 'linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%)', border: '2px solid #FBAD3F', boxShadow: '0 2px 8px rgba(251, 173, 63, 0.15)'}}>
             <div className="flex items-start gap-3">
