@@ -1075,8 +1075,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
     // Create a string of host IDs to detect if hosts have changed
     const currentHostIds = availableHosts.map(h => h.id).sort().join(',');
-    if (hostIdsRef.current === currentHostIds && Object.keys(hostDriveTimes).length > 0) {
-      // Hosts haven't changed and we already have drive times, don't recalculate
+    if (hostIdsRef.current === currentHostIds) {
+      // Hosts haven't changed, don't recalculate
       return;
     }
     hostIdsRef.current = currentHostIds;
