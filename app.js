@@ -1062,73 +1062,55 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   }, [mapLoaded, userCoords, viewMode, initializeMap, map]);
 
+  // Memoize host IDs string to prevent unnecessary recalculations
+  const hostIdsString = React.useMemo(() => {
+    return availableHosts.map(h => h.id).sort().join(',');
+  }, [availableHosts]);
+
   // Calculate drive times for all hosts when user enters address
   React.useEffect(() => {
     // Early return if conditions aren't met
-    if (!userCoords || !directionsService || !availableHosts || !availableHosts.length || !window.google || !window.google.maps) {
-      if (!userCoords || !directionsService) {
-        setHostDriveTimes({});
-        hostIdsRef.current = '';
-      }
+    if (!userCoords || !directionsService || !availableHosts.length || !window.google || !window.google.maps) {
       return;
     }
 
-    // Create a string of host IDs to detect if hosts have changed
-    const currentHostIds = availableHosts.map(h => h.id).sort().join(',');
-    if (hostIdsRef.current === currentHostIds) {
-      // Hosts haven't changed, don't recalculate
+    // Skip if we already calculated for these hosts
+    if (hostIdsRef.current === hostIdsString) {
       return;
     }
-    hostIdsRef.current = currentHostIds;
+
+    hostIdsRef.current = hostIdsString;
 
     const origin = { lat: userCoords.lat, lng: userCoords.lng };
     let completedRequests = 0;
     const totalRequests = availableHosts.length;
     const newDriveTimes = {};
-    let isCancelled = false;
 
     // Calculate drive time for each host
     availableHosts.forEach(host => {
-      if (isCancelled) return; // Skip if already cancelled
-      
       const destination = { lat: host.lat, lng: host.lng };
 
-      try {
-        directionsService.route(
-          {
-            origin: origin,
-            destination: destination,
-            travelMode: window.google.maps.TravelMode.DRIVING
-          },
-          (result, status) => {
-            if (isCancelled) return; // Don't update if effect was cancelled
-            
-            completedRequests++;
-            if (status === 'OK' && result && result.routes && result.routes[0]) {
-              const duration = result.routes[0].legs[0].duration.text;
-              newDriveTimes[host.id] = duration;
-            }
-
-            // Only update state once all requests are complete to avoid multiple re-renders
-            if (completedRequests === totalRequests && !isCancelled) {
-              setHostDriveTimes(newDriveTimes);
-            }
+      directionsService.route(
+        {
+          origin: origin,
+          destination: destination,
+          travelMode: window.google.maps.TravelMode.DRIVING
+        },
+        (result, status) => {
+          completedRequests++;
+          if (status === 'OK' && result && result.routes && result.routes[0]) {
+            const duration = result.routes[0].legs[0].duration.text;
+            newDriveTimes[host.id] = duration;
           }
-        );
-      } catch (error) {
-        console.error('Error calculating drive time:', error);
-        completedRequests++;
-        if (completedRequests === totalRequests && !isCancelled) {
-          setHostDriveTimes(newDriveTimes);
-        }
-      }
-    });
 
-    // Cleanup function to cancel in-flight requests
-    return () => {
-      isCancelled = true;
-    };
-  }, [userCoords, directionsService, availableHosts.length]);
+          // Only update state once all requests are complete
+          if (completedRequests === totalRequests) {
+            setHostDriveTimes(newDriveTimes);
+          }
+        }
+      );
+    });
+  }, [userCoords, directionsService, hostIdsString, availableHosts]);
 
   // Handle marker highlighting when highlightedHostId changes
   React.useEffect(() => {
