@@ -3,9 +3,8 @@ const HostAvailabilityApp = () => {
   const [searchInput, setSearchInput] = React.useState('');
   const [nameSearch, setNameSearch] = React.useState('');
   const [userCoords, setUserCoords] = React.useState(null);
-  const [viewMode, setViewMode] = React.useState('proximity'); 
+  const [viewMode, setViewMode] = React.useState('proximity');
   const [filterArea, setFilterArea] = React.useState('all');
-  const [selectedHost, setSelectedHost] = React.useState(null);
   const [mapTooltip, setMapTooltip] = React.useState(null);
   const [geocoding, setGeocoding] = React.useState(false);
   const [map, setMap] = React.useState(null);
@@ -1658,20 +1657,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <h3 className="font-bold text-2xl whitespace-nowrap">{host.name}</h3>
                         </div>
                         <div className="flex flex-wrap gap-3">
-                          {userCoords && (
-                            <button
-                              onClick={() => showingDirections === host.id ? clearDirections() : showDirections(host)}
-                              className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
-                              style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
-                              title={showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'}
-                            >
-                              <i className="lucide-route w-4 h-4 mr-1.5"></i>
-                              {showingDirections === host.id ? 'Clear Route' : 'Show Route on Map'}
-                            </button>
-                          )}
                           <button
                             onClick={() => {
-                              setSelectedHost(host);
+                              if (!userCoords) {
+                                alert('Please enter your address first to see the route on the map!');
+                                // Focus on the search input
+                                const searchInput = document.querySelector('input[placeholder*="Enter address"]');
+                                if (searchInput) {
+                                  searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  setTimeout(() => searchInput.focus(), 500);
+                                }
+                                return;
+                              }
+                              showingDirections === host.id ? clearDirections() : showDirections(host);
+                            }}
+                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
+                            style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
+                            title={!userCoords ? 'Enter your address to see route on map' : (showingDirections === host.id ? 'Clear route from map' : 'Show route on the map')}
+                          >
+                            <i className="lucide-route w-4 h-4 mr-1.5"></i>
+                            {showingDirections === host.id ? 'Clear Route' : 'Show Route on Map'}
+                          </button>
+                          <a
+                            href={`https://maps.apple.com/?daddr=${host.lat},${host.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => {
                               trackEvent('get_directions_click', {
                                 event_category: 'Directions',
                                 event_label: 'Get Directions Button',
@@ -1681,11 +1692,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             }}
                             className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
                             style={{backgroundColor: '#007E8C'}}
-                            title="Get directions to this host in Apple or Google Maps"
+                            title="Open directions in your maps app"
                           >
                             <i className="lucide-navigation w-4 h-4 mr-1.5"></i>
                             Get Directions
-                          </button>
+                          </a>
                           <button
                             onClick={() => handleAddToCalendar(host)}
                             className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
@@ -1792,80 +1803,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
             )}
         </div>
-        
-        {/* Directions Modal */}
-        {selectedHost && (
-          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedHost(null)}>
-            <div className="modal-content bg-white rounded-2xl p-8 max-w-md w-full premium-card-header" onClick={e => e.stopPropagation()}>
-              <h3 className="text-2xl font-bold mb-2" style={{color: '#236383'}}>{selectedHost.name}</h3>
-              <p className="text-lg font-medium mb-2" style={{color: '#007E8C'}}>📍 {selectedHost.area}{selectedHost.neighborhood ? ` - ${selectedHost.neighborhood}` : ''}</p>
-              {selectedHost.distance && (
-                <div className="premium-badge px-4 py-2 mb-6 inline-block rounded-xl">
-                  <p className="text-base font-semibold" style={{color: '#007E8C'}}>
-                    <i className="lucide-map-pin w-5 h-5 mr-1.5 inline"></i>
-                    {selectedHost.distance} miles away
-                    {routeInfo && routeInfo.hostId === selectedHost.id && (
-                      <span> • {routeInfo.duration} drive</span>
-                    )}
-                  </p>
-                </div>
-              )}
-              <div className="space-y-3">
-                <a
-                  href={`https://maps.apple.com/?daddr=${selectedHost.lat},${selectedHost.lng}`}
-                  className="btn-primary block w-full px-6 py-3.5 text-white rounded-xl font-semibold text-center transition-all"
-                  style={{backgroundColor: '#007E8C'}}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => {
-                    trackEvent('open_apple_maps', {
-                      event_category: 'External Navigation',
-                      event_label: 'Apple Maps',
-                      host_name: selectedHost.name,
-                      host_area: selectedHost.area
-                    });
-                  }}
-                >
-                  🍎 Open in Apple Maps
-                </a>
-                <button
-                  onClick={() => openGoogleMapsDirections(selectedHost)}
-                  className="btn-primary block w-full px-6 py-3.5 text-white rounded-xl font-semibold text-center transition-all"
-                  style={{backgroundColor: '#A31C41'}}
-                >
-                  🌎 Open in Google Maps
-                </button>
-                <button
-                  onClick={() => {
-                    const coords = `${selectedHost.lat}, ${selectedHost.lng}`;
-                    trackEvent('copy_coordinates', {
-                      event_category: 'Directions',
-                      event_label: 'Copy Coordinates',
-                      host_name: selectedHost.name,
-                      host_area: selectedHost.area
-                    });
-                    navigator.clipboard.writeText(coords).then(() => {
-                      alert(`Coordinates copied to clipboard:\n${coords}`);
-                    }).catch(() => {
-                      alert(`Coordinates:\n${coords}`);
-                    });
-                  }}
-                  className="btn-primary block w-full px-6 py-3.5 text-white rounded-xl font-semibold text-center transition-all"
-                  style={{backgroundColor: '#FBAD3F'}}
-                >
-                  📋 Copy Coordinates
-                </button>
-                <button
-                  onClick={() => setSelectedHost(null)}
-                  className="view-toggle-btn block w-full px-6 py-3.5 rounded-xl font-semibold text-center transition-all"
-                  style={{backgroundColor: 'white', color: '#236383', border: '2px solid rgba(71, 179, 203, 0.3)'}}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Resources Section - Moved to bottom for better UX */}
         <div className="max-w-4xl mx-auto mt-8 px-4">
