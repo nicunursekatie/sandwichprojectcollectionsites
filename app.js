@@ -1130,7 +1130,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
-                <b>The Sandwich Project</b></b> Host Finder Tool
+                <b>The Sandwich Project</b> Host Finder Tool
               </h1>
               <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
                 {dropOffDate}
