@@ -35,7 +35,7 @@ const HostAvailabilityApp = () => {
     });
   };
 
-  // Close directions menu when clicking outside
+  // Close directions menu when clicking outside and update position on scroll/resize
   React.useEffect(() => {
     const handleClickOutside = (event) => {
       if (directionsMenuOpen !== null) {
@@ -53,14 +53,53 @@ const HostAvailabilityApp = () => {
         }
       }
     };
+
+    const updateMenuPosition = () => {
+      if (directionsMenuOpen !== null && directionsButtonRef.current) {
+        const buttonRect = directionsButtonRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const dropdownWidth = 280; // min-width
+        const dropdownHeight = 200; // approximate height
+        
+        let left = buttonRect.left;
+        let top = buttonRect.bottom + 4;
+        
+        // Ensure dropdown doesn't go off right edge
+        if (left + dropdownWidth > viewportWidth - 16) {
+          left = viewportWidth - dropdownWidth - 16;
+        }
+        // Ensure dropdown doesn't go off left edge
+        if (left < 16) {
+          left = 16;
+        }
+        // If dropdown would go off bottom, show above button instead
+        if (top + dropdownHeight > viewportHeight - 16) {
+          top = buttonRect.top - dropdownHeight - 4;
+        }
+        // Ensure dropdown doesn't go off top edge
+        if (top < 16) {
+          top = 16;
+        }
+        
+        setDirectionsMenuPosition({ top, left });
+      }
+    };
     
     if (directionsMenuOpen !== null || mapTooltipMenuOpen) {
       // Use setTimeout to avoid immediate closure when opening
       setTimeout(() => {
         document.addEventListener('click', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        // Update position on scroll/resize for mobile
+        window.addEventListener('scroll', updateMenuPosition, true);
+        window.addEventListener('resize', updateMenuPosition);
       }, 0);
       return () => {
         document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside);
+        window.removeEventListener('scroll', updateMenuPosition, true);
+        window.removeEventListener('resize', updateMenuPosition);
       };
     }
   }, [directionsMenuOpen, mapTooltipMenuOpen]);
@@ -962,7 +1001,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
     if (mapLoaded) return;
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=marker,geometry`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=marker,geometry&loading=async`;
+    script.async = true;
+    script.defer = true;
     script.onload = () => {
       setMapLoaded(true);
     };
@@ -1328,14 +1369,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <div className="mt-4 space-y-2">
               {/* Hosts NOT Available - Collapsible */}
               <details className="group">
-                <summary className="cursor-pointer list-none p-2 rounded-lg text-sm font-semibold" style={{backgroundColor: '#FEE2E2', color: '#991B1B'}}>
+                <summary className="cursor-pointer list-none p-3 rounded-lg text-sm font-bold" style={{backgroundColor: '#FEE2E2', color: '#991B1B', border: '2px solid #DC2626'}}>
                   <span className="inline-flex items-center gap-2">
                     <span className="group-open:rotate-90 transition-transform">▶</span>
-                    Hosts NOT available this week (click to see)
+                    Hosts NOT available this week (click to expand)
                   </span>
                 </summary>
-                <div className="p-3 mt-1 rounded-lg text-sm" style={{backgroundColor: '#FEF2F2', color: '#991B1B'}}>
-                  Jenny V.W., Carrey H., Stacey & Jack G.
+                <div className="p-4 mt-2 rounded-lg" style={{backgroundColor: '#FEF2F2', border: '2px solid #FCA5A5'}}>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
+                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
+                      Jenny V.W.
+                    </li>
+                    <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
+                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
+                      Carrey H.
+                    </li>
+                    <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
+                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
+                      Stacey & Jack G.
+                    </li>
+                  </ul>
                 </div>
               </details>
             </div>
@@ -1825,10 +1879,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 const isOpening = directionsMenuOpen !== host.id;
                                 setDirectionsMenuOpen(isOpening ? host.id : null);
                                 if (isOpening) {
-                                  setDirectionsMenuPosition({
-                                    top: buttonRect.bottom + 4,
-                                    left: buttonRect.left
-                                  });
+                                  const viewportWidth = window.innerWidth;
+                                  const viewportHeight = window.innerHeight;
+                                  const dropdownWidth = 280;
+                                  const dropdownHeight = 200;
+                                  
+                                  let left = buttonRect.left;
+                                  let top = buttonRect.bottom + 4;
+                                  
+                                  // Ensure dropdown doesn't go off right edge
+                                  if (left + dropdownWidth > viewportWidth - 16) {
+                                    left = viewportWidth - dropdownWidth - 16;
+                                  }
+                                  // Ensure dropdown doesn't go off left edge
+                                  if (left < 16) {
+                                    left = 16;
+                                  }
+                                  // If dropdown would go off bottom, show above button instead
+                                  if (top + dropdownHeight > viewportHeight - 16) {
+                                    top = buttonRect.top - dropdownHeight - 4;
+                                  }
+                                  // Ensure dropdown doesn't go off top edge
+                                  if (top < 16) {
+                                    top = 16;
+                                  }
+                                  
+                                  setDirectionsMenuPosition({ top, left });
                                 }
                                 trackEvent('get_directions_click', {
                                   event_category: 'Directions',
