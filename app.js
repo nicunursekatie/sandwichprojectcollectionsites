@@ -1189,12 +1189,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <div className="flex items-start gap-4">
               <div className="text-3xl flex-shrink-0">🎯</div>
               <div>
-                <h3 className="text-2xl font-bold mb-2" style={{color: '#236383'}}>
+                <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>
                   How to Use This App
                 </h3>
-                <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
-                  Just enter your address or use your current location — we'll instantly highlight your 3 closest host homes where you can drop your sandwiches off on Wednesday!
-                </p>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                    Enter your address (or use your current location).
+                  </p>
+                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                    We'll show you your 3 closest host homes for Wednesday drop-off.
+                  </p>
+                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                    Tap Get Directions for the one you want.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1315,7 +1323,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         </div>
 
         {/* Map and/or List */}
-        <div className={`grid grid-cols-1 ${viewMode === 'list' ? '' : 'lg:grid-cols-2 lg:items-start'} gap-6`}>
+        <div className={`grid grid-cols-1 ${viewMode === 'proximity' ? 'lg:grid-cols-2 lg:items-start' : ''} gap-6`}>
           {/* Map View */}
           {viewMode !== 'list' && (
             <div className="bg-white rounded-2xl premium-card overflow-hidden">
