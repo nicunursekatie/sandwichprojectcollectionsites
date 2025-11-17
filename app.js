@@ -25,6 +25,7 @@ const HostAvailabilityApp = () => {
   const [initialMapZoom, setInitialMapZoom] = React.useState(null);
   const [hostDriveTimes, setHostDriveTimes] = React.useState({});
   const directionsButtonRef = React.useRef(null);
+  const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
 
   // Google Tag Manager tracking helper
@@ -765,7 +766,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
     setInitialMapCenter(mapCenter);
     setInitialMapZoom(mapZoom);
 
-    const mapInstance = new window.google.maps.Map(document.getElementById('map'), {
+    if (!window.google || !window.google.maps) {
+      console.error('Google Maps API not loaded');
+      return;
+    }
+
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+      console.error('Map element not found');
+      return;
+    }
+
+    const mapInstance = new window.google.maps.Map(mapElement, {
       center: mapCenter,
       zoom: mapZoom,
       mapId: 'SANDWICH_DROP_OFF_MAP'
@@ -1052,12 +1064,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Calculate drive times for all hosts when user enters address
   React.useEffect(() => {
-    if (!userCoords || !directionsService || !availableHosts.length) {
+    if (!userCoords || !directionsService || !availableHosts.length || !window.google || !window.google.maps) {
       setHostDriveTimes({});
       return;
     }
 
+    // Create a string of host IDs to detect if hosts have changed
+    const currentHostIds = availableHosts.map(h => h.id).sort().join(',');
+    if (hostIdsRef.current === currentHostIds) {
+      // Hosts haven't changed, don't recalculate
+      return;
+    }
+    hostIdsRef.current = currentHostIds;
+
     const origin = { lat: userCoords.lat, lng: userCoords.lng };
+    let completedRequests = 0;
+    const totalRequests = availableHosts.length;
     const newDriveTimes = {};
 
     // Calculate drive time for each host
@@ -1068,15 +1090,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {
           origin: origin,
           destination: destination,
-          travelMode: google.maps.TravelMode.DRIVING
+          travelMode: window.google.maps.TravelMode.DRIVING
         },
         (result, status) => {
+          completedRequests++;
           if (status === 'OK') {
             const duration = result.routes[0].legs[0].duration.text;
-            setHostDriveTimes(prev => ({
-              ...prev,
-              [host.id]: duration
-            }));
+            newDriveTimes[host.id] = duration;
+          }
+          
+          // Only update state once all requests are complete to avoid multiple re-renders
+          if (completedRequests === totalRequests) {
+            setHostDriveTimes(newDriveTimes);
           }
         }
       );
@@ -1274,10 +1299,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {/* Header */}
         <div className="bg-white rounded-2xl premium-card-header p-6 mb-6">
           <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight" style={{letterSpacing: '-0.02em'}}>
-                <b>The Sandwich Project</b> Host Finder Tool
-              </h1>
+            <div className="flex items-center gap-4 flex-1">
+              <img
+                src="LOGOS/CMYK_PRINT_TSP-01-01.jpg"
+                alt="The Sandwich Project Logo"
+                className="h-16 sm:h-20 w-auto object-contain"
+              />
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 tracking-tight" style={{letterSpacing: '-0.02em'}}>
+                  <b>The Sandwich Project</b> Host Finder Tool
+                </h1>
               <p className="text-xl font-bold mb-2" style={{color: '#007E8C'}}>
                 {dropOffDate}
               </p>
