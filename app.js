@@ -19,6 +19,9 @@ const HostAvailabilityApp = () => {
   const [editingHost, setEditingHost] = React.useState(null);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
   const [directionsMenuOpen, setDirectionsMenuOpen] = React.useState(null);
+  const [mapTooltipMenuOpen, setMapTooltipMenuOpen] = React.useState(false);
+  const [initialMapCenter, setInitialMapCenter] = React.useState(null);
+  const [initialMapZoom, setInitialMapZoom] = React.useState(null);
   const markersRef = React.useRef({});
 
   // Google Tag Manager tracking helper
@@ -39,9 +42,15 @@ const HostAvailabilityApp = () => {
           setDirectionsMenuOpen(null);
         }
       }
+      if (mapTooltipMenuOpen) {
+        const menuContainer = event.target.closest('[data-map-tooltip-menu]');
+        if (!menuContainer) {
+          setMapTooltipMenuOpen(false);
+        }
+      }
     };
     
-    if (directionsMenuOpen !== null) {
+    if (directionsMenuOpen !== null || mapTooltipMenuOpen) {
       // Use setTimeout to avoid immediate closure when opening
       setTimeout(() => {
         document.addEventListener('click', handleClickOutside);
@@ -50,7 +59,7 @@ const HostAvailabilityApp = () => {
         document.removeEventListener('click', handleClickOutside);
       };
     }
-  }, [directionsMenuOpen]);
+  }, [directionsMenuOpen, mapTooltipMenuOpen]);
 
   // Scroll depth tracking
   React.useEffect(() => {
@@ -708,11 +717,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
     const mapCenter = userCoords || atlCenter;
     const mapZoom = userCoords ? 11 : 10;
 
+    // Store initial map state for reset
+    setInitialMapCenter(mapCenter);
+    setInitialMapZoom(mapZoom);
+
     const mapInstance = new window.google.maps.Map(document.getElementById('map'), {
       center: mapCenter,
       zoom: mapZoom,
       mapId: 'SANDWICH_DROP_OFF_MAP'
     });
+
+    // Store initial values in closure for reset functionality
+    const savedMapCenter = mapCenter;
+    const savedMapZoom = mapZoom;
 
     // Add user location marker only if we have user coordinates
     if (userCoords) {
@@ -923,10 +940,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
     setDirectionsService(directionsServiceInstance);
     setDirectionsRenderer(directionsRendererInstance);
 
-    // Close tooltip when clicking on the map (not on a marker)
+    // Close tooltip and reset map view when clicking on the map (not on a marker)
     mapInstance.addListener('click', () => {
       setMapTooltip(null);
       setHighlightedHostId(null);
+      setMapTooltipMenuOpen(false);
+      // Reset map to initial view
+      mapInstance.setCenter(savedMapCenter);
+      mapInstance.setZoom(savedMapZoom);
     });
 
     setMap(mapInstance);
@@ -970,15 +991,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Initialize map when API is loaded AND map div exists (works with or without user location)
   React.useEffect(() => {
-    if (mapLoaded && viewMode !== 'list') {
+    if (viewMode === 'list') {
+      // When switching to list-only view, clear the map to allow re-initialization later
+      setMap(null);
+    } else if (mapLoaded) {
       // Check if map element exists in DOM before initializing
       const mapElement = document.getElementById('map');
-      if (mapElement) {
+      if (mapElement && !map) {
         // Small delay to ensure DOM element is fully ready
         setTimeout(initializeMap, 100);
       }
     }
-  }, [mapLoaded, userCoords, viewMode, initializeMap]);
+  }, [mapLoaded, userCoords, viewMode, initializeMap, map]);
 
   // Handle marker highlighting when highlightedHostId changes
   React.useEffect(() => {
@@ -1218,12 +1242,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <span className="text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-md" style={{backgroundColor: '#007E8C'}}>2</div>
-              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>See 3 nearest hosts</span>
+              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>View your 3 nearest hosts</span>
             </div>
             <span className="text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-md" style={{backgroundColor: '#007E8C'}}>3</div>
-              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>Tap "Get Directions"</span>
+              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>Click "Show Route" or "Get Directions"</span>
             </div>
           </div>
 
@@ -1516,9 +1540,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           e.stopPropagation();
                           setMapTooltip(null);
                           setHighlightedHostId(null);
+                          setMapTooltipMenuOpen(false);
+                          // Reset map to initial view
+                          if (map && initialMapCenter && initialMapZoom !== null) {
+                            map.setCenter(initialMapCenter);
+                            map.setZoom(initialMapZoom);
+                          }
                         }}
                         className="text-gray-400 hover:text-gray-600 ml-2"
                         style={{fontSize: '20px', lineHeight: '1'}}
+                        title="Close and reset map"
                       >
                         ×
                       </button>
@@ -1542,24 +1573,51 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <span className="text-gray-700"> Sign in when you drop off!</span>
                       </div>
 
-                      <a
-                        href={`https://maps.apple.com/?daddr=${mapTooltip.lat},${mapTooltip.lng}`}
-                        className="block w-full px-4 py-2 text-white rounded-lg font-medium text-center text-sm transition-all hover:opacity-90"
-                        style={{backgroundColor: '#007E8C'}}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          trackEvent('open_apple_maps', {
-                            event_category: 'External Navigation',
-                            event_label: 'Apple Maps',
-                            host_name: mapTooltip.name,
-                            host_area: mapTooltip.area
-                          });
-                        }}
-                      >
-                        Open in Maps
-                      </a>
+                      <div className="relative" data-map-tooltip-menu>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMapTooltipMenuOpen(!mapTooltipMenuOpen);
+                          }}
+                          className="block w-full px-4 py-2 text-white rounded-lg font-medium text-center text-sm transition-all hover:opacity-90 flex items-center justify-center gap-2"
+                          style={{backgroundColor: '#007E8C'}}
+                        >
+                          <i className="lucide-navigation w-4 h-4"></i>
+                          <span>Open in Maps</span>
+                          <i className={`lucide-chevron-down w-3 h-3 transition-transform ${mapTooltipMenuOpen ? 'rotate-180' : ''}`}></i>
+                        </button>
+                        {mapTooltipMenuOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-50 overflow-hidden min-w-[280px]" style={{borderColor: '#007E8C'}}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openGoogleMapsDirections(mapTooltip);
+                                setMapTooltipMenuOpen(false);
+                              }}
+                              className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                            >
+                              <div className="flex items-center justify-center gap-3 mb-1">
+                                <i className="lucide-map w-6 h-6" style={{color: '#007E8C'}}></i>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Google Maps</div>
+                              </div>
+                              <div className="text-sm text-gray-600">Works on all devices</div>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAppleMapsDirections(mapTooltip);
+                                setMapTooltipMenuOpen(false);
+                              }}
+                              className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center border-t" style={{borderColor: '#e0e0e0'}}>
+                              <div className="flex items-center justify-center gap-3 mb-1">
+                                <i className="lucide-map-pin w-6 h-6" style={{color: '#007E8C'}}></i>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Apple Maps</div>
+                              </div>
+                              <div className="text-sm text-gray-600">Best on iPhone/iPad</div>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1644,12 +1702,30 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <div
                   key={host.id}
                   data-host-id={host.id}
-                  className={`bg-white rounded-2xl premium-card p-6 md:p-8 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer border-2 border-transparent hover:border-blue-200 ${
+                  className={`bg-white rounded-2xl premium-card p-6 md:p-8 transition-all border-2 border-transparent ${
+                    // Only add hover effects and cursor pointer on desktop (md breakpoint and up)
+                    'md:hover:shadow-xl md:hover:scale-[1.02] md:cursor-pointer md:hover:border-blue-200'
+                  } ${
                     userCoords && viewMode === 'proximity' && index < 3
                       ? `top-host-card top-host-${index + 1}`
                       : ''
                   } ${highlightedHostId === host.id ? 'ring-4 ring-yellow-400 shadow-xl' : ''}`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    // Only handle card clicks on desktop and when clicking on non-interactive areas
+                    const isMobile = window.innerWidth < 768;
+                    const clickedElement = e.target;
+                    const isInteractive = clickedElement.closest('button, a, input, select, textarea, [role="button"]');
+                    
+                    // On mobile, don't do anything if clicking on interactive elements
+                    if (isMobile && isInteractive) {
+                      return;
+                    }
+                    
+                    // On desktop, allow card clicks but still check if it's an interactive element
+                    if (!isMobile && isInteractive) {
+                      return;
+                    }
+                    
                     setHighlightedHostId(host.id);
                     trackEvent('host_card_click', {
                       event_category: 'Host List',
@@ -1657,8 +1733,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       host_name: host.name,
                       host_area: host.area
                     });
-                    // Scroll map into view if on mobile
-                    if (viewMode !== 'list' && window.innerWidth < 768) {
+                    // Scroll map into view if on mobile (but only if not clicking a button)
+                    if (viewMode !== 'list' && isMobile && !isInteractive) {
                       document.getElementById('map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                   }}
@@ -1751,38 +1827,37 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               <i className={`lucide-chevron-down w-4 h-4 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
                             </button>
                             {directionsMenuOpen === host.id && (
-                              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-50 overflow-hidden" style={{borderColor: '#007E8C'}}>
-                                {/* Sign-in Reminder in dropdown */}
-                                <div className="p-3 text-xs" style={{backgroundColor: '#FFF9E6', borderBottom: '1px solid #FBAD3F'}}>
-                                  <span className="font-semibold" style={{color: '#A31C41'}}>Remember:</span>
-                                  <span className="text-gray-700"> Sign in when you drop off!</span>
-                                </div>
-
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-50 overflow-hidden min-w-[280px]" style={{borderColor: '#007E8C'}}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     openGoogleMapsDirections(host);
                                   }}
-                                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                  className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
                                 >
-                                  <i className="lucide-map w-5 h-5" style={{color: '#007E8C'}}></i>
-                                  <div>
-                                    <div className="font-semibold text-sm" style={{color: '#236383'}}>Google Maps</div>
-                                    <div className="text-xs text-gray-500">Works on all devices</div>
+                                  <div className="flex items-center justify-center gap-3 mb-1">
+                                    <i className="lucide-map w-6 h-6" style={{color: '#007E8C'}}></i>
+                                    <div className="font-bold text-base" style={{color: '#236383'}}>Google Maps</div>
                                   </div>
+                                  <div className="text-sm text-gray-600">Works on all devices</div>
                                 </button>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     openAppleMapsDirections(host);
                                   }}
-                                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors border-t" style={{borderColor: '#e0e0e0'}}>
-                                  <i className="lucide-map-pin w-5 h-5" style={{color: '#007E8C'}}></i>
-                                  <div>
-                                    <div className="font-semibold text-sm" style={{color: '#236383'}}>Apple Maps</div>
-                                    <div className="text-xs text-gray-500">Best on iPhone/iPad</div>
+                                  className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center border-t" style={{borderColor: '#e0e0e0'}}>
+                                  <div className="flex items-center justify-center gap-3 mb-1">
+                                    <i className="lucide-map-pin w-6 h-6" style={{color: '#007E8C'}}></i>
+                                    <div className="font-bold text-base" style={{color: '#236383'}}>Apple Maps</div>
                                   </div>
+                                  <div className="text-sm text-gray-600">Best on iPhone/iPad</div>
                                 </button>
+                                {/* Sign-in Reminder at bottom */}
+                                <div className="p-3 text-center text-sm border-t" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+                                  <span className="font-bold" style={{color: '#A31C41'}}>Remember: </span>
+                                  <span className="text-gray-700">Sign in when you drop off!</span>
+                                </div>
                               </div>
                             )}
                           </div>
