@@ -1098,7 +1098,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             const duration = result.routes[0].legs[0].duration.text;
             newDriveTimes[host.id] = duration;
           }
-          
+
           // Only update state once all requests are complete to avoid multiple re-renders
           if (completedRequests === totalRequests) {
             setHostDriveTimes(newDriveTimes);
@@ -1106,7 +1106,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         }
       );
     });
-  }, [userCoords, directionsService, availableHosts]);
+  }, [userCoords, directionsService]);
 
   // Handle marker highlighting when highlightedHostId changes
   React.useEffect(() => {
