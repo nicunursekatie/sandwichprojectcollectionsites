@@ -1533,6 +1533,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
 
                     <div className="space-y-2">
+                      {/* Sign-in Reminder */}
+                      <div className="p-2 rounded-lg text-xs mb-2" style={{backgroundColor: '#FFF9E6', border: '1px solid #FBAD3F'}}>
+                        <span className="font-semibold" style={{color: '#A31C41'}}>Remember:</span>
+                        <span className="text-gray-700"> Sign in when you drop off!</span>
+                      </div>
+
                       <a
                         href={`https://maps.apple.com/?daddr=${mapTooltip.lat},${mapTooltip.lng}`}
                         className="block w-full px-4 py-2 text-white rounded-lg font-medium text-center text-sm transition-all hover:opacity-90"
@@ -1743,6 +1749,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             </button>
                             {directionsMenuOpen === host.id && (
                               <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-50 overflow-hidden" style={{borderColor: '#007E8C'}}>
+                                {/* Sign-in Reminder in dropdown */}
+                                <div className="p-3 text-xs" style={{backgroundColor: '#FFF9E6', borderBottom: '1px solid #FBAD3F'}}>
+                                  <span className="font-semibold" style={{color: '#A31C41'}}>Remember:</span>
+                                  <span className="text-gray-700"> Sign in when you drop off!</span>
+                                </div>
+
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1879,14 +1891,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
             )}
               </div>
             )}
-        </div>
-
-        {/* Sign-in Reminder Footer */}
-        <div className="max-w-5xl mx-auto mt-6 px-4">
-          <div className="p-3 rounded-lg text-center text-sm" style={{backgroundColor: '#FFF9E6', border: '1px solid #FBAD3F'}}>
-            <span className="font-semibold" style={{color: '#A31C41'}}>Remember to sign in at your host home!</span>
-            <span className="text-gray-700"> Record your sandwich type, count, and contact info on the sign-in sheet.</span>
-          </div>
         </div>
 
         {/* Resources Section - Moved to bottom for better UX */}
