@@ -1192,11 +1192,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <h3 className="text-2xl font-bold mb-2" style={{color: '#236383'}}>
                   How to Use This App
                 </h3>
-                <p className="text-lg font-semibold mb-2" style={{color: '#007E8C'}}>
-                  Type in your address below and we'll show you the 3 closest host homes to you.
-                </p>
-                <p className="text-base font-medium" style={{color: '#236383'}}>
-                  That's it! Super simple. Just enter your address, ZIP code, or use your current location to find the most convenient drop-off spot.
+                <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                  Just enter your address or use your current location — we'll instantly highlight your 3 closest host homes where you can drop your sandwiches off on Wednesday!
                 </p>
               </div>
             </div>
