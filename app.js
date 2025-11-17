@@ -1645,7 +1645,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap justify-between items-start gap-3 mb-3">
+                      <div className="flex flex-col gap-3 mb-3">
                         <div className="flex items-center gap-3">
                           {userCoords && viewMode === 'proximity' && index < 3 && (
                             <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
@@ -1654,9 +1654,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               {index + 1}
                             </span>
                           )}
-                          <h3 className="font-bold text-2xl whitespace-nowrap">{host.name}</h3>
+                          <h3 className="font-bold text-2xl">{host.name}</h3>
                         </div>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <button
                             onClick={() => {
                               if (!userCoords) {
@@ -1671,12 +1671,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               }
                               showingDirections === host.id ? clearDirections() : showDirections(host);
                             }}
-                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
+                            className="btn-primary px-4 py-2.5 rounded-lg font-medium text-white text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all hover:shadow-md"
                             style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
                             title={!userCoords ? 'Enter your address to see route on map' : (showingDirections === host.id ? 'Clear route from map' : 'Show route on the map')}
                           >
-                            <i className="lucide-route w-4 h-4 mr-1.5"></i>
-                            {showingDirections === host.id ? 'Clear Route' : 'Show Route on Map'}
+                            <i className="lucide-route w-4 h-4"></i>
+                            <span className="hidden sm:inline">{showingDirections === host.id ? 'Clear Route' : 'Show Route'}</span>
+                            <span className="sm:hidden">{showingDirections === host.id ? 'Clear' : 'Route'}</span>
                           </button>
                           <a
                             href={`https://maps.apple.com/?daddr=${host.lat},${host.lng}`}
@@ -1690,21 +1691,23 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 host_area: host.area
                               });
                             }}
-                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
+                            className="btn-primary px-4 py-2.5 rounded-lg font-medium text-white text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all hover:shadow-md"
                             style={{backgroundColor: '#007E8C'}}
                             title="Open directions in your maps app"
                           >
-                            <i className="lucide-navigation w-4 h-4 mr-1.5"></i>
-                            Get Directions
+                            <i className="lucide-navigation w-4 h-4"></i>
+                            <span className="hidden sm:inline">Get Directions</span>
+                            <span className="sm:hidden">Directions</span>
                           </a>
                           <button
                             onClick={() => handleAddToCalendar(host)}
-                            className="btn-primary px-6 py-3 rounded-xl font-medium text-white text-sm flex items-center whitespace-nowrap"
+                            className="btn-primary px-4 py-2.5 rounded-lg font-medium text-white text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all hover:shadow-md"
                             style={{backgroundColor: '#236383'}}
                             title="Download an event reminder for this host"
                           >
-                            <i className="lucide-calendar-plus w-4 h-4 mr-1.5"></i>
-                            Add to Calendar
+                            <i className="lucide-calendar-plus w-4 h-4"></i>
+                            <span className="hidden sm:inline">Add to Calendar</span>
+                            <span className="sm:hidden">Calendar</span>
                           </button>
                         </div>
                       </div>
