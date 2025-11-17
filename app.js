@@ -1301,26 +1301,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
             >
               📋 List Only
             </button>
-            {userCoords && (
-              <button
-                onClick={() => {
-                  setViewMode('proximity');
-                  trackEvent('view_mode_change', {
-                    event_category: 'View',
-                    event_label: 'Split View Selected'
-                  });
-                }}
-                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                  viewMode === 'proximity' ? 'active' : ''
-                }`}
-                style={{
-                  backgroundColor: viewMode === 'proximity' ? '#007E8C' : undefined,
-                  color: viewMode === 'proximity' ? 'white' : undefined
-                }}
-              >
-                📍 Map + List
-              </button>
-            )}
+            <button
+              onClick={() => {
+                setViewMode('proximity');
+                trackEvent('view_mode_change', {
+                  event_category: 'View',
+                  event_label: 'Split View Selected'
+                });
+              }}
+              className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
+                viewMode === 'proximity' ? 'active' : ''
+              }`}
+              style={{
+                backgroundColor: viewMode === 'proximity' ? '#007E8C' : undefined,
+                color: viewMode === 'proximity' ? 'white' : undefined
+              }}
+            >
+              📍 Map + List
+            </button>
             <button
               onClick={() => {
                 setViewMode('map');
