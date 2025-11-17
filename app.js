@@ -1166,11 +1166,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <div className="p-6 mb-4 rounded-xl" style={{background: 'linear-gradient(135deg, #E6F7F9 0%, #D4F1F4 100%)', border: '3px solid #007E8C', boxShadow: '0 4px 12px rgba(0, 126, 140, 0.2)'}}>
             <div className="flex items-start gap-4">
               <div className="text-3xl flex-shrink-0">🎯</div>
-              <div>
+              <div className="flex-1">
                 <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>
                   How to Use This App
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-2 mb-4">
                   <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
                     Enter your address (or use your current location).
                   </p>
@@ -1181,6 +1181,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     Tap Get Directions for the one you want.
                   </p>
                 </div>
+                <button
+                  onClick={() => {
+                    document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    trackEvent('resources_link_click', {
+                      event_category: 'Resources',
+                      event_label: 'Jump to Resources'
+                    });
+                  }}
+                  className="text-sm px-4 py-2 rounded-lg font-medium inline-flex items-center gap-2 transition-all hover:shadow-md"
+                  style={{backgroundColor: '#FBAD3F', color: 'white'}}
+                >
+                  <span>📚</span>
+                  Need our food safety or sandwich-making guides?
+                </button>
               </div>
             </div>
           </div>
@@ -1830,7 +1844,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         </div>
 
         {/* Resources Section - Moved to bottom for better UX */}
-        <div className="max-w-4xl mx-auto mt-8 px-4">
+        <div id="resources-section" className="max-w-4xl mx-auto mt-8 px-4">
           <div className="info-box p-5 mb-6" style={{background: 'linear-gradient(135deg, rgba(251, 173, 63, 0.05) 0%, rgba(35, 99, 131, 0.05) 100%)', border: '2px solid rgba(251, 173, 63, 0.3)'}}>
             <h3 className="text-xl font-bold mb-2" style={{color: '#236383'}}>
               📚 Sandwich Making Resources
