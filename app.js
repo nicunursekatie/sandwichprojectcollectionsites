@@ -1281,20 +1281,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
             )}
           </div>
 
-          {/* Scroll hint */}
-          <div className="text-center py-4 mb-4">
-            <p className="text-base font-medium mb-2" style={{color: '#007E8C'}}>
-              👇 Scroll down to see the map and host list
-            </p>
-            <div className="inline-block animate-bounce">
-              <svg className="w-6 h-6 mx-auto" style={{color: '#007E8C'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            </div>
-          </div>
-
           {/* View Toggle */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             <button
               onClick={() => {
                 setViewMode('list');
