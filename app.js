@@ -1126,81 +1126,48 @@ This is safe because your API key is already restricted to only the Geocoding AP
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-2xl premium-card-header p-8 mb-8">
-          <div className="flex justify-between items-start mb-6">
+        <div className="bg-white rounded-2xl premium-card-header p-6 mb-6">
+          <div className="flex justify-between items-start mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight" style={{letterSpacing: '-0.02em'}}>
                 <b>The Sandwich Project</b> Host Finder Tool
               </h1>
-              <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
+              <p className="text-xl font-bold mb-1" style={{color: '#007E8C'}}>
                 {dropOffDate}
               </p>
-              <p className="text-lg font-semibold" style={{color: '#A31C41'}}>
-                We only collect sandwiches on Wednesdays (some hosts may accept early Thursday AM drop-offs).
+              <p className="text-sm text-gray-600 mb-3">
+                We collect on Wednesdays (some hosts accept early Thursday AM drop-offs)
               </p>
-            </div>
-            <button
-              onClick={() => {
-                const password = prompt('Enter admin password:');
-                if (password === 'sandwich2024') {  // Change this password
-                  setShowAdmin(true);
-                } else if (password !== null) {
-                  alert('Incorrect password');
-                }
-              }}
-              className="text-sm px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
-              style={{backgroundColor: '#A31C41', color: 'white'}}
-              title="Admin: Manage hosts for next week"
-            >
-              🔧 Manage Hosts
-            </button>
-          </div>
-
-          {/* Compact Info Boxes */}
-          <div className="space-y-3 mb-6">
-            {/* How to Use */}
-            <div className="p-4 rounded-lg text-center" style={{background: 'linear-gradient(135deg, #E6F7F9 0%, #D4F1F4 100%)', border: '2px solid #007E8C'}}>
-              <p className="text-base font-semibold" style={{color: '#236383'}}>
-                <span style={{color: '#007E8C'}}>Enter your address below</span> to find your 3 closest drop-off locations • <button
+              <p className="text-sm text-gray-700">
+                <span className="font-semibold">How to use:</span> Enter your address below → we'll show your 3 closest hosts → tap "Get Directions" • <button
                   onClick={() => {
                     document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    trackEvent('resources_link_click', {
-                      event_category: 'Resources',
-                      event_label: 'Jump to Resources'
-                    });
                   }}
-                  className="underline hover:no-underline font-semibold"
-                  style={{color: '#FBAD3F'}}
+                  className="text-blue-600 underline hover:no-underline"
                 >
                   Need sandwich-making guides?
                 </button>
               </p>
             </div>
-
-            {/* Hosts NOT Collecting */}
-            <div className="p-3 rounded-lg text-center" style={{background: 'linear-gradient(135deg, #FFE6E6 0%, #FFD6D6 100%)', border: '2px solid #A31C41'}}>
-              <p className="text-sm font-bold" style={{color: '#A31C41'}}>
-                Hosts NOT Available This Week: Jenny V.W., Carrey H., Stacey & Jack G.
-              </p>
-            </div>
-
-            {/* Sign-in Reminder */}
-            <div className="p-3 rounded-lg text-center" style={{background: 'linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%)', border: '2px solid #FBAD3F'}}>
-              <p className="text-sm font-semibold" style={{color: '#A31C41'}}>
-                Don't forget to sign in at your host home!
-                <span className="font-normal" style={{color: '#236383'}}> Record your sandwich type, count, and contact info.</span>
-              </p>
-            </div>
+            <button
+              onClick={() => {
+                const password = prompt('Enter admin password:');
+                if (password === 'sandwich2024') {
+                  setShowAdmin(true);
+                } else if (password !== null) {
+                  alert('Incorrect password');
+                }
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:shadow-md hidden sm:block"
+              style={{backgroundColor: '#A31C41', color: 'white'}}
+              title="Admin: Manage hosts for next week"
+            >
+              🔧 Admin
+            </button>
           </div>
 
           {/* Smart Search Section */}
-          <div className="info-box p-6 mb-6" style={{boxShadow: '0 4px 12px rgba(0, 126, 140, 0.15)'}}>
-            <label className="block text-2xl font-bold mb-3" style={{color: '#236383'}}>
-              Find Your Nearest Drop-Off Location
-            </label>
-            <p className="text-base mb-4" style={{color: '#007E8C'}}>
-              Enter your address to see the 3 closest hosts
-            </p>
+          <div className="p-4">
             <div className="flex flex-col sm:flex-row gap-3 mb-3">
               <div className="relative flex-1">
                 <input
@@ -1267,6 +1234,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </p>
               </div>
             )}
+
+            {/* Collapsible Alerts Below Search */}
+            <div className="mt-4 space-y-2">
+              {/* Hosts NOT Available - Collapsible */}
+              <details className="group">
+                <summary className="cursor-pointer list-none p-2 rounded-lg text-sm font-semibold" style={{backgroundColor: '#FEE2E2', color: '#991B1B'}}>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="group-open:rotate-90 transition-transform">▶</span>
+                    Hosts NOT available this week (click to see)
+                  </span>
+                </summary>
+                <div className="p-3 mt-1 rounded-lg text-sm" style={{backgroundColor: '#FEF2F2', color: '#991B1B'}}>
+                  Jenny V.W., Carrey H., Stacey & Jack G.
+                </div>
+              </details>
+            </div>
           </div>
 
           {/* View Toggle */}
@@ -1808,6 +1791,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
             )}
               </div>
             )}
+        </div>
+
+        {/* Sign-in Reminder Footer */}
+        <div className="max-w-5xl mx-auto mt-6 px-4">
+          <div className="p-3 rounded-lg text-center text-sm" style={{backgroundColor: '#FFF9E6', border: '1px solid #FBAD3F'}}>
+            <span className="font-semibold" style={{color: '#A31C41'}}>Remember to sign in at your host home!</span>
+            <span className="text-gray-700"> Record your sandwich type, count, and contact info on the sign-in sheet.</span>
+          </div>
         </div>
 
         {/* Resources Section - Moved to bottom for better UX */}
