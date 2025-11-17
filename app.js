@@ -18,6 +18,7 @@ const HostAvailabilityApp = () => {
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
+  const [directionsMenuOpen, setDirectionsMenuOpen] = React.useState(null);
   const markersRef = React.useRef({});
 
   // Google Tag Manager tracking helper
@@ -28,6 +29,28 @@ const HostAvailabilityApp = () => {
       ...eventParams
     });
   };
+
+  // Close directions menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (directionsMenuOpen !== null) {
+        const menuContainer = event.target.closest('[data-directions-menu]');
+        if (!menuContainer) {
+          setDirectionsMenuOpen(null);
+        }
+      }
+    };
+    
+    if (directionsMenuOpen !== null) {
+      // Use setTimeout to avoid immediate closure when opening
+      setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 0);
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [directionsMenuOpen]);
 
   // Scroll depth tracking
   React.useEffect(() => {
@@ -867,6 +890,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
       marker.addListener('click', (e) => {
         setMapTooltip(host);
         setHighlightedHostId(host.id);
+
+        // Zoom in and center on the clicked marker
+        mapInstance.setZoom(14);
+        mapInstance.panTo({ lat: host.lat, lng: host.lng });
+
         trackEvent('map_marker_click', {
           event_category: 'Map',
           event_label: 'Marker Clicked',
@@ -1085,6 +1113,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
       const url = `https://www.google.com/maps/search/?api=1&query=${host.lat},${host.lng}`;
       window.open(url, '_blank');
     }
+    setDirectionsMenuOpen(null);
+  };
+
+  // Open Apple Maps with directions
+  const openAppleMapsDirections = (host) => {
+    trackEvent('open_apple_maps', {
+      event_category: 'External Navigation',
+      event_label: 'Apple Maps',
+      host_name: host.name,
+      host_area: host.area
+    });
+    
+    const url = `https://maps.apple.com/?daddr=${host.lat},${host.lng}`;
+    window.open(url, '_blank');
+    setDirectionsMenuOpen(null);
   };
 
   // Email directions
@@ -1135,17 +1178,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <p className="text-xl font-bold mb-1" style={{color: '#007E8C'}}>
                 {dropOffDate}
               </p>
-              <p className="text-sm text-gray-600 mb-3">
-                We collect on Wednesdays (some hosts accept early Thursday AM drop-offs)
-              </p>
-              <p className="text-sm text-gray-700">
-                <span className="font-semibold">How to use:</span> Enter your address below → we'll show your 3 closest hosts → tap "Get Directions" • <button
+              <p className="text-sm text-gray-600 mb-2">
+                We collect on Wednesdays (some hosts accept early Thursday AM drop-offs) • <button
                   onClick={() => {
                     document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
                   className="text-blue-600 underline hover:no-underline"
                 >
-                  Need sandwich-making guides?
+                  Need guides?
                 </button>
               </p>
             </div>
@@ -1164,6 +1204,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
             >
               🔧 Admin
             </button>
+          </div>
+
+          {/* Visual How-to Steps */}
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-5 px-4 py-3" style={{background: 'linear-gradient(135deg, #F0F9FA 0%, #E6F7F9 100%)', borderRadius: '12px'}}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-md" style={{backgroundColor: '#007E8C'}}>1</div>
+              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>Enter your address</span>
+            </div>
+            <span className="text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-md" style={{backgroundColor: '#007E8C'}}>2</div>
+              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>See 3 nearest hosts</span>
+            </div>
+            <span className="text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-md" style={{backgroundColor: '#007E8C'}}>3</div>
+              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>Tap "Get Directions"</span>
+            </div>
           </div>
 
           {/* Smart Search Section */}
@@ -1663,26 +1721,56 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <i className="lucide-route w-5 h-5"></i>
                             <span>{showingDirections === host.id ? 'Clear Route' : 'Show Route'}</span>
                           </button>
-                          <a
-                            href={`https://maps.apple.com/?daddr=${host.lat},${host.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              trackEvent('get_directions_click', {
-                                event_category: 'Directions',
-                                event_label: 'Get Directions Button',
-                                host_name: host.name,
-                                host_area: host.area
-                              });
-                            }}
-                            className="btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
-                            style={{backgroundColor: '#007E8C', minHeight: '48px'}}
-                            title="Open directions in your maps app"
-                          >
-                            <i className="lucide-navigation w-5 h-5"></i>
-                            <span>Get Directions</span>
-                          </a>
+                          <div className="relative" data-directions-menu>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDirectionsMenuOpen(directionsMenuOpen === host.id ? null : host.id);
+                                trackEvent('get_directions_click', {
+                                  event_category: 'Directions',
+                                  event_label: 'Get Directions Button',
+                                  host_name: host.name,
+                                  host_area: host.area
+                                });
+                              }}
+                              className="btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation w-full"
+                              style={{backgroundColor: '#007E8C', minHeight: '48px'}}
+                              title="Choose your maps app"
+                            >
+                              <i className="lucide-navigation w-5 h-5"></i>
+                              <span>Get Directions</span>
+                              <i className={`lucide-chevron-down w-4 h-4 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
+                            </button>
+                            {directionsMenuOpen === host.id && (
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-50 overflow-hidden" style={{borderColor: '#007E8C'}}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openGoogleMapsDirections(host);
+                                  }}
+                                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                >
+                                  <i className="lucide-map w-5 h-5" style={{color: '#007E8C'}}></i>
+                                  <div>
+                                    <div className="font-semibold text-sm" style={{color: '#236383'}}>Google Maps</div>
+                                    <div className="text-xs text-gray-500">Works on all devices</div>
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openAppleMapsDirections(host);
+                                  }}
+                                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors border-t" style={{borderColor: '#e0e0e0'}}>
+                                  <i className="lucide-map-pin w-5 h-5" style={{color: '#007E8C'}}></i>
+                                  <div>
+                                    <div className="font-semibold text-sm" style={{color: '#236383'}}>Apple Maps</div>
+                                    <div className="text-xs text-gray-500">Best on iPhone/iPad</div>
+                                  </div>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
