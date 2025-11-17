@@ -1130,7 +1130,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight" style={{letterSpacing: '-0.02em'}}>
-                Sandwich Drop-Off Locations
+                <b>The Sandwich Project</b></b> Host Finder Tool
               </h1>
               <p className="text-2xl font-bold mb-2" style={{color: '#007E8C'}}>
                 {dropOffDate}
@@ -1158,9 +1158,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
           {/* How to Use This App - Primary Instructions */}
           <div className="p-6 mb-4 rounded-xl" style={{background: 'linear-gradient(135deg, #E6F7F9 0%, #D4F1F4 100%)', border: '3px solid #007E8C', boxShadow: '0 4px 12px rgba(0, 126, 140, 0.2)'}}>
-            <div className="flex items-start gap-4">
-              <div className="text-3xl flex-shrink-0">🎯</div>
-              <div className="flex-1">
+            <div className="flex flex-col items-center text-center">
+              <div className="text-3xl mb-3">🎯</div>
+              <div className="w-full">
                 <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>
                   How to Use This App
                 </h3>
@@ -1175,28 +1175,30 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     Tap Get Directions for the one you want.
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    trackEvent('resources_link_click', {
-                      event_category: 'Resources',
-                      event_label: 'Jump to Resources'
-                    });
-                  }}
-                  className="text-sm px-4 py-2 rounded-lg font-medium inline-flex items-center gap-2 transition-all hover:shadow-md"
-                  style={{backgroundColor: '#FBAD3F', color: 'white'}}
-                >
-                  <span>📚</span>
-                  Need our food safety or sandwich-making guides?
-                </button>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => {
+                      document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      trackEvent('resources_link_click', {
+                        event_category: 'Resources',
+                        event_label: 'Jump to Resources'
+                      });
+                    }}
+                    className="text-sm px-4 py-2 rounded-lg font-medium inline-flex items-center gap-2 transition-all hover:shadow-md"
+                    style={{backgroundColor: '#FBAD3F', color: 'white'}}
+                  >
+                    <span>📚</span>
+                    Need our food safety or sandwich-making guides?
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Hosts NOT Collecting */}
           <div className="p-5 mb-6 rounded-xl" style={{background: 'linear-gradient(135deg, #FFE6E6 0%, #FFD6D6 100%)', border: '2px solid #A31C41', boxShadow: '0 2px 8px rgba(163, 28, 65, 0.15)'}}>
-            <div className="flex items-start gap-4">
-              <div className="text-2xl flex-shrink-0">⚠️</div>
+            <div className="flex flex-col items-center text-center">
+              <div className="text-2xl mb-2">⚠️</div>
               <div>
                 <p className="text-base font-bold mb-2" style={{color: '#A31C41'}}>
                   Hosts NOT Available This Week: Jenny V.W., Carrey H., Stacey & Jack G.
@@ -1210,8 +1212,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
           {/* Sign-in Reminder */}
           <div className="p-5 mb-6 rounded-xl" style={{background: 'linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%)', border: '2px solid #FBAD3F', boxShadow: '0 2px 8px rgba(251, 173, 63, 0.15)'}}>
-            <div className="flex items-start gap-3">
-              <div className="text-2xl flex-shrink-0">📝</div>
+            <div className="flex flex-col items-center text-center">
+              <div className="text-2xl mb-2">📝</div>
               <div>
                 <h3 className="text-lg font-bold mb-1" style={{color: '#A31C41'}}>
                   Don't Forget to Sign In When You Drop Off At Your Host Home!!
