@@ -1226,39 +1226,57 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </div>
 
           {/* Smart Search Section */}
-          <div className="info-box p-6 mb-6">
-            <label className="block text-xl font-semibold mb-3" style={{color: '#236383'}}>
-              Search for Locations
+          <div className="info-box p-6 mb-6" style={{boxShadow: '0 4px 12px rgba(0, 126, 140, 0.15)'}}>
+            <label className="block text-2xl font-bold mb-3" style={{color: '#236383'}}>
+              🔍 Find Your Nearest Drop-Off Location
             </label>
-            <p className="text-base mb-3" style={{color: '#007E8C'}}>
-              Enter an address to find nearest hosts, or search by name/area to filter the list
+            <p className="text-base mb-4" style={{color: '#007E8C'}}>
+              Enter your address to see the 3 closest hosts
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mb-3">
-              <input
-                type="text"
-                placeholder="Enter address, ZIP code, host name, or area..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSmartSearch()}
-                className="flex-1 px-5 py-4 premium-input rounded-xl text-base"
-                disabled={geocoding}
-              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="e.g., 123 Peachtree St, Atlanta, GA or 30308"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSmartSearch()}
+                  className="w-full px-5 py-5 pr-12 premium-input rounded-xl text-lg border-2 transition-all"
+                  style={{borderColor: '#007E8C'}}
+                  disabled={geocoding}
+                  autoFocus
+                />
+                {searchInput && (
+                  <button
+                    onClick={() => {
+                      setSearchInput('');
+                      setNameSearch('');
+                      setUserCoords(null);
+                      setUserAddress('');
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
               <button
                 onClick={handleSmartSearch}
                 disabled={geocoding || !searchInput.trim()}
-                className="btn-primary px-8 py-4 text-white rounded-xl font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="btn-primary px-8 py-5 text-white rounded-xl font-bold text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transition-all touch-manipulation"
+                style={{backgroundColor: '#007E8C', minHeight: '60px'}}
               >
-                <i className="lucide-search w-5 h-5 mr-2"></i>
+                <i className="lucide-search w-6 h-6 mr-2"></i>
                 {geocoding ? 'Searching...' : 'Search'}
               </button>
             </div>
             <button
               onClick={getCurrentLocation}
-              className="text-base font-medium hover:underline flex items-center transition-all"
-              style={{color: '#007E8C'}}
+              className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+              style={{backgroundColor: '#FBAD3F', color: 'white', minHeight: '56px'}}
             >
-              <i className="lucide-locate w-5 h-5 mr-2"></i>
-              Use my current location
+              <i className="lucide-locate w-5 h-5"></i>
+              Use My Current Location
             </button>
             {userAddress && userCoords && (
               <div className="mt-4 p-4 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
@@ -1608,11 +1626,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <div
                   key={host.id}
                   data-host-id={host.id}
-                  className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow cursor-pointer ${
+                  className={`bg-white rounded-2xl premium-card p-6 md:p-8 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer border-2 border-transparent hover:border-blue-200 ${
                     userCoords && viewMode === 'proximity' && index < 3
                       ? `top-host-card top-host-${index + 1}`
                       : ''
-                  } ${highlightedHostId === host.id ? 'ring-4 ring-yellow-400' : ''}`}
+                  } ${highlightedHostId === host.id ? 'ring-4 ring-yellow-400 shadow-xl' : ''}`}
                   onClick={() => {
                     setHighlightedHostId(host.id);
                     trackEvent('host_card_click', {
@@ -1671,13 +1689,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           )}
                           <h3 className="font-bold text-2xl">{host.name}</h3>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (!userCoords) {
                                 alert('Please enter your address first to see the route on the map!');
                                 // Focus on the search input
-                                const searchInput = document.querySelector('input[placeholder*="Enter address"]');
+                                const searchInput = document.querySelector('input[placeholder*="e.g."]');
                                 if (searchInput) {
                                   searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                   setTimeout(() => searchInput.focus(), 500);
@@ -1686,19 +1705,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               }
                               showingDirections === host.id ? clearDirections() : showDirections(host);
                             }}
-                            className="btn-primary px-4 py-2.5 rounded-lg font-medium text-white text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all hover:shadow-md"
-                            style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F'}}
+                            className="btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+                            style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F', minHeight: '48px'}}
                             title={!userCoords ? 'Enter your address to see route on map' : (showingDirections === host.id ? 'Clear route from map' : 'Show route on the map')}
                           >
-                            <i className="lucide-route w-4 h-4"></i>
-                            <span className="hidden sm:inline">{showingDirections === host.id ? 'Clear Route' : 'Show Route'}</span>
-                            <span className="sm:hidden">{showingDirections === host.id ? 'Clear' : 'Route'}</span>
+                            <i className="lucide-route w-5 h-5"></i>
+                            <span>{showingDirections === host.id ? 'Clear Route' : 'Show Route'}</span>
                           </button>
                           <a
                             href={`https://maps.apple.com/?daddr=${host.lat},${host.lng}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               trackEvent('get_directions_click', {
                                 event_category: 'Directions',
                                 event_label: 'Get Directions Button',
@@ -1706,18 +1725,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 host_area: host.area
                               });
                             }}
-                            className="btn-primary px-4 py-2.5 rounded-lg font-medium text-white text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all hover:shadow-md"
-                            style={{backgroundColor: '#007E8C'}}
+                            className="btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+                            style={{backgroundColor: '#007E8C', minHeight: '48px'}}
                             title="Open directions in your maps app"
                           >
-                            <i className="lucide-navigation w-4 h-4"></i>
-                            <span className="hidden sm:inline">Get Directions</span>
-                            <span className="sm:hidden">Directions</span>
+                            <i className="lucide-navigation w-5 h-5"></i>
+                            <span>Get Directions</span>
                           </a>
                           <button
-                            onClick={() => handleAddToCalendar(host)}
-                            className="btn-primary px-4 py-2.5 rounded-lg font-medium text-white text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all hover:shadow-md"
-                            style={{backgroundColor: '#236383'}}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCalendar(host);
+                            }}
+                            className="btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+                            style={{backgroundColor: '#236383', minHeight: '48px'}}
                             title="Download an event reminder for this host"
                           >
                             <i className="lucide-calendar-plus w-4 h-4"></i>
