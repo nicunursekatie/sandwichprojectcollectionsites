@@ -6,6 +6,7 @@ const HostAvailabilityApp = () => {
   const [viewMode, setViewMode] = React.useState('proximity'); 
   const [filterArea, setFilterArea] = React.useState('all');
   const [selectedHost, setSelectedHost] = React.useState(null);
+  const [mapTooltip, setMapTooltip] = React.useState(null);
   const [geocoding, setGeocoding] = React.useState(false);
   const [map, setMap] = React.useState(null);
   const [mapLoaded, setMapLoaded] = React.useState(false);
@@ -869,9 +870,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
       // Store marker reference
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
 
-      // Add click listener to show host info
-      marker.addListener('click', () => {
-        setSelectedHost(host);
+      // Add click listener to show tooltip
+      marker.addListener('click', (e) => {
+        setMapTooltip(host);
         setHighlightedHostId(host.id);
         trackEvent('map_marker_click', {
           event_category: 'Map',
@@ -900,6 +901,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
     
     setDirectionsService(directionsServiceInstance);
     setDirectionsRenderer(directionsRendererInstance);
+
+    // Close tooltip when clicking on the map (not on a marker)
+    mapInstance.addListener('click', () => {
+      setMapTooltip(null);
+      setHighlightedHostId(null);
+    });
 
     setMap(mapInstance);
   }, [userCoords, availableHosts, map, showAllHostsOnMap]);
@@ -1441,6 +1448,85 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
               <div className="relative">
                 <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
+
+                {/* Map Tooltip */}
+                {mapTooltip && (
+                  <div
+                    className="absolute bg-white rounded-xl shadow-2xl p-4 z-10 border-2"
+                    style={{
+                      top: '20px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      minWidth: '280px',
+                      maxWidth: '320px',
+                      borderColor: '#007E8C',
+                      boxShadow: '0 10px 40px rgba(0, 126, 140, 0.3)'
+                    }}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="text-lg font-bold" style={{color: '#236383'}}>
+                        {mapTooltip.name}
+                      </h4>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMapTooltip(null);
+                          setHighlightedHostId(null);
+                        }}
+                        className="text-gray-400 hover:text-gray-600 ml-2"
+                        style={{fontSize: '20px', lineHeight: '1'}}
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 mb-3">
+                      <p className="text-sm font-medium" style={{color: '#007E8C'}}>
+                        📍 {mapTooltip.area}{mapTooltip.neighborhood ? ` - ${mapTooltip.neighborhood}` : ''}
+                      </p>
+                      {mapTooltip.distance && (
+                        <p className="text-sm font-semibold" style={{color: '#236383'}}>
+                          {mapTooltip.distance} miles away
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <a
+                        href={`https://maps.apple.com/?daddr=${mapTooltip.lat},${mapTooltip.lng}`}
+                        className="block w-full px-4 py-2 text-white rounded-lg font-medium text-center text-sm transition-all hover:opacity-90"
+                        style={{backgroundColor: '#007E8C'}}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          trackEvent('open_apple_maps', {
+                            event_category: 'External Navigation',
+                            event_label: 'Apple Maps',
+                            host_name: mapTooltip.name,
+                            host_area: mapTooltip.area
+                          });
+                        }}
+                      >
+                        Open in Maps
+                      </a>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const hostCard = document.querySelector(`[data-host-id="${mapTooltip.id}"]`);
+                          if (hostCard) {
+                            hostCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                          setMapTooltip(null);
+                        }}
+                        className="block w-full px-4 py-2 rounded-lg font-medium text-center text-sm transition-all"
+                        style={{backgroundColor: '#F0F9FA', color: '#236383', border: '1.5px solid #007E8C'}}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Turn-by-Turn Directions */}
@@ -1507,6 +1593,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               filteredHosts.map((host, index) => (
                 <div
                   key={host.id}
+                  data-host-id={host.id}
                   className={`bg-white rounded-2xl premium-card p-6 hover:shadow-md transition-shadow cursor-pointer ${
                     userCoords && viewMode === 'proximity' && index < 3
                       ? `top-host-card top-host-${index + 1}`
