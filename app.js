@@ -1185,13 +1185,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
           </div>
 
-          {/* Hosts NOT Collecting - Compact version */}
-          <div className="p-3 mb-6 rounded-lg" style={{background: 'linear-gradient(135deg, #FFE6E6 0%, #FFD6D6 100%)', border: '2px solid #A31C41'}}>
-            <div className="flex items-start gap-3">
-              <div className="text-xl flex-shrink-0">⚠️</div>
+          {/* Hosts NOT Collecting */}
+          <div className="p-5 mb-6 rounded-xl" style={{background: 'linear-gradient(135deg, #FFE6E6 0%, #FFD6D6 100%)', border: '2px solid #A31C41', boxShadow: '0 2px 8px rgba(163, 28, 65, 0.15)'}}>
+            <div className="flex items-start gap-4">
+              <div className="text-2xl flex-shrink-0">⚠️</div>
               <div>
-                <p className="text-sm font-bold" style={{color: '#A31C41'}}>
-                  Hosts NOT available this week: <span className="font-bold">Jenny V.W., Carrey H., Stacey & Jack G.</span> • <span className="text-xs" style={{color: '#007E8C'}}>Availability may change until Monday morning.</span>
+                <h3 className="text-lg font-bold mb-2" style={{color: '#A31C41'}}>
+                  Hosts NOT Available This Week
+                </h3>
+                <p className="text-base font-semibold mb-1" style={{color: '#A31C41'}}>
+                  Jenny V.W., Carrey H., Stacey & Jack G.
+                </p>
+                <p className="text-sm font-medium" style={{color: '#007E8C'}}>
+                  Availability may change until Monday morning.
                 </p>
               </div>
             </div>
