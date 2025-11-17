@@ -1202,7 +1202,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <p className="text-xl font-bold mb-2" style={{color: '#007E8C'}}>
                 {dropOffDate}
               </p>
-              <p className="text-base font-semibold mb-2" style={{color: '#236383'}}>
+              <p className="text-lg font-bold mb-2" style={{color: '#236383'}}>
                 We collect on Wednesdays <span className="text-sm font-normal" style={{color: '#666'}}>(some hosts accept early Thursday AM drop-offs)</span>
               </p>
               <p className="text-sm">
