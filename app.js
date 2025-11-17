@@ -688,13 +688,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     const mapInstance = new window.google.maps.Map(document.getElementById('map'), {
       center: mapCenter,
       zoom: mapZoom,
-      mapId: 'SANDWICH_DROP_OFF_MAP',
-      styles: [
-        {
-          featureType: 'poi',
-          stylers: [{ visibility: 'off' }]
-        }
-      ]
+      mapId: 'SANDWICH_DROP_OFF_MAP'
     });
 
     // Add user location marker only if we have user coordinates
@@ -1204,11 +1198,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <div className="flex items-start gap-4">
               <div className="text-2xl flex-shrink-0">⚠️</div>
               <div>
-                <h3 className="text-lg font-bold mb-2" style={{color: '#A31C41'}}>
-                  Hosts NOT Available This Week
-                </h3>
-                <p className="text-base font-semibold mb-1" style={{color: '#A31C41'}}>
-                  Jenny V.W., Carrey H., Stacey & Jack G.
+                <p className="text-base font-bold mb-2" style={{color: '#A31C41'}}>
+                  Hosts NOT Available This Week: Jenny V.W., Carrey H., Stacey & Jack G.
                 </p>
                 <p className="text-sm font-medium" style={{color: '#007E8C'}}>
                   Availability may change until Monday morning.
