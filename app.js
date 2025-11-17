@@ -1298,28 +1298,28 @@ This is safe because your API key is already restricted to only the Geocoding AP
   };
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-2xl premium-card-header p-6 mb-6">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-4 flex-1">
+        <div className="bg-white rounded-2xl premium-card-header p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-1 mb-3 sm:mb-0">
               <img
                 src="LOGOS/CMYK_PRINT_TSP-01-01.jpg"
                 alt="The Sandwich Project Logo"
-                className="h-16 sm:h-20 w-auto object-contain"
+                className="h-12 sm:h-16 md:h-20 w-auto object-contain mx-auto sm:mx-0"
               />
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 tracking-tight" style={{letterSpacing: '-0.02em'}}>
+              <div className="text-center sm:text-left">
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1 sm:mb-2 tracking-tight" style={{letterSpacing: '-0.02em'}}>
                   <b>The Sandwich Project</b> Host Finder Tool
                 </h1>
-                <p className="text-xl font-bold mb-2" style={{color: '#007E8C'}}>
+                <p className="text-base sm:text-xl font-bold mb-1 sm:mb-2" style={{color: '#007E8C'}}>
                   {dropOffDate}
                 </p>
-                <p className="text-lg font-bold mb-2" style={{color: '#236383'}}>
-                  We collect on Wednesdays <span className="text-sm font-normal" style={{color: '#666'}}>(some hosts accept early Thursday AM drop-offs)</span>
+                <p className="text-sm sm:text-base md:text-lg font-semibold mb-1 sm:mb-2" style={{color: '#236383'}}>
+                  We collect on Wednesdays <span className="text-xs sm:text-sm font-normal" style={{color: '#666'}}>(some hosts accept early Thursday AM drop-offs)</span>
                 </p>
-                <p className="text-sm">
+                <p className="text-xs sm:text-sm">
                   <button
                     onClick={() => {
                       document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1340,7 +1340,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   alert('Incorrect password');
                 }
               }}
-              className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:shadow-md hidden sm:block"
+              className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:shadow-md hidden sm:block self-start"
               style={{backgroundColor: '#A31C41', color: 'white'}}
               title="Admin: Manage hosts for next week"
             >
@@ -1349,26 +1349,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </div>
 
           {/* Visual How-to Steps */}
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-5 px-4 py-3" style={{background: 'linear-gradient(135deg, #F0F9FA 0%, #E6F7F9 100%)', borderRadius: '12px'}}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-md" style={{backgroundColor: '#007E8C'}}>1</div>
-              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>Enter your address</span>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-center gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-5 px-3 sm:px-4 py-3" style={{background: 'linear-gradient(135deg, #F0F9FA 0%, #E6F7F9 100%)', borderRadius: '12px'}}>
+            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>1</div>
+              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Enter your address</span>
             </div>
-            <span className="text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-md" style={{backgroundColor: '#007E8C'}}>2</div>
-              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>View your 3 nearest hosts</span>
+            <span className="text-xl sm:text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
+            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>2</div>
+              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>View your 3 nearest hosts</span>
             </div>
-            <span className="text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-md" style={{backgroundColor: '#007E8C'}}>3</div>
-              <span className="text-base sm:text-lg font-bold" style={{color: '#236383'}}>Click "Show Route" or "Get Directions"</span>
+            <span className="text-xl sm:text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
+            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>3</div>
+              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Click "Show Route" or "Get Directions"</span>
             </div>
           </div>
 
           {/* Smart Search Section */}
-          <div className="p-4">
-            <div className="flex flex-col sm:flex-row gap-3 mb-3">
+          <div className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
               <div className="relative flex-1">
                 <input
                   type="text"
@@ -1376,7 +1376,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSmartSearch()}
-                  className="w-full px-5 py-5 pr-12 premium-input rounded-xl text-lg border-2 transition-all"
+                  className="w-full px-4 sm:px-5 py-4 sm:py-5 pr-10 sm:pr-12 premium-input rounded-xl text-base sm:text-lg border-2 transition-all"
                   style={{borderColor: '#007E8C'}}
                   disabled={geocoding}
                   autoFocus
@@ -1398,19 +1398,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <button
                 onClick={handleSmartSearch}
                 disabled={geocoding || !searchInput.trim()}
-                className="btn-primary px-8 py-5 text-white rounded-xl font-bold text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transition-all touch-manipulation"
-                style={{backgroundColor: '#007E8C', minHeight: '60px'}}
+                className="btn-primary px-6 sm:px-8 py-4 sm:py-5 text-white rounded-xl font-bold text-base sm:text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transition-all touch-manipulation w-full sm:w-auto"
+                style={{backgroundColor: '#007E8C', minHeight: '52px'}}
               >
-                <i className="lucide-search w-6 h-6 mr-2"></i>
+                <i className="lucide-search w-5 h-5 sm:w-6 sm:h-6 mr-2"></i>
                 {geocoding ? 'Searching...' : 'Search'}
               </button>
             </div>
             <button
               onClick={getCurrentLocation}
-              className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
-              style={{backgroundColor: '#FBAD3F', color: 'white', minHeight: '56px'}}
+              className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+              style={{backgroundColor: '#FBAD3F', color: 'white', minHeight: '52px'}}
             >
-              <i className="lucide-locate w-5 h-5"></i>
+              <i className="lucide-locate w-4 h-4 sm:w-5 sm:h-5"></i>
               Use My Current Location
             </button>
             {userAddress && userCoords && (
