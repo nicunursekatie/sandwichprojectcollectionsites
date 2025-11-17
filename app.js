@@ -1309,23 +1309,23 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 tracking-tight" style={{letterSpacing: '-0.02em'}}>
                   <b>The Sandwich Project</b> Host Finder Tool
                 </h1>
-              <p className="text-xl font-bold mb-2" style={{color: '#007E8C'}}>
-                {dropOffDate}
-              </p>
-              <p className="text-lg font-bold mb-2" style={{color: '#236383'}}>
-                We collect on Wednesdays <span className="text-sm font-normal" style={{color: '#666'}}>(some hosts accept early Thursday AM drop-offs)</span>
-              </p>
-              <p className="text-sm">
-                <button
-                  onClick={() => {
-                    document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                  className="text-blue-600 underline hover:no-underline font-medium"
-                >
-                  Need sandwich-making guides?
-                </button>
-              </p>
-            </div>
+                <p className="text-xl font-bold mb-2" style={{color: '#007E8C'}}>
+                  {dropOffDate}
+                </p>
+                <p className="text-lg font-bold mb-2" style={{color: '#236383'}}>
+                  We collect on Wednesdays <span className="text-sm font-normal" style={{color: '#666'}}>(some hosts accept early Thursday AM drop-offs)</span>
+                </p>
+                <p className="text-sm">
+                  <button
+                    onClick={() => {
+                      document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="text-blue-600 underline hover:no-underline font-medium"
+                  >
+                    Need sandwich-making guides?
+                  </button>
+                </p>
+              </div>
             <button
               onClick={() => {
                 const password = prompt('Enter admin password:');
