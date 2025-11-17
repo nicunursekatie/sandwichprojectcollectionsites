@@ -39,8 +39,10 @@ const HostAvailabilityApp = () => {
   React.useEffect(() => {
     const handleClickOutside = (event) => {
       if (directionsMenuOpen !== null) {
+        // Check if click is on the button or inside the portal dropdown
         const menuContainer = event.target.closest('[data-directions-menu]');
-        if (!menuContainer) {
+        const portalDropdown = event.target.closest('.fixed.bg-white.rounded-lg.shadow-xl');
+        if (!menuContainer && !portalDropdown) {
           setDirectionsMenuOpen(null);
         }
       }
@@ -1843,7 +1845,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               <span>Get Directions</span>
                               <i className={`lucide-chevron-down w-4 h-4 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
                             </button>
-                            {directionsMenuOpen === host.id && (
+                            {directionsMenuOpen === host.id && ReactDOM.createPortal(
                               <div 
                                 className="fixed bg-white rounded-lg shadow-xl border-2 overflow-hidden"
                                 style={{
@@ -1855,6 +1857,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                   top: `${directionsMenuPosition.top}px`,
                                   left: `${directionsMenuPosition.left}px`
                                 }}
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <button
                                   onClick={(e) => {
@@ -1886,7 +1889,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                   <span className="font-bold" style={{color: '#A31C41'}}>Remember: </span>
                                   <span className="text-gray-700">Sign in when you drop off!</span>
                                 </div>
-                              </div>
+                              </div>,
+                              document.body
                             )}
                           </div>
                           <button
