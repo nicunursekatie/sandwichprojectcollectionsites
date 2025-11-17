@@ -1741,9 +1741,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             style={{backgroundColor: '#236383', minHeight: '48px'}}
                             title="Download an event reminder for this host"
                           >
-                            <i className="lucide-calendar-plus w-4 h-4"></i>
-                            <span className="hidden sm:inline">Add to Calendar</span>
-                            <span className="sm:hidden">Calendar</span>
+                            <i className="lucide-calendar-plus w-5 h-5"></i>
+                            <span>Add to Calendar</span>
                           </button>
                         </div>
                       </div>
