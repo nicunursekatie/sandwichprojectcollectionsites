@@ -1131,34 +1131,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
-        {/* Announcement Banner */}
-        <div className="mb-6 p-6 rounded-2xl" style={{backgroundColor: '#FFF3CD', border: '3px solid #FBAD3F'}}>
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 text-3xl">
-              ⚠️
-            </div>
-            <div>
-              <h2 className="text-xl font-bold mb-2" style={{color: '#A31C41'}}>
-                Important: Hosts NOT Collecting This Week
-              </h2>
-              <p className="text-lg font-semibold mb-2" style={{color: '#236383'}}>
-                The following hosts are <strong>NOT available</strong> for drop-offs this week:
-              </p>
-              <p className="text-lg font-bold" style={{color: '#A31C41'}}>
-                Jenny V.W.<br />
-                Carrey H.<br />
-                Stacey & Jack G.<br />
-                
-
-              </p>
-              <p className="text-base mt-2" style={{color: '#007E8C'}}>
-                <b>Availability for hosts may change until Monday, please check back Monday morning for official host availability for the following Wednesday.</b><br />
-                Please choose a different host from the available list below.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Header */}
         <div className="bg-white rounded-2xl premium-card-header p-8 mb-8">
           <div className="flex justify-between items-start mb-6">
@@ -1190,23 +1162,49 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </button>
           </div>
 
-          {/* How to Use This App - Primary Instructions */}
-          <div className="p-6 mb-6 rounded-xl" style={{background: 'linear-gradient(135deg, #E6F7F9 0%, #D4F1F4 100%)', border: '3px solid #007E8C', boxShadow: '0 4px 12px rgba(0, 126, 140, 0.2)'}}>
-            <div className="flex items-start gap-4">
-              <div className="text-3xl flex-shrink-0">🎯</div>
-              <div>
-                <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>
-                  How to Use This App
-                </h3>
-                <div className="space-y-2">
-                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
-                    Enter your address (or use your current location).
+          {/* How to Use + Unavailable Hosts - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* How to Use This App - Primary Instructions */}
+            <div className="p-6 rounded-xl" style={{background: 'linear-gradient(135deg, #E6F7F9 0%, #D4F1F4 100%)', border: '3px solid #007E8C', boxShadow: '0 4px 12px rgba(0, 126, 140, 0.2)'}}>
+              <div className="flex items-start gap-4">
+                <div className="text-3xl flex-shrink-0">🎯</div>
+                <div>
+                  <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>
+                    How to Use This App
+                  </h3>
+                  <div className="space-y-2">
+                    <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                      Enter your address (or use your current location).
+                    </p>
+                    <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                      We'll show you your 3 closest host homes for Wednesday drop-off.
+                    </p>
+                    <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                      Tap Get Directions for the one you want.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Hosts NOT Collecting - moved from top */}
+            <div className="p-6 rounded-xl" style={{background: 'linear-gradient(135deg, #FFE6E6 0%, #FFD6D6 100%)', border: '3px solid #A31C41', boxShadow: '0 4px 12px rgba(163, 28, 65, 0.2)'}}>
+              <div className="flex items-start gap-4">
+                <div className="text-3xl flex-shrink-0">⚠️</div>
+                <div>
+                  <h3 className="text-xl font-bold mb-2" style={{color: '#A31C41'}}>
+                    Hosts NOT Collecting This Week
+                  </h3>
+                  <p className="text-base font-semibold mb-2" style={{color: '#236383'}}>
+                    The following hosts are <strong>NOT available</strong> for drop-offs:
                   </p>
-                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
-                    We'll show you your 3 closest host homes for Wednesday drop-off.
+                  <p className="text-base font-bold mb-2" style={{color: '#A31C41'}}>
+                    Jenny V.W.<br />
+                    Carrey H.<br />
+                    Stacey & Jack G.
                   </p>
-                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
-                    Tap Get Directions for the one you want.
+                  <p className="text-sm" style={{color: '#007E8C'}}>
+                    <b>Availability may change until Monday morning.</b>
                   </p>
                 </div>
               </div>
@@ -1284,6 +1282,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Scroll hint */}
+          <div className="text-center py-4 mb-4">
+            <p className="text-base font-medium mb-2" style={{color: '#007E8C'}}>
+              👇 Scroll down to see the map and host list
+            </p>
+            <div className="inline-block animate-bounce">
+              <svg className="w-6 h-6 mx-auto" style={{color: '#007E8C'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
           </div>
 
           {/* View Toggle */}
