@@ -1293,15 +1293,35 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 });
               }}
               className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                viewMode === 'list' || viewMode === 'proximity' ? 'active' : ''
+                viewMode === 'list' ? 'active' : ''
               }`}
               style={{
-                backgroundColor: viewMode === 'list' || viewMode === 'proximity' ? '#007E8C' : undefined,
-                color: viewMode === 'list' || viewMode === 'proximity' ? 'white' : undefined
+                backgroundColor: viewMode === 'list' ? '#007E8C' : undefined,
+                color: viewMode === 'list' ? 'white' : undefined
               }}
             >
-              📋 List View
+              📋 List Only
             </button>
+            {userCoords && (
+              <button
+                onClick={() => {
+                  setViewMode('proximity');
+                  trackEvent('view_mode_change', {
+                    event_category: 'View',
+                    event_label: 'Split View Selected'
+                  });
+                }}
+                className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
+                  viewMode === 'proximity' ? 'active' : ''
+                }`}
+                style={{
+                  backgroundColor: viewMode === 'proximity' ? '#007E8C' : undefined,
+                  color: viewMode === 'proximity' ? 'white' : undefined
+                }}
+              >
+                📍 Map + List
+              </button>
+            )}
             <button
               onClick={() => {
                 setViewMode('map');
@@ -1318,7 +1338,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 color: viewMode === 'map' ? 'white' : undefined
               }}
             >
-              🗺️ Map View
+              🗺️ Map Only
             </button>
           </div>
 
@@ -1609,8 +1629,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   }}
                 >
                   <div className="flex gap-5 items-start">
-                    {/* Only show map thumbnail if map view is NOT active */}
-                    {!userCoords && (
+                    {/* Show map thumbnail in list view or when no address entered */}
+                    {(viewMode === 'list' || !userCoords) && (
                       <div className="flex-shrink-0" style={{width: '85px'}}>
                         {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
                           <img
