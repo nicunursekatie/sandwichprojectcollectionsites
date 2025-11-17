@@ -1064,15 +1064,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Calculate drive times for all hosts when user enters address
   React.useEffect(() => {
-    if (!userCoords || !directionsService || !availableHosts.length || !window.google || !window.google.maps) {
-      setHostDriveTimes({});
+    // Early return if conditions aren't met
+    if (!userCoords || !directionsService || !availableHosts || !availableHosts.length || !window.google || !window.google.maps) {
+      if (!userCoords || !directionsService) {
+        setHostDriveTimes({});
+        hostIdsRef.current = '';
+      }
       return;
     }
 
     // Create a string of host IDs to detect if hosts have changed
     const currentHostIds = availableHosts.map(h => h.id).sort().join(',');
-    if (hostIdsRef.current === currentHostIds) {
-      // Hosts haven't changed, don't recalculate
+    if (hostIdsRef.current === currentHostIds && Object.keys(hostDriveTimes).length > 0) {
+      // Hosts haven't changed and we already have drive times, don't recalculate
       return;
     }
     hostIdsRef.current = currentHostIds;
@@ -1081,32 +1085,50 @@ This is safe because your API key is already restricted to only the Geocoding AP
     let completedRequests = 0;
     const totalRequests = availableHosts.length;
     const newDriveTimes = {};
+    let isCancelled = false;
 
     // Calculate drive time for each host
     availableHosts.forEach(host => {
+      if (isCancelled) return; // Skip if already cancelled
+      
       const destination = { lat: host.lat, lng: host.lng };
 
-      directionsService.route(
-        {
-          origin: origin,
-          destination: destination,
-          travelMode: window.google.maps.TravelMode.DRIVING
-        },
-        (result, status) => {
-          completedRequests++;
-          if (status === 'OK') {
-            const duration = result.routes[0].legs[0].duration.text;
-            newDriveTimes[host.id] = duration;
-          }
+      try {
+        directionsService.route(
+          {
+            origin: origin,
+            destination: destination,
+            travelMode: window.google.maps.TravelMode.DRIVING
+          },
+          (result, status) => {
+            if (isCancelled) return; // Don't update if effect was cancelled
+            
+            completedRequests++;
+            if (status === 'OK' && result && result.routes && result.routes[0]) {
+              const duration = result.routes[0].legs[0].duration.text;
+              newDriveTimes[host.id] = duration;
+            }
 
-          // Only update state once all requests are complete to avoid multiple re-renders
-          if (completedRequests === totalRequests) {
-            setHostDriveTimes(newDriveTimes);
+            // Only update state once all requests are complete to avoid multiple re-renders
+            if (completedRequests === totalRequests && !isCancelled) {
+              setHostDriveTimes(newDriveTimes);
+            }
           }
+        );
+      } catch (error) {
+        console.error('Error calculating drive time:', error);
+        completedRequests++;
+        if (completedRequests === totalRequests && !isCancelled) {
+          setHostDriveTimes(newDriveTimes);
         }
-      );
+      }
     });
-  }, [userCoords, directionsService]);
+
+    // Cleanup function to cancel in-flight requests
+    return () => {
+      isCancelled = true;
+    };
+  }, [userCoords, directionsService, availableHosts.length]);
 
   // Handle marker highlighting when highlightedHostId changes
   React.useEffect(() => {
@@ -1326,6 +1348,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </button>
                 </p>
               </div>
+            </div>
             <button
               onClick={() => {
                 const password = prompt('Enter admin password:');
