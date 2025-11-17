@@ -1162,51 +1162,37 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </button>
           </div>
 
-          {/* How to Use + Unavailable Hosts - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* How to Use This App - Primary Instructions */}
-            <div className="p-6 rounded-xl" style={{background: 'linear-gradient(135deg, #E6F7F9 0%, #D4F1F4 100%)', border: '3px solid #007E8C', boxShadow: '0 4px 12px rgba(0, 126, 140, 0.2)'}}>
-              <div className="flex items-start gap-4">
-                <div className="text-3xl flex-shrink-0">🎯</div>
-                <div>
-                  <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>
-                    How to Use This App
-                  </h3>
-                  <div className="space-y-2">
-                    <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
-                      Enter your address (or use your current location).
-                    </p>
-                    <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
-                      We'll show you your 3 closest host homes for Wednesday drop-off.
-                    </p>
-                    <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
-                      Tap Get Directions for the one you want.
-                    </p>
-                  </div>
+          {/* How to Use This App - Primary Instructions */}
+          <div className="p-6 mb-4 rounded-xl" style={{background: 'linear-gradient(135deg, #E6F7F9 0%, #D4F1F4 100%)', border: '3px solid #007E8C', boxShadow: '0 4px 12px rgba(0, 126, 140, 0.2)'}}>
+            <div className="flex items-start gap-4">
+              <div className="text-3xl flex-shrink-0">🎯</div>
+              <div>
+                <h3 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>
+                  How to Use This App
+                </h3>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                    Enter your address (or use your current location).
+                  </p>
+                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                    We'll show you your 3 closest host homes for Wednesday drop-off.
+                  </p>
+                  <p className="text-lg font-semibold" style={{color: '#007E8C'}}>
+                    Tap Get Directions for the one you want.
+                  </p>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Hosts NOT Collecting - moved from top */}
-            <div className="p-6 rounded-xl" style={{background: 'linear-gradient(135deg, #FFE6E6 0%, #FFD6D6 100%)', border: '3px solid #A31C41', boxShadow: '0 4px 12px rgba(163, 28, 65, 0.2)'}}>
-              <div className="flex items-start gap-4">
-                <div className="text-3xl flex-shrink-0">⚠️</div>
-                <div>
-                  <h3 className="text-xl font-bold mb-2" style={{color: '#A31C41'}}>
-                    Hosts NOT Collecting This Week
-                  </h3>
-                  <p className="text-base font-semibold mb-2" style={{color: '#236383'}}>
-                    The following hosts are <strong>NOT available</strong> for drop-offs:
-                  </p>
-                  <p className="text-base font-bold mb-2" style={{color: '#A31C41'}}>
-                    Jenny V.W.<br />
-                    Carrey H.<br />
-                    Stacey & Jack G.
-                  </p>
-                  <p className="text-sm" style={{color: '#007E8C'}}>
-                    <b>Availability may change until Monday morning.</b>
-                  </p>
-                </div>
+          {/* Hosts NOT Collecting - Compact version */}
+          <div className="p-3 mb-6 rounded-lg" style={{background: 'linear-gradient(135deg, #FFE6E6 0%, #FFD6D6 100%)', border: '2px solid #A31C41'}}>
+            <div className="flex items-start gap-3">
+              <div className="text-xl flex-shrink-0">⚠️</div>
+              <div>
+                <p className="text-sm font-bold" style={{color: '#A31C41'}}>
+                  Hosts NOT available this week: <span className="font-bold">Jenny V.W., Carrey H., Stacey & Jack G.</span> • <span className="text-xs" style={{color: '#007E8C'}}>Availability may change until Monday morning.</span>
+                </p>
               </div>
             </div>
           </div>
