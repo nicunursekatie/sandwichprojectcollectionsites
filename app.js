@@ -225,23 +225,35 @@ const HostAvailabilityApp = () => {
     day: 'numeric'
   });
 
-  // Initialize hosts from localStorage or use default data
+  // Initialize hosts from Firestore
+  const [allHosts, setAllHosts] = React.useState([]);
+  const [hostsLoading, setHostsLoading] = React.useState(true);
+
+  // Load hosts from Firestore on mount
+  React.useEffect(() => {
+    const loadHosts = async () => {
+      try {
+        const snapshot = await db.collection('hosts').get();
+        const hostsData = [];
+        snapshot.forEach(doc => {
+          hostsData.push({ ...doc.data(), id: doc.data().id });
+        });
+        // Sort by ID
+        hostsData.sort((a, b) => a.id - b.id);
+        setAllHosts(hostsData);
+        setHostsLoading(false);
+      } catch (error) {
+        console.error('Error loading hosts:', error);
+        setHostsLoading(false);
+      }
+    };
+
+    loadHosts();
+  }, []);
+
+  // Legacy code - keep structure but don't use
   const getInitialHosts = () => {
-    const DATA_VERSION = window.CONFIG?.DATA_VERSION || '2025-11-10';
-    const savedVersion = localStorage.getItem('sandwichHostsVersion');
-    const savedHosts = localStorage.getItem('sandwichHosts');
-
-    // If version doesn't match, clear old data and use defaults
-    if (savedHosts && savedVersion === DATA_VERSION) {
-      // Return all hosts from localStorage (including inactive) for admin management
-      return JSON.parse(savedHosts);
-    }
-
-    // Clear old data and set new version
-    localStorage.setItem('sandwichHostsVersion', DATA_VERSION);
-
-    // Default host data with actual coordinates from your spreadsheet
-    // Only include active hosts in initial state
+    // This function is no longer used - hosts come from Firestore
     const defaultHosts = [
       { id: 1, name: 'Karen C.', area: 'Johns Creek', neighborhood: 'Glenn Abbey', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
       { id: 2, name: 'Nancy M.', area: 'Johns Creek', neighborhood: 'Chartwell', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
@@ -281,40 +293,63 @@ const HostAvailabilityApp = () => {
     return defaultHosts;
   };
 
-  const [allHosts, setAllHosts] = React.useState(getInitialHosts());
-
-  // Save hosts to localStorage whenever they change
-  React.useEffect(() => {
-    localStorage.setItem('sandwichHosts', JSON.stringify(allHosts));
-  }, [allHosts]);
-
-  // Admin functions
-  const addHost = (hostData) => {
+  // Admin functions - now save to Firestore
+  const addHost = async (hostData) => {
     const newHost = {
       ...hostData,
       id: Math.max(...(allHosts || []).map(h => h.id)) + 1,
       lat: parseFloat(hostData.lat),
       lng: parseFloat(hostData.lng)
     };
-    setAllHosts([...(allHosts || []), newHost]);
+
+    try {
+      await db.collection('hosts').doc(String(newHost.id)).set(newHost);
+      setAllHosts([...(allHosts || []), newHost]);
+    } catch (error) {
+      console.error('Error adding host:', error);
+      alert('Error adding host. Please try again.');
+    }
   };
 
-  const updateHost = (hostId, hostData) => {
-    setAllHosts((allHosts || []).map(host => 
-      host.id === hostId 
-        ? { ...hostData, id: hostId, lat: parseFloat(hostData.lat), lng: parseFloat(hostData.lng) }
-        : host
-    ));
+  const updateHost = async (hostId, hostData) => {
+    const updatedHost = { ...hostData, id: hostId, lat: parseFloat(hostData.lat), lng: parseFloat(hostData.lng) };
+
+    try {
+      await db.collection('hosts').doc(String(hostId)).set(updatedHost);
+      setAllHosts((allHosts || []).map(host =>
+        host.id === hostId ? updatedHost : host
+      ));
+    } catch (error) {
+      console.error('Error updating host:', error);
+      alert('Error updating host. Please try again.');
+    }
   };
 
-  const deleteHost = (hostId) => {
-    setAllHosts((allHosts || []).filter(host => host.id !== hostId));
+  const deleteHost = async (hostId) => {
+    try {
+      await db.collection('hosts').doc(String(hostId)).delete();
+      setAllHosts((allHosts || []).filter(host => host.id !== hostId));
+    } catch (error) {
+      console.error('Error deleting host:', error);
+      alert('Error deleting host. Please try again.');
+    }
   };
 
-  const toggleHostAvailability = (hostId) => {
-    setAllHosts((allHosts || []).map(host => 
-      host.id === hostId ? { ...host, available: !host.available } : host
-    ));
+  const toggleHostAvailability = async (hostId) => {
+    const host = allHosts.find(h => h.id === hostId);
+    if (!host) return;
+
+    const updatedHost = { ...host, available: !host.available };
+
+    try {
+      await db.collection('hosts').doc(String(hostId)).set(updatedHost);
+      setAllHosts((allHosts || []).map(h =>
+        h.id === hostId ? updatedHost : h
+      ));
+    } catch (error) {
+      console.error('Error toggling host availability:', error);
+      alert('Error updating host availability. Please try again.');
+    }
   };
 
   const exportHosts = () => {
@@ -1301,6 +1336,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
     const mailtoLink = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoLink;
   };
+
+  // Show loading state while fetching hosts
+  if (hostsLoading) {
+    return (
+      <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🥪</div>
+          <p className="text-xl font-bold" style={{color: '#007E8C'}}>Loading hosts...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8">
