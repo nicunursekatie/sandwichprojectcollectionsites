@@ -1791,7 +1791,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           style={{backgroundColor: '#007E8C'}}
                         >
                           <i className="lucide-navigation w-4 h-4"></i>
-                          <span>Start Navigation</span>
+                          <span>Get Directions</span>
                           <i className={`lucide-chevron-down w-3 h-3 transition-transform ${mapTooltipMenuOpen ? 'rotate-180' : ''}`}></i>
                         </button>
                         {mapTooltipMenuOpen && (
@@ -1801,16 +1801,33 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                openGoogleMapsDirections(mapTooltip);
+                                showDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
+                                setMapTooltip(null);
                               }}
                               className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
                             >
                               <div className="flex items-center justify-center gap-3 mb-1">
-                                <i className="lucide-map w-6 h-6" style={{color: '#007E8C'}}></i>
-                                <div className="font-bold text-base" style={{color: '#236383'}}>Google Maps</div>
+                                <i className="lucide-route w-6 h-6" style={{color: '#007E8C'}}></i>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Show Directions In-App</div>
                               </div>
-                              <div className="text-sm text-gray-600">Works on all devices</div>
+                              <div className="text-sm text-gray-600">View turn-by-turn directions below map</div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                openGoogleMapsDirections(mapTooltip);
+                                setMapTooltipMenuOpen(false);
+                              }}
+                              className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center border-t" style={{borderColor: '#e0e0e0'}}
+                            >
+                              <div className="flex items-center justify-center gap-3 mb-1">
+                                <i className="lucide-map w-6 h-6" style={{color: '#007E8C'}}></i>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Open in Google Maps</div>
+                              </div>
+                              <div className="text-sm text-gray-600">Navigate with Google Maps app</div>
                             </button>
                             <button
                               type="button"
@@ -1823,9 +1840,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center border-t" style={{borderColor: '#e0e0e0'}}>
                               <div className="flex items-center justify-center gap-3 mb-1">
                                 <i className="lucide-map-pin w-6 h-6" style={{color: '#007E8C'}}></i>
-                                <div className="font-bold text-base" style={{color: '#236383'}}>Apple Maps</div>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Open in Apple Maps</div>
                               </div>
-                              <div className="text-sm text-gray-600">Best on iPhone/iPad</div>
+                              <div className="text-sm text-gray-600">Navigate with Apple Maps app</div>
                             </button>
                           </div>
                         )}
