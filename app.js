@@ -1760,14 +1760,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </p>
                     </div>
 
-                    {/* Special Instructions Preview */}
+                    {/* Special Instructions */}
                     {mapTooltip.notes && (
                       <div className="mb-3 p-2 rounded-lg" style={{backgroundColor: '#FFF9E6', border: '1px solid #FBAD3F'}}>
                         <p className="text-xs">
                           <span className="font-semibold" style={{color: '#A31C41'}}>⚠️ </span>
-                          <span style={{color: '#666'}}>
-                            {mapTooltip.notes.length > 50 ? `${mapTooltip.notes.substring(0, 50)}...` : mapTooltip.notes}
-                          </span>
+                          <span style={{color: '#666'}}>{mapTooltip.notes}</span>
                         </p>
                       </div>
                     )}
