@@ -219,12 +219,12 @@
             position: relative;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         
         /* Top section with full logo */
         .hero-section {
-            background: white;
-            border-bottom: 4px solid #007E8C;
+            background: linear-gradient(135deg, #236383 0%, #007E8C 100%);
             padding: 35px 50px 25px;
             position: relative;
             min-height: 160px;
@@ -245,12 +245,18 @@
             max-height: 110px;
             width: auto;
             height: auto;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
         }
 
         .hero-subtitle {
             font-size: 18px;
-            font-weight: 700;
-            color: #236383;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
             margin-top: 12px;
             text-align: center;
             letter-spacing: 1.5px;
@@ -258,11 +264,13 @@
         
         /* QR Section */
         .content-area {
-            flex: 1;
+            flex: 1 1 auto;
             padding: 20px 40px 15px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .qr-container {
@@ -430,11 +438,14 @@
         /* Call to Action Section */
         .cta-section {
             background: linear-gradient(135deg, #FBAD3F 0%, #ff9800 100%);
-            padding: 20px 40px;
+            padding: 20px 40px 30px;
             text-align: center;
             position: relative;
             overflow: hidden;
             min-height: 120px;
+            margin: 0;
+            flex-shrink: 0;
+            flex-grow: 0;
         }
 
         .cta-section::before {
@@ -446,16 +457,19 @@
             height: 100%;
             background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
             animation: pulse 4s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
         }
 
         @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.8; }
         }
 
         .cta-content {
             position: relative;
             z-index: 2;
+            isolation: isolate;
         }
 
         .cta-title {
@@ -507,11 +521,14 @@
             background: #236383;
             color: white;
             text-align: center;
-            padding: 18px 12px;
+            padding: 20px 12px;
             font-size: 18px;
             font-weight: 600;
             letter-spacing: 1px;
-            margin-top: 15px;
+            margin-top: 0;
+            position: relative;
+            z-index: 1;
+            flex-shrink: 0;
         }
 
         .website-footer a {
