@@ -34,13 +34,15 @@ const HostAvailabilityApp = () => {
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
 
-  // Google Tag Manager tracking helper
+  // Firebase Analytics tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      event: eventName,
-      ...eventParams
-    });
+    if (window.firebase && window.firebase.analytics) {
+      try {
+        window.firebase.analytics().logEvent(eventName, eventParams);
+      } catch (error) {
+        console.error('Analytics error:', error);
+      }
+    }
   };
 
   // Load favorite host from localStorage on mount
