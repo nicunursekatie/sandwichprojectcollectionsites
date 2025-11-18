@@ -29,6 +29,7 @@ const HostAvailabilityApp = () => {
   const [feedbackText, setFeedbackText] = React.useState('');
   const [feedbackEmail, setFeedbackEmail] = React.useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
+  const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
@@ -40,6 +41,37 @@ const HostAvailabilityApp = () => {
       event: eventName,
       ...eventParams
     });
+  };
+
+  // Load favorite host from localStorage on mount
+  React.useEffect(() => {
+    const savedFavoriteId = localStorage.getItem('favoriteHostId');
+    if (savedFavoriteId) {
+      setFavoriteHostId(parseInt(savedFavoriteId));
+    }
+  }, []);
+
+  // Toggle favorite host
+  const toggleFavoriteHost = (hostId) => {
+    if (favoriteHostId === hostId) {
+      // Unfavorite
+      setFavoriteHostId(null);
+      localStorage.removeItem('favoriteHostId');
+      trackEvent('unfavorite_host', {
+        event_category: 'Favorites',
+        event_label: 'Remove Favorite Host',
+        host_id: hostId
+      });
+    } else {
+      // Favorite
+      setFavoriteHostId(hostId);
+      localStorage.setItem('favoriteHostId', hostId.toString());
+      trackEvent('favorite_host', {
+        event_category: 'Favorites',
+        event_label: 'Set Favorite Host',
+        host_id: hostId
+      });
+    }
   };
 
   // Close directions menu when clicking outside and update position on scroll/resize
@@ -1252,7 +1284,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
           if (directionsPanel) {
             directionsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
-        }, 300);
+        }, 500);
 
         trackEvent('directions_calculated', {
           event_category: 'Directions',
@@ -1428,6 +1460,61 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Click "Show Route" or "Get Directions"</span>
             </div>
           </div>
+
+          {/* Favorite Host Banner */}
+          {favoriteHostId && (() => {
+            const favoriteHost = allHosts.find(h => h.id === favoriteHostId);
+            if (!favoriteHost) return null;
+            return (
+              <div className="mb-4 mx-3 sm:mx-4 p-4 rounded-xl border-2" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0">⭐</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-bold text-base sm:text-lg" style={{color: '#236383'}}>Your Saved Host</h4>
+                      <button
+                        onClick={() => toggleFavoriteHost(favoriteHostId)}
+                        className="text-xs px-2 py-1 rounded hover:bg-orange-100 transition-colors"
+                        style={{color: '#A31C41'}}
+                      >
+                        Change
+                      </button>
+                    </div>
+                    <p className="font-semibold mb-3" style={{color: '#007E8C'}}>
+                      {favoriteHost.name} ({favoriteHost.area}{favoriteHost.neighborhood ? ` - ${favoriteHost.neighborhood}` : ''})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          if (!userCoords) {
+                            alert('Please enter your address first to see the route on the map!');
+                            const searchInput = document.querySelector('input[placeholder*="e.g."]');
+                            if (searchInput) {
+                              searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              setTimeout(() => searchInput.focus(), 500);
+                            }
+                            return;
+                          }
+                          showDirections(favoriteHost);
+                        }}
+                        className="px-3 py-2 rounded-lg text-white text-sm font-semibold hover:opacity-90 transition-all"
+                        style={{backgroundColor: '#FBAD3F'}}
+                      >
+                        Show Route
+                      </button>
+                      <button
+                        onClick={() => setDirectionsMenuOpen(favoriteHostId)}
+                        className="px-3 py-2 rounded-lg text-sm font-semibold hover:bg-orange-100 transition-all"
+                        style={{color: '#007E8C', border: '2px solid #007E8C'}}
+                      >
+                        Get Directions
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Smart Search Section */}
           <div className="p-3 sm:p-4">
@@ -1961,7 +2048,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       );
                     })()}
 
-                    <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
+                    <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
                       {directionSteps.map((step, index) => (
                         <div key={index} className="flex gap-3 p-3 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.05)'}}>
                           <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs text-white" style={{backgroundColor: '#007E8C'}}>
@@ -2087,7 +2174,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               {index + 1}
                             </span>
                           )}
-                          <h3 className="font-bold text-2xl">{host.name}</h3>
+                          <h3 className="font-bold text-2xl flex-1">{host.name}</h3>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavoriteHost(host.id);
+                            }}
+                            className="flex-shrink-0 p-2 rounded-lg transition-all hover:bg-gray-100"
+                            title={favoriteHostId === host.id ? 'Remove from favorites' : 'Save as my host'}
+                          >
+                            {favoriteHostId === host.id ? (
+                              <span className="text-2xl">⭐</span>
+                            ) : (
+                              <span className="text-2xl opacity-30 hover:opacity-60">⭐</span>
+                            )}
+                          </button>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <button
