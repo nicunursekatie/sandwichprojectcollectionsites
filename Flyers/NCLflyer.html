@@ -25,14 +25,20 @@
                 background: white !important;
                 width: 100% !important;
                 height: 100% !important;
+                overflow: hidden !important;
+            }
+
+            body > *:not(.container) {
+                display: none !important;
             }
 
             .container {
-                page-break-inside: avoid;
+                page-break-inside: avoid !important;
                 width: 100% !important;
                 height: 11in !important;
                 max-height: 11in !important;
-                margin: 0 !important;
+                min-height: 11in !important;
+                margin: 0 auto !important;
                 padding: 0 !important;
                 box-shadow: none !important;
                 background: white !important;
@@ -40,6 +46,8 @@
                 flex-direction: column !important;
                 overflow: hidden !important;
                 position: relative !important;
+                align-items: stretch !important;
+                justify-content: flex-start !important;
             }
 
             .hero-section {
@@ -54,10 +62,13 @@
                 height: 120px !important;
                 flex-shrink: 0 !important;
                 flex-grow: 0 !important;
+                flex-basis: 120px !important;
                 position: relative !important;
                 z-index: 10 !important;
                 overflow: visible !important;
                 order: 1 !important;
+                align-self: stretch !important;
+                width: 100% !important;
             }
 
             .main-logo {
@@ -95,15 +106,19 @@
             .content-area {
                 padding: 10px 30px 0px !important;
                 flex: 1 1 auto !important;
+                flex-basis: auto !important;
                 display: block !important;
                 min-height: 0 !important;
                 max-height: calc(11in - 120px - 80px - 38px) !important;
                 overflow: hidden !important;
                 margin-top: 0 !important;
                 margin-bottom: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
                 position: relative !important;
                 z-index: 1 !important;
                 order: 2 !important;
+                align-self: stretch !important;
             }
 
             .qr-container {
