@@ -31,12 +31,14 @@
                 page-break-inside: avoid;
                 width: 100% !important;
                 height: 11in !important;
+                max-height: 11in !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 box-shadow: none !important;
                 background: white !important;
                 display: flex !important;
                 flex-direction: column !important;
+                overflow: hidden !important;
             }
 
             .hero-section {
@@ -44,8 +46,9 @@
                 border-bottom: 3px solid #236383 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 30px 40px 25px !important;
-                min-height: 160px !important;
+                padding: 25px 40px 20px !important;
+                min-height: 140px !important;
+                max-height: 140px !important;
                 flex-shrink: 0 !important;
             }
 
@@ -89,26 +92,28 @@
             }
 
             .content-area {
-                padding: 30px 35px 30px !important;
-                flex: 1 !important;
+                padding: 20px 35px 20px !important;
+                flex: 1 1 auto !important;
                 display: block !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
             }
 
             .qr-container {
-                gap: 30px !important;
+                gap: 20px !important;
                 margin-top: 0 !important;
-                margin-bottom: 15px !important;
+                margin-bottom: 10px !important;
             }
 
             .qr-container-row-2 {
-                gap: 45px !important;
-                margin-top: 30px !important;
-                margin-bottom: 30px !important;
+                gap: 30px !important;
+                margin-top: 15px !important;
+                margin-bottom: 15px !important;
                 max-width: 80% !important;
             }
 
             .qr-card {
-                padding: 25px 20px 30px !important;
+                padding: 15px 15px 20px !important;
                 border-radius: 18px !important;
                 position: relative !important;
                 z-index: 1 !important;
@@ -123,8 +128,8 @@
             }
 
             .qr-image {
-                width: 160px !important;
-                height: 160px !important;
+                width: 140px !important;
+                height: 140px !important;
             }
 
             .social-icon {
@@ -156,8 +161,12 @@
             .cta-section {
                 background: #fff3e6 !important;
                 border-top: 3px solid #FBAD3F !important;
-                padding: 20px 50px 20px !important;
-                min-height: 120px !important;
+                padding: 15px 40px 15px !important;
+                min-height: auto !important;
+                max-height: 110px !important;
+                flex-shrink: 0 !important;
+                flex-grow: 0 !important;
+                overflow: hidden !important;
             }
 
             .cta-button {
@@ -165,16 +174,16 @@
             }
 
             .cta-title {
-                font-size: 46px !important;
-                margin-bottom: 12px !important;
+                font-size: 38px !important;
+                margin-bottom: 8px !important;
                 font-weight: 900 !important;
                 line-height: 1.1 !important;
             }
 
             .cta-subtitle {
-                font-size: 20px !important;
+                font-size: 16px !important;
                 margin-bottom: 0 !important;
-                line-height: 1.25 !important;
+                line-height: 1.2 !important;
                 max-width: 900px !important;
                 font-weight: 700 !important;
             }
@@ -185,10 +194,11 @@
                 border-top: 3px solid #236383 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 18px !important;
-                font-size: 30px !important;
+                padding: 12px !important;
+                font-size: 28px !important;
                 font-weight: 800 !important;
                 flex-shrink: 0 !important;
+                flex-grow: 0 !important;
             }
 
             .website-footer a {
