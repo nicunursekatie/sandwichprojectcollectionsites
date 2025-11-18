@@ -1700,7 +1700,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Map Tooltip */}
                 {mapTooltip && (
                   <div
-                    className="absolute bg-white rounded-xl shadow-2xl p-4 z-10 border-2"
+                    className="absolute bg-white rounded-xl shadow-2xl p-3 z-10 border-2"
                     style={{
                       top: '20px',
                       left: '50%',
@@ -1712,7 +1712,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     }}
                   >
                     {/* Header */}
-                    <div className="flex justify-between items-start mb-3">
+                    <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
                         <h4 className="text-lg font-bold mb-1" style={{color: '#236383'}}>
                           {mapTooltip.name}
@@ -1739,18 +1739,25 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </button>
                     </div>
 
-                    {/* Distance & Drive Time */}
-                    {mapTooltip.distance && (
-                      <div className="mb-3 py-2 px-3 rounded-lg" style={{backgroundColor: '#E6F7F9'}}>
-                        <p className="text-sm font-bold" style={{color: '#007E8C'}}>
-                          {mapTooltip.distance} miles
-                          {hostDriveTimes[mapTooltip.id] && ` · ${hostDriveTimes[mapTooltip.id]}`}
-                        </p>
-                      </div>
-                    )}
+                    {/* Distance & Drive Time - Always show if user has location */}
+                    {userCoords && (() => {
+                      const distance = mapTooltip.distance || calculateDistance(
+                        userCoords.lat,
+                        userCoords.lng,
+                        mapTooltip.lat,
+                        mapTooltip.lng
+                      ).toFixed(1);
+                      return (
+                        <div className="mb-2 py-2 px-3 rounded-lg" style={{backgroundColor: '#E6F7F9'}}>
+                          <p className="text-sm font-bold" style={{color: '#007E8C'}}>
+                            {distance} miles{hostDriveTimes[mapTooltip.id] ? ` · ${hostDriveTimes[mapTooltip.id]} drive` : ''}
+                          </p>
+                        </div>
+                      );
+                    })()}
 
                     {/* Hours */}
-                    <div className="mb-3">
+                    <div className="mb-2">
                       <p className="text-sm mb-1">
                         <span className="font-semibold" style={{color: '#236383'}}>Hours: </span>
                         <span style={{color: '#007E8C'}}>{mapTooltip.hours}</span>
@@ -1760,9 +1767,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </p>
                     </div>
 
-                    {/* Special Instructions */}
+                    {/* Special Instructions - Higher contrast */}
                     {mapTooltip.notes && (
-                      <div className="mb-3 p-2 rounded-lg" style={{backgroundColor: '#FFF9E6', border: '1px solid #FBAD3F'}}>
+                      <div className="mb-2 p-2 rounded-lg" style={{backgroundColor: '#FFF9E6', border: '2px solid #FBAD3F'}}>
                         <p className="text-xs">
                           <span className="font-semibold" style={{color: '#A31C41'}}>⚠️ </span>
                           <span style={{color: '#666'}}>{mapTooltip.notes}</span>
