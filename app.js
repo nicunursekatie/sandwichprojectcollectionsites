@@ -1325,27 +1325,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
       duration: routeInfo.duration
     });
 
+    const host = availableHosts.find(h => h.id === routeInfo.hostId);
     const subject = encodeURIComponent(`Directions to ${routeInfo.hostName} - Sandwich Drop-Off`);
 
-    // Create plain text directions
+    // Create condensed directions with just the essentials
     let body = `Directions to ${routeInfo.hostName}\n`;
     body += `Location: ${routeInfo.hostAddress}\n`;
     body += `Phone: ${routeInfo.hostPhone}\n`;
     body += `\nTotal Distance: ${routeInfo.distance}\n`;
     body += `Estimated Time: ${routeInfo.duration}\n`;
-    body += `\n--- Turn-by-Turn Directions ---\n\n`;
-
-    directionSteps.forEach((step, index) => {
-      // Strip HTML tags from instructions
-      const plainText = step.instruction.replace(/<[^>]*>/g, '');
-      body += `${index + 1}. ${plainText} (${step.distance})\n`;
-    });
-
-    body += `\nDrop-off Date: ${dropOffDate}\n`;
-    body += `\nView on Google Maps: https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${availableHosts.find(h => h.id === routeInfo.hostId).lat},${availableHosts.find(h => h.id === routeInfo.hostId).lng}`;
+    body += `Drop-off Date: ${dropOffDate}\n`;
+    body += `\nView full turn-by-turn directions on Google Maps:\n`;
+    body += `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}\n`;
 
     const mailtoLink = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoLink;
+
+    // Try to open the mailto link
+    try {
+      window.location.href = mailtoLink;
+    } catch (error) {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(body.replace(/\\n/g, '\n')).then(() => {
+        alert('Email app could not be opened. Directions have been copied to your clipboard!');
+      }).catch(() => {
+        alert('Unable to open email app. Please manually copy the directions from the screen.');
+      });
+    }
   };
 
   // Show loading state while fetching hosts
