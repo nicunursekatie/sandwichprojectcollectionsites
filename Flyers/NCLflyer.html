@@ -53,18 +53,21 @@
                 max-height: 120px !important;
                 height: 120px !important;
                 flex-shrink: 0 !important;
+                flex-grow: 0 !important;
                 position: relative !important;
-                z-index: 1 !important;
+                z-index: 10 !important;
+                overflow: visible !important;
+                order: 1 !important;
             }
 
             .main-logo {
-                max-width: 400px !important;
-                max-height: 100px !important;
+                max-width: 380px !important;
+                max-height: 90px !important;
             }
 
             .hero-subtitle {
-                font-size: 24px !important;
-                margin-top: 10px !important;
+                font-size: 22px !important;
+                margin-top: 8px !important;
                 font-weight: 800 !important;
                 letter-spacing: 2px !important;
                 color: white !important;
@@ -90,15 +93,17 @@
             }
 
             .content-area {
-                padding: 12px 30px 8px !important;
+                padding: 10px 30px 0px !important;
                 flex: 1 1 auto !important;
                 display: block !important;
                 min-height: 0 !important;
                 max-height: calc(11in - 120px - 80px - 38px) !important;
                 overflow: hidden !important;
                 margin-top: 0 !important;
+                margin-bottom: 0 !important;
                 position: relative !important;
-                z-index: 0 !important;
+                z-index: 1 !important;
+                order: 2 !important;
             }
 
             .qr-container {
@@ -111,8 +116,9 @@
             .qr-container-row-2 {
                 gap: 18px !important;
                 margin-top: 8px !important;
-                margin-bottom: 8px !important;
+                margin-bottom: 0px !important;
                 max-width: 85% !important;
+                padding-bottom: 0 !important;
             }
 
             .qr-card {
@@ -175,6 +181,7 @@
                 flex-grow: 0 !important;
                 overflow: hidden !important;
                 position: relative !important;
+                order: 3 !important;
             }
 
             .cta-button {
@@ -227,6 +234,7 @@
                 overflow: hidden !important;
                 position: relative !important;
                 z-index: 10 !important;
+                order: 4 !important;
             }
 
             .website-footer a {
