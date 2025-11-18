@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Sandwich Project - Join Your Community</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #236383;
+            color: #646464;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 8.5in;
+            min-height: 11in;
+            margin: 0 auto;
+            background: white;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Header with logo */
+        .hero-section {
+            background: linear-gradient(135deg, #236383 0%, #007E8C 100%);
+            padding: 20px 40px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+            overflow: visible;
+            z-index: 10;
+        }
+
+        /* Decorative circles in header corners */
+        .hero-decoration-left {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .hero-decoration-right {
+            position: absolute;
+            bottom: 10px;
+            right: 30px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(251, 173, 63, 0.1);
+        }
+        
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .main-logo {
+            max-width: 320px;
+            max-height: 80px;
+            width: auto;
+            height: auto;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .hero-subtitle {
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+            margin-top: 8px;
+            letter-spacing: 2px;
+        }
+        
+        /* Main content area with rich background */
+        .content-area {
+            flex: 1;
+            padding: 10px 35px 25px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background:
+                radial-gradient(circle at 15% 30%, rgba(251, 173, 63, 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 85% 70%, rgba(71, 179, 203, 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 70% 10%, rgba(0, 126, 140, 0.04) 0%, transparent 30%),
+                linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+        }
+
+        /* Static decorative elements */
+        .decoration-dots {
+            position: absolute;
+            bottom: 40px;
+            right: 50px;
+            width: 100px;
+            height: 100px;
+            opacity: 0.06;
+            background-image: 
+                radial-gradient(circle, #FBAD3F 20%, transparent 20%),
+                radial-gradient(circle, #47B3CB 20%, transparent 20%);
+            background-size: 20px 20px, 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        .decoration-wave {
+            position: absolute;
+            top: 200px;
+            left: 20px;
+            width: 80px;
+            height: 40px;
+            opacity: 0.08;
+            background: linear-gradient(135deg, #FBAD3F 0%, transparent 100%);
+            border-radius: 50% / 100%;
+            transform: rotate(-15deg);
+        }
+
+        /* Community intro section */
+        .intro-section {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 2;
+            background: white;
+            padding: 25px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(35, 99, 131, 0.12);
+            border: 3px solid rgba(35, 99, 131, 0.08);
+            background-image: 
+                radial-gradient(circle at top right, rgba(251, 173, 63, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at bottom left, rgba(71, 179, 203, 0.03) 0%, transparent 50%);
+        }
+
+        /* Icon badges for intro */
+        .intro-icons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .intro-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, rgba(251, 173, 63, 0.1), rgba(71, 179, 203, 0.1));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 2px solid white;
+        }
+
+        .intro-title {
+            font-size: 28px;
+            color: #236383;
+            font-weight: 800;
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+
+        .intro-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #5a5a5a;
+            max-width: 580px;
+            margin: 0 auto;
+        }
+
+        .intro-text strong {
+            color: #236383;
+            font-weight: 700;
+        }
+
+        .highlight-date {
+            display: inline-block;
+            background: linear-gradient(135deg, #FBAD3F, #ff9800);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 25px;
+            font-weight: 700;
+            margin: 0 4px;
+            box-shadow: 0 4px 12px rgba(251, 173, 63, 0.3);
+            position: relative;
+        }
+
+        /* Sparkle decoration */
+        .highlight-date::after {
+            content: '✨';
+            position: absolute;
+            right: -20px;
+            top: -5px;
+            font-size: 12px;
+        }
+
+        .tagline {
+            display: inline-block;
+            background: linear-gradient(135deg, #e8f4f8, #f0f9fc);
+            color: #007E8C;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 12px;
+            border: 2px solid #c3e4ed;
+            box-shadow: 0 3px 12px rgba(71, 179, 203, 0.15);
+        }
+
+        /* Steps container */
+        .steps-wrapper {
+            position: relative;
+            z-index: 2;
+            margin-bottom: 25px;
+        }
+
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            position: relative;
+        }
+
+        /* Arrow connectors between steps */
+        .arrow-connector {
+            position: absolute;
+            top: 30px;
+            width: 30px;
+            height: 30px;
+            z-index: 1;
+        }
+
+        .arrow-1 {
+            left: 31%;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath d='M5 15 L20 15 L15 10 M20 15 L15 20' stroke='%23FBAD3F' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        }
+
+        .arrow-2 {
+            right: 31%;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath d='M5 15 L20 15 L15 10 M20 15 L15 20' stroke='%2347B3CB' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        }
+
+        .step-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 15px 20px;
+            position: relative;
+            text-align: center;
+            border: 3px solid;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.1);
+            overflow: visible;
+        }
+
+        /* Color-coded borders and accents */
+        .step-card:nth-child(1) {
+            border-color: rgba(251, 173, 63, 0.3);
+            background: linear-gradient(180deg, white 0%, rgba(251, 173, 63, 0.02) 100%);
+        }
+
+        .step-card:nth-child(2) {
+            border-color: rgba(71, 179, 203, 0.3);
+            background: linear-gradient(180deg, white 0%, rgba(71, 179, 203, 0.02) 100%);
+        }
+
+        .step-card:nth-child(3) {
+            border-color: rgba(0, 126, 140, 0.3);
+            background: linear-gradient(180deg, white 0%, rgba(0, 126, 140, 0.02) 100%);
+        }
+
+        /* Top ribbon for each card */
+        .step-ribbon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .step-card:nth-child(1) .step-ribbon {
+            background: linear-gradient(90deg, #FBAD3F 0%, #ff9800 100%);
+        }
+
+        .step-card:nth-child(2) .step-ribbon {
+            background: linear-gradient(90deg, #47B3CB 0%, #007E8C 100%);
+        }
+
+        .step-card:nth-child(3) .step-ribbon {
+            background: linear-gradient(90deg, #007E8C 0%, #236383 100%);
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 24px;
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            border: 4px solid white;
+            z-index: 2;
+        }
+
+        .step-card:nth-child(1) .step-number {
+            background: linear-gradient(135deg, #FBAD3F, #ff9800);
+        }
+
+        .step-card:nth-child(2) .step-number {
+            background: linear-gradient(135deg, #47B3CB, #007E8C);
+        }
+
+        .step-card:nth-child(3) .step-number {
+            background: linear-gradient(135deg, #007E8C, #236383);
+        }
+
+        .step-title {
+            font-size: 19px;
+            color: #236383;
+            font-weight: 700;
+            margin: 12px 0 12px;
+        }
+
+        /* Make QR areas clickable */
+        .qr-link {
+            display: block;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .qr-image-wrapper {
+            background: white;
+            border-radius: 15px;
+            padding: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 130px;
+            position: relative;
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.06),
+                0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 2px solid;
+            transition: all 0.2s ease;
+        }
+
+        .step-card:nth-child(1) .qr-image-wrapper {
+            border-color: rgba(251, 173, 63, 0.2);
+            background: linear-gradient(135deg, white, rgba(251, 173, 63, 0.03));
+        }
+
+        .step-card:nth-child(2) .qr-image-wrapper {
+            border-color: rgba(71, 179, 203, 0.2);
+            background: linear-gradient(135deg, white, rgba(71, 179, 203, 0.03));
+        }
+
+        .qr-image {
+            width: 100px;
+            height: 100px;
+            display: block;
+            padding: 5px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Dual QR layout */
+        .qr-dual {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            padding: 12px 8px;
+            background: white;
+            border-radius: 15px;
+            height: 130px;
+            align-items: center;
+            margin-bottom: 12px;
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.06),
+                0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 2px solid rgba(0, 126, 140, 0.2);
+            background: linear-gradient(135deg, white, rgba(0, 126, 140, 0.03));
+        }
+
+        a.qr-mini {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .qr-image-small {
+            width: 50px;
+            height: 50px;
+            padding: 3px;
+            background: white;
+            border: 2px solid #e8f4f8;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .qr-mini span {
+            font-size: 12px;
+            color: white;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .qr-mini:first-child span {
+            background: linear-gradient(135deg, #FBAD3F, #ff9800);
+        }
+
+        .qr-mini:last-child span {
+            background: linear-gradient(135deg, #007E8C, #236383);
+        }
+
+        .step-text {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #5a5a5a;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-text strong {
+            color: #236383;
+            display: block;
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        /* Social footer */
+        .social-footer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            margin-top: auto;
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(135deg, rgba(35, 99, 131, 0.06), rgba(71, 179, 203, 0.06));
+            border-radius: 15px;
+            border: 2px solid rgba(35, 99, 131, 0.1);
+        }
+
+        .social-label {
+            color: #5a5a5a;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 2px solid #f0f5f8;
+        }
+
+        .social-icon-small {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Call to action section */
+        .cta-section {
+            background: linear-gradient(135deg, #FBAD3F 0%, #ff9800 100%);
+            padding: 20px 35px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        /* Static decoration in CTA */
+        .cta-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.1;
+            background-image: repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 20px,
+                rgba(255, 255, 255, 0.1) 20px,
+                rgba(255, 255, 255, 0.1) 40px
+            );
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .cta-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .cta-subtitle {
+            font-size: 14px;
+            color: #236383;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.95);
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Website footer */
+        .website-footer {
+            background: #236383;
+            color: white;
+            text-align: center;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+        }
+
+        .website-footer a {
+            color: #FBAD3F;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        /* PRINT STYLES */
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            @page {
+                margin: 0;
+                size: 8.5in 11in;
+            }
+
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+
+            .container {
+                width: 8.5in !important;
+                height: 11in !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                display: block !important;
+                position: relative !important;
+                overflow: hidden !important;
+            }
+
+            /* Simplify header completely */
+            .hero-section {
+                background: #236383 !important;
+                padding: 20px 40px !important;
+                display: block !important;
+                text-align: center !important;
+                position: relative !important;
+                height: auto !important;
+            }
+
+            .hero-decoration-left,
+            .hero-decoration-right {
+                display: none !important;
+            }
+
+            .main-logo {
+                background: white !important;
+                max-width: 300px !important;
+                margin: 0 auto !important;
+                display: block !important;
+            }
+
+            .hero-subtitle {
+                color: white !important;
+                margin-top: 10px !important;
+            }
+
+            /* Simplify content area */
+            .content-area {
+                background: white !important;
+                padding: 25px 40px !important;
+                display: block !important;
+                position: relative !important;
+            }
+
+            /* Remove ALL decorative backgrounds */
+            .decoration-dots,
+            .decoration-wave,
+            .pattern-overlay,
+            .cta-pattern {
+                display: none !important;
+            }
+
+            /* Simplify intro section */
+            .intro-section {
+                background: white !important;
+                border: 2px solid #236383 !important;
+                padding: 20px !important;
+                margin-bottom: 25px !important;
+                border-radius: 10px !important;
+                box-shadow: none !important;
+            }
+
+            .intro-icons {
+                display: block !important;
+                text-align: center !important;
+                margin-bottom: 10px !important;
+            }
+
+            .intro-icon {
+                display: inline-block !important;
+                background: #f0f0f0 !important;
+                width: 45px !important;
+                height: 45px !important;
+                line-height: 45px !important;
+                text-align: center !important;
+                margin: 0 5px !important;
+                border-radius: 50% !important;
+                font-size: 22px !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            /* Simplify steps */
+            .steps-wrapper {
+                display: block !important;
+                margin-bottom: 20px !important;
+            }
+
+            .arrow-connector {
+                display: none !important;
+            }
+
+            .steps-container {
+                display: table !important;
+                width: 100% !important;
+                table-layout: fixed !important;
+            }
+
+            .step-card {
+                display: table-cell !important;
+                width: 33.333% !important;
+                padding: 20px 10px !important;
+                background: white !important;
+                border: 2px solid #e0e0e0 !important;
+                border-radius: 10px !important;
+                position: relative !important;
+                vertical-align: top !important;
+                box-shadow: none !important;
+            }
+
+            .step-card:nth-child(1) {
+                border-top: 4px solid #FBAD3F !important;
+            }
+
+            .step-card:nth-child(2) {
+                border-top: 4px solid #47B3CB !important;
+            }
+
+            .step-card:nth-child(3) {
+                border-top: 4px solid #007E8C !important;
+            }
+
+            .step-ribbon {
+                display: none !important;
+            }
+
+            .step-number {
+                position: static !important;
+                display: inline-block !important;
+                margin: 0 auto 10px !important;
+                transform: none !important;
+                background: #236383 !important;
+                color: white !important;
+                width: 40px !important;
+                height: 40px !important;
+                line-height: 40px !important;
+                text-align: center !important;
+                border-radius: 50% !important;
+                font-size: 20px !important;
+                font-weight: bold !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            .step-title {
+                font-size: 16px !important;
+                margin: 10px 0 !important;
+                color: #236383 !important;
+            }
+
+            .qr-image-wrapper,
+            .qr-dual {
+                background: #f8f8f8 !important;
+                border: 1px solid #ddd !important;
+                border-radius: 8px !important;
+                padding: 10px !important;
+                margin: 10px auto !important;
+                height: 110px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-shadow: none !important;
+            }
+
+            .qr-image {
+                width: 85px !important;
+                height: 85px !important;
+                padding: 0 !important;
+                background: white !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            .qr-image-small {
+                width: 45px !important;
+                height: 45px !important;
+                background: white !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 5px !important;
+            }
+
+            .qr-mini {
+                display: inline-block !important;
+                text-align: center !important;
+            }
+
+            .qr-mini span {
+                display: block !important;
+                margin-top: 5px !important;
+                font-size: 10px !important;
+                background: #236383 !important;
+                color: white !important;
+                padding: 2px 8px !important;
+                border-radius: 10px !important;
+                box-shadow: none !important;
+            }
+
+            /* Simplify social footer */
+            .social-footer {
+                background: #f0f0f0 !important;
+                padding: 12px !important;
+                text-align: center !important;
+                border-radius: 8px !important;
+                margin: 20px 0 !important;
+                border: none !important;
+            }
+
+            .social-link {
+                display: inline-block !important;
+                width: 35px !important;
+                height: 35px !important;
+                line-height: 35px !important;
+                background: white !important;
+                border: 1px solid #ddd !important;
+                border-radius: 50% !important;
+                margin: 0 5px !important;
+                text-align: center !important;
+                box-shadow: none !important;
+            }
+
+            /* Simplify CTA */
+            .cta-section {
+                background: #FBAD3F !important;
+                padding: 15px !important;
+                text-align: center !important;
+                position: relative !important;
+            }
+
+            .cta-title {
+                color: white !important;
+                font-size: 20px !important;
+                margin-bottom: 5px !important;
+                text-shadow: none !important;
+            }
+
+            .cta-subtitle {
+                background: white !important;
+                color: #236383 !important;
+                padding: 4px 12px !important;
+                border-radius: 15px !important;
+                display: inline-block !important;
+                font-size: 12px !important;
+                box-shadow: none !important;
+            }
+
+            /* Simplify footer */
+            .website-footer {
+                background: #236383 !important;
+                color: white !important;
+                padding: 10px !important;
+                text-align: center !important;
+                font-size: 12px !important;
+            }
+
+            .website-footer a {
+                color: #FBAD3F !important;
+            }
+
+            /* Remove ALL transforms and complex positioning */
+            * {
+                transform: none !important;
+                animation: none !important;
+                transition: none !important;
+            }
+
+            /* Force text to be readable */
+            p, span, strong, a {
+                color: inherit !important;
+                text-decoration: none !important;
+            }
+
+            /* Ensure highlight date is visible */
+            .highlight-date {
+                background: #FBAD3F !important;
+                color: white !important;
+                padding: 3px 8px !important;
+                border-radius: 12px !important;
+                display: inline-block !important;
+                box-shadow: none !important;
+            }
+
+            .highlight-date::after {
+                display: none !important;
+            }
+
+            /* Ensure tagline is visible */
+            .tagline {
+                background: #e8f4f8 !important;
+                color: #007E8C !important;
+                padding: 6px 15px !important;
+                border-radius: 15px !important;
+                display: inline-block !important;
+                border: 1px solid #c3e4ed !important;
+                box-shadow: none !important;
+            }
+
+            .qr-link, a.qr-mini {
+                cursor: default;
+            }
+        }
+
+        /* Hover states only for digital */
+        @media screen {
+            .step-card {
+                transition: transform 0.3s ease;
+            }
+            
+            .step-card:hover {
+                transform: translateY(-5px);
+            }
+
+            .qr-link:hover .qr-image-wrapper {
+                transform: scale(1.02);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            }
+
+            a.qr-mini:hover {
+                transform: scale(1.05);
+            }
+
+            .social-link {
+                transition: all 0.3s;
+            }
+
+            .social-link:hover {
+                background: linear-gradient(135deg, #236383, #007E8C);
+                transform: translateY(-2px);
+                border-color: transparent;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero-section">
+            <div class="hero-decoration-left"></div>
+            <div class="hero-decoration-right"></div>
+            <div class="logo-container">
+                <img src="../LOGOS/CMYK_PRINT_TSP-01-01.jpg" alt="The Sandwich Project" class="main-logo">
+                <div class="hero-subtitle">NOURISH THE HUNGRY • FEED THE SOUL</div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="decoration-dots"></div>
+            <div class="decoration-wave"></div>
+
+            <div class="intro-section">
+                <h2 class="intro-title">Join Your Neighbors in Fighting Hunger!</h2>
+                <p class="intro-text">
+                    <strong>Great news!</strong> The Sandwich Project now has a collection host right in your neighborhood! 
+                    Starting <span class="highlight-date">Wednesday, December 3rd</span>, you and your kids can make 
+                    sandwiches at home and drop them off locally. Together, we can help feed Atlanta's most vulnerable neighbors.
+                </p>
+                <span class="tagline">✨ Easy • Meaningful • Family-Friendly ✨</span>
+            </div>
+
+            <div class="steps-wrapper">
+                <div class="arrow-connector arrow-1"></div>
+                <div class="arrow-connector arrow-2"></div>
+                <div class="steps-container">
+                    <div class="step-card">
+                        <div class="step-ribbon"></div>
+                        <div class="step-number">1</div>
+                        <h3 class="step-title">Sign up for Our Newsletter</h3>
+                        <a href="https://www.thesandwichproject.org/get-our-newsletter" target="_blank" class="qr-link">
+                            <div class="qr-image-wrapper">
+                                <img src="../newsletterqrcode2.png" alt="Newsletter QR Code" class="qr-image">
+                            </div>
+                        </a>
+                        <p class="step-text">
+                            <strong>Sign up for our newsletter</strong>
+                            Weekly host schedules delivered to your inbox
+                        </p>
+                    </div>
+
+                    <div class="step-card">
+                        <div class="step-ribbon"></div>
+                        <div class="step-number">2</div>
+                        <h3 class="step-title">Review our Food Safety Guides</h3>
+                        <a href="https://www.thesandwichproject.org/make-sandwiches" target="_blank" class="qr-link">
+                            <div class="qr-image-wrapper">
+                                <img src="make-sandwiches-qrCode.png" alt="Food Safety QR Code" class="qr-image">
+                            </div>
+                        </a>
+                        <p class="step-text">
+                            <strong>Review our food safety documents</strong>
+                            Simple steps to safely prepare sandwiches
+                        </p>
+                    </div>
+
+                    <div class="step-card">
+                        <div class="step-ribbon"></div>
+                        <div class="step-number">3</div>
+                        <h3 class="step-title">More Ways to Give Back</h3>
+                        <div class="qr-dual">
+                            <a href="https://www.amazon.com/hz/wishlist/ls/XRSQ9EDIIIWV?ref_=wl_share" target="_blank" class="qr-mini">
+                                <img src="amazon wish list qr code.png" alt="Amazon Wishlist QR" class="qr-image-small">
+                                <span>Wishlist</span>
+                            </a>
+                            <a href="https://www.thesandwichproject.org/make-a-donation" target="_blank" class="qr-mini">
+                                <img src="makeadonationqrCode.png" alt="Donate QR" class="qr-image-small">
+                                <span>Donate</span>
+                            </a>
+                        </div>
+                        <p class="step-text">
+                            <strong>Support our mission</strong>
+                            Shop wishlist or donate
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="social-footer">
+                <span class="social-label">Follow our journey:</span>
+                <a href="https://www.facebook.com/thesandwichprojectatl" target="_blank" class="social-link">
+                    <img src="../icons/facebook symbol.png" alt="Facebook" class="social-icon-small">
+                </a>
+                <a href="https://www.instagram.com/thesandwichprojectatl" target="_blank" class="social-link">
+                    <img src="../icons/instagram symbol.png" alt="Instagram" class="social-icon-small">
+                </a>
+                <a href="https://www.linkedin.com/company/the-sandwich-project/" target="_blank" class="social-link">
+                    <img src="../icons/linkedin symbol.png" alt="LinkedIn" class="social-icon-small">
+                </a>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <div class="cta-pattern"></div>
+            <div class="cta-content">
+                <h2 class="cta-title">Every Sandwich Makes a Difference!</h2>
+                <p class="cta-subtitle">2.2+ million sandwiches distributed since 2020</p>
+            </div>
+        </div>
+
+        <div class="website-footer">
+            Visit <a href="https://www.thesandwichproject.org">www.thesandwichproject.org</a> for more information
+        </div>
+    </div>
+</body>
+</html>
