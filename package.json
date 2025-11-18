@@ -3,6 +3,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "firebase": "^12.6.0",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
