@@ -39,6 +39,7 @@
                 display: flex !important;
                 flex-direction: column !important;
                 overflow: hidden !important;
+                position: relative !important;
             }
 
             .hero-section {
@@ -83,11 +84,11 @@
             }
 
             .content-area {
-                padding: 15px 30px 10px !important;
+                padding: 12px 30px 8px !important;
                 flex: 1 1 auto !important;
                 display: block !important;
                 min-height: 0 !important;
-                max-height: calc(11in - 120px - 90px - 40px) !important;
+                max-height: calc(11in - 120px - 85px - 38px) !important;
                 overflow: hidden !important;
             }
 
@@ -98,9 +99,9 @@
             }
 
             .qr-container-row-2 {
-                gap: 20px !important;
-                margin-top: 10px !important;
-                margin-bottom: 10px !important;
+                gap: 18px !important;
+                margin-top: 8px !important;
+                margin-bottom: 8px !important;
                 max-width: 85% !important;
             }
 
@@ -151,11 +152,14 @@
             }
 
             .cta-section {
-                background: #fff3e6 !important;
+                background: linear-gradient(135deg, #FBAD3F 0%, #ff9800 100%) !important;
                 border-top: 3px solid #FBAD3F !important;
-                padding: 12px 30px 12px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                padding: 10px 25px 10px !important;
                 min-height: auto !important;
-                max-height: 90px !important;
+                max-height: 85px !important;
                 flex-shrink: 0 !important;
                 flex-grow: 0 !important;
                 overflow: hidden !important;
@@ -166,42 +170,49 @@
             }
 
             .cta-title {
-                font-size: 28px !important;
-                margin-bottom: 4px !important;
+                font-size: 26px !important;
+                margin-bottom: 3px !important;
                 font-weight: 900 !important;
                 line-height: 1.1 !important;
+                color: #236383 !important;
             }
 
             .cta-subtitle {
-                font-size: 13px !important;
+                font-size: 12px !important;
                 margin-bottom: 0 !important;
                 line-height: 1.15 !important;
                 max-width: 100% !important;
                 font-weight: 700 !important;
+                color: #236383 !important;
             }
 
             .cta-content {
                 overflow: hidden !important;
+                position: relative !important;
+                z-index: 1 !important;
             }
 
             .website-footer {
-                background: white !important;
-                color: #236383 !important;
+                background: #236383 !important;
+                color: white !important;
                 border-top: 3px solid #236383 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 10px !important;
-                font-size: 24px !important;
+                color-adjust: exact !important;
+                padding: 8px !important;
+                font-size: 22px !important;
                 font-weight: 800 !important;
                 flex-shrink: 0 !important;
                 flex-grow: 0 !important;
-                max-height: 40px !important;
+                max-height: 38px !important;
+                overflow: hidden !important;
             }
 
             .website-footer a {
-                color: #236383 !important;
+                color: #FBAD3F !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+                color-adjust: exact !important;
             }
         }
         
