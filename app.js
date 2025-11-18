@@ -1134,6 +1134,57 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   }, [mapLoaded, userCoords, viewMode, initializeMap, map]);
 
+  // Auto-focus map on favorite host when page loads
+  React.useEffect(() => {
+    if (!map || !favoriteHostId || !allHosts.length || highlightedHostId) return;
+
+    const favoriteHost = allHosts.find(h => h.id === favoriteHostId);
+    if (!favoriteHost) return;
+
+    // Check if host is available
+    if (!favoriteHost.available) {
+      // Show notification that saved host is unavailable this week
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-50 p-4 rounded-lg shadow-xl border-2';
+      notification.style.backgroundColor = '#FFF9E6';
+      notification.style.borderColor = '#FBAD3F';
+      notification.style.maxWidth = '90%';
+      notification.style.width = '400px';
+      notification.innerHTML = `
+        <div class="flex items-start gap-3">
+          <span style="font-size: 24px;">⚠️</span>
+          <div class="flex-1">
+            <p class="font-bold mb-1" style="color: #A31C41;">Your Saved Host is Unavailable</p>
+            <p class="text-sm" style="color: #666;">${favoriteHost.name} is not accepting drop-offs this week. Please choose another host from the list below.</p>
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666;">&times;</button>
+        </div>
+      `;
+      document.body.appendChild(notification);
+
+      // Auto-dismiss after 8 seconds
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove();
+        }
+      }, 8000);
+      return;
+    }
+
+    // Focus map on favorite host
+    setTimeout(() => {
+      map.setCenter({ lat: favoriteHost.lat, lng: favoriteHost.lng });
+      map.setZoom(15);
+      setHighlightedHostId(favoriteHostId);
+
+      trackEvent('auto_focus_favorite', {
+        event_category: 'Favorites',
+        event_label: 'Auto-focused on Saved Host',
+        host_id: favoriteHostId
+      });
+    }, 500);
+  }, [map, favoriteHostId, allHosts, highlightedHostId]);
+
   // Memoize host IDs string to prevent unnecessary recalculations
   const hostIdsString = React.useMemo(() => {
     return availableHosts.map(h => h.id).sort().join(',');
