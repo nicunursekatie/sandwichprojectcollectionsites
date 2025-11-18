@@ -1252,7 +1252,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
           if (directionsPanel) {
             directionsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
-        }, 300);
+        }, 500);
 
         trackEvent('directions_calculated', {
           event_category: 'Directions',
