@@ -1316,44 +1316,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
     setDirectionsMenuOpen(null);
   };
 
-  // Email directions
-  const emailDirections = () => {
+  // Copy directions to clipboard
+  const copyDirections = () => {
     if (!routeInfo || !directionSteps) return;
 
-    trackEvent('email_directions', {
+    trackEvent('copy_directions', {
       event_category: 'Directions',
-      event_label: 'Email Directions',
+      event_label: 'Copy to Clipboard',
       host_name: routeInfo.hostName,
       distance: routeInfo.distance,
       duration: routeInfo.duration
     });
 
     const host = availableHosts.find(h => h.id === routeInfo.hostId);
-    const subject = encodeURIComponent(`Directions to ${routeInfo.hostName} - Sandwich Drop-Off`);
 
-    // Create condensed directions with just the essentials
-    let body = `Directions to ${routeInfo.hostName}\n`;
-    body += `Location: ${routeInfo.hostAddress}\n`;
-    body += `Phone: ${routeInfo.hostPhone}\n`;
-    body += `\nTotal Distance: ${routeInfo.distance}\n`;
-    body += `Estimated Time: ${routeInfo.duration}\n`;
-    body += `Drop-off Date: ${dropOffDate}\n`;
-    body += `\nView full turn-by-turn directions on Google Maps:\n`;
-    body += `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}\n`;
+    // Create formatted text for clipboard
+    let text = `Directions to ${routeInfo.hostName}\n`;
+    text += `Location: ${routeInfo.hostAddress}\n`;
+    text += `Phone: ${routeInfo.hostPhone}\n`;
+    text += `\nTotal Distance: ${routeInfo.distance}\n`;
+    text += `Estimated Time: ${routeInfo.duration}\n`;
+    text += `Drop-off Date: ${dropOffDate}\n`;
+    text += `Host Hours: ${routeInfo.hours}\n`;
+    text += `\nView full turn-by-turn directions on Google Maps:\n`;
+    text += `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}\n`;
 
-    const mailtoLink = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
-
-    // Try to open the mailto link
-    try {
-      window.location.href = mailtoLink;
-    } catch (error) {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(body.replace(/\\n/g, '\n')).then(() => {
-        alert('Email app could not be opened. Directions have been copied to your clipboard!');
-      }).catch(() => {
-        alert('Unable to open email app. Please manually copy the directions from the screen.');
-      });
-    }
+    navigator.clipboard.writeText(text).then(() => {
+      alert('✓ Directions copied to clipboard! You can now paste them into an email or text message.');
+    }).catch(() => {
+      alert('Unable to copy to clipboard. Please manually copy the information from the screen.');
+    });
   };
 
   // Show loading state while fetching hosts
@@ -1894,13 +1886,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         📍 Turn-by-Turn Directions
                       </h3>
                       <button
-                        onClick={emailDirections}
+                        onClick={copyDirections}
                         className="text-sm px-4 py-2 rounded-lg font-medium text-white flex items-center"
                         style={{backgroundColor: '#007E8C'}}
-                        title="Email these directions to yourself"
+                        title="Copy directions to clipboard"
                       >
-                        <i className="lucide-mail w-4 h-4 mr-1.5"></i>
-                        Email Directions
+                        <i className="lucide-copy w-4 h-4 mr-1.5"></i>
+                        Copy Directions
                       </button>
                     </div>
 
@@ -1914,12 +1906,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                       // Wednesday is day 3
                       const isWednesday = currentDay === 3;
-                      const openMinutes = routeInfo.openTime;
-                      const closeMinutes = routeInfo.closeTime;
+                      const openMinutes = parseInt(routeInfo.openTime) || 0;
+                      const closeMinutes = parseInt(routeInfo.closeTime) || 0;
                       const isCurrentlyOpen = isWednesday && currentTime >= openMinutes && currentTime < closeMinutes;
 
-                      // Format time helper
+                      // Format time helper (same as formatTime in the main app)
                       const formatTimeForBanner = (minutes) => {
+                        if (!minutes && minutes !== 0) return '';
                         const hours = Math.floor(minutes / 60);
                         const mins = minutes % 60;
                         const period = hours >= 12 ? 'pm' : 'am';
