@@ -1705,54 +1705,75 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       top: '20px',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      minWidth: '280px',
-                      maxWidth: '320px',
+                      minWidth: '300px',
+                      maxWidth: '340px',
                       borderColor: '#007E8C',
                       boxShadow: '0 10px 40px rgba(0, 126, 140, 0.3)'
                     }}
                   >
+                    {/* Header */}
                     <div className="flex justify-between items-start mb-3">
-                      <h4 className="text-lg font-bold" style={{color: '#236383'}}>
-                        {mapTooltip.name}
-                      </h4>
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold mb-1" style={{color: '#236383'}}>
+                          {mapTooltip.name}
+                        </h4>
+                        <p className="text-sm font-medium" style={{color: '#007E8C'}}>
+                          {mapTooltip.neighborhood ? mapTooltip.neighborhood : mapTooltip.area}
+                        </p>
+                      </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setMapTooltip(null);
                           setHighlightedHostId(null);
                           setMapTooltipMenuOpen(false);
-                          // Reset map to initial view
                           if (map && initialMapCenter && initialMapZoom !== null) {
                             map.setCenter(initialMapCenter);
                             map.setZoom(initialMapZoom);
                           }
                         }}
-                        className="text-gray-400 hover:text-gray-600 ml-2"
-                        style={{fontSize: '20px', lineHeight: '1'}}
-                        title="Close and reset map"
+                        className="text-gray-400 hover:text-gray-600 ml-2 text-2xl leading-none"
+                        title="Close"
                       >
                         ×
                       </button>
                     </div>
 
-                    <div className="space-y-2 mb-3">
-                      <p className="text-sm font-medium" style={{color: '#007E8C'}}>
-                        📍 {mapTooltip.area}{mapTooltip.neighborhood ? ` - ${mapTooltip.neighborhood}` : ''}
-                      </p>
-                      {mapTooltip.distance && (
-                        <p className="text-sm font-semibold" style={{color: '#236383'}}>
-                          {mapTooltip.distance} miles away
+                    {/* Distance & Drive Time */}
+                    {mapTooltip.distance && (
+                      <div className="mb-3 py-2 px-3 rounded-lg" style={{backgroundColor: '#E6F7F9'}}>
+                        <p className="text-sm font-bold" style={{color: '#007E8C'}}>
+                          {mapTooltip.distance} miles
+                          {hostDriveTimes[mapTooltip.id] && ` · ${hostDriveTimes[mapTooltip.id]}`}
                         </p>
-                      )}
+                      </div>
+                    )}
+
+                    {/* Hours */}
+                    <div className="mb-3">
+                      <p className="text-sm mb-1">
+                        <span className="font-semibold" style={{color: '#236383'}}>Hours: </span>
+                        <span style={{color: '#007E8C'}}>{mapTooltip.hours}</span>
+                      </p>
+                      <p className="text-xs" style={{color: '#666'}}>
+                        Opens Wednesday at {formatTime(mapTooltip.openTime)}
+                      </p>
                     </div>
 
-                    <div className="space-y-2">
-                      {/* Sign-in Reminder */}
-                      <div className="p-2 rounded-lg text-xs mb-2" style={{backgroundColor: '#FFF9E6', border: '1px solid #FBAD3F'}}>
-                        <span className="font-semibold" style={{color: '#A31C41'}}>Remember:</span>
-                        <span className="text-gray-700"> Sign in when you drop off!</span>
+                    {/* Special Instructions Preview */}
+                    {mapTooltip.notes && (
+                      <div className="mb-3 p-2 rounded-lg" style={{backgroundColor: '#FFF9E6', border: '1px solid #FBAD3F'}}>
+                        <p className="text-xs">
+                          <span className="font-semibold" style={{color: '#A31C41'}}>⚠️ </span>
+                          <span style={{color: '#666'}}>
+                            {mapTooltip.notes.length > 50 ? `${mapTooltip.notes.substring(0, 50)}...` : mapTooltip.notes}
+                          </span>
+                        </p>
                       </div>
+                    )}
 
+                    {/* Actions */}
+                    <div className="space-y-2">
                       <div className="relative" data-map-tooltip-menu>
                         <button
                           type="button"
@@ -1761,15 +1782,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             e.stopPropagation();
                             setMapTooltipMenuOpen(!mapTooltipMenuOpen);
                           }}
-                          className="block w-full px-4 py-2 text-white rounded-lg font-medium text-center text-sm transition-all hover:opacity-90 flex items-center justify-center gap-2"
+                          className="block w-full px-4 py-3 text-white rounded-lg font-bold text-sm transition-all hover:opacity-90 flex items-center justify-center gap-2"
                           style={{backgroundColor: '#007E8C'}}
                         >
                           <i className="lucide-navigation w-4 h-4"></i>
-                          <span>Get Directions</span>
+                          <span>Start Navigation</span>
                           <i className={`lucide-chevron-down w-3 h-3 transition-transform ${mapTooltipMenuOpen ? 'rotate-180' : ''}`}></i>
                         </button>
                         {mapTooltipMenuOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden min-w-[280px]" style={{borderColor: '#007E8C'}}>
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden min-w-[300px]" style={{borderColor: '#007E8C'}}>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1813,10 +1834,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           }
                           setMapTooltip(null);
                         }}
-                        className="block w-full px-4 py-2 rounded-lg font-medium text-center text-sm transition-all"
-                        style={{backgroundColor: '#F0F9FA', color: '#236383', border: '1.5px solid #007E8C'}}
+                        className="block w-full px-4 py-2 rounded-lg font-medium text-center text-sm transition-all hover:bg-opacity-80"
+                        style={{backgroundColor: '#F0F9FA', color: '#007E8C', border: '1.5px solid rgba(0, 126, 140, 0.3)'}}
                       >
-                        View Details
+                        View Full Details
                       </button>
                     </div>
                   </div>
