@@ -2048,7 +2048,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       );
                     })()}
 
-                    <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
+                    <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
                       {directionSteps.map((step, index) => (
                         <div key={index} className="flex gap-3 p-3 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.05)'}}>
                           <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs text-white" style={{backgroundColor: '#007E8C'}}>
