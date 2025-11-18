@@ -1233,7 +1233,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
           distance: leg.distance.text,
           hostName: host.name,
           hostAddress: `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`,
-          hostPhone: host.phone
+          hostPhone: host.phone,
+          hours: host.hours,
+          openTime: host.openTime,
+          closeTime: host.closeTime
         });
 
         // Extract turn-by-turn directions
@@ -1900,6 +1903,62 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         Email Directions
                       </button>
                     </div>
+
+                    {/* Host Hours Banner */}
+                    {(() => {
+                      const now = new Date();
+                      const currentDay = now.getDay();
+                      const currentHour = now.getHours();
+                      const currentMinutes = now.getMinutes();
+                      const currentTime = currentHour * 60 + currentMinutes;
+
+                      // Wednesday is day 3
+                      const isWednesday = currentDay === 3;
+                      const openMinutes = routeInfo.openTime;
+                      const closeMinutes = routeInfo.closeTime;
+                      const isCurrentlyOpen = isWednesday && currentTime >= openMinutes && currentTime < closeMinutes;
+
+                      // Format time helper
+                      const formatTimeForBanner = (minutes) => {
+                        const hours = Math.floor(minutes / 60);
+                        const mins = minutes % 60;
+                        const period = hours >= 12 ? 'pm' : 'am';
+                        const displayHour = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+                        return mins > 0 ? `${displayHour}:${mins.toString().padStart(2, '0')}${period}` : `${displayHour}${period}`;
+                      };
+
+                      const openTimeStr = formatTimeForBanner(openMinutes);
+                      const closeTimeStr = formatTimeForBanner(closeMinutes);
+
+                      return (
+                        <div
+                          className="mb-4 p-3 rounded-lg border-2"
+                          style={{
+                            backgroundColor: isCurrentlyOpen ? 'rgba(34, 197, 94, 0.1)' : 'rgba(251, 173, 63, 0.15)',
+                            borderColor: isCurrentlyOpen ? 'rgba(34, 197, 94, 0.4)' : '#FBAD3F'
+                          }}
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className="text-lg flex-shrink-0">
+                              {isCurrentlyOpen ? '✅' : '⏰'}
+                            </span>
+                            <div className="flex-1">
+                              <p className="text-sm font-bold mb-1" style={{color: '#236383'}}>
+                                {isCurrentlyOpen
+                                  ? `Open now · Closes at ${closeTimeStr}`
+                                  : `Opens Wednesday at ${openTimeStr}`
+                                }
+                              </p>
+                              <p className="text-xs" style={{color: '#666'}}>
+                                Host Hours: {routeInfo.hours}
+                                {!isCurrentlyOpen && ' · Drop-off must occur during listed hours'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
                       {directionSteps.map((step, index) => (
                         <div key={index} className="flex gap-3 p-3 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.05)'}}>
