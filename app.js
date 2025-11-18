@@ -1906,8 +1906,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                       // Wednesday is day 3
                       const isWednesday = currentDay === 3;
-                      const openMinutes = parseInt(routeInfo.openTime) || 0;
-                      const closeMinutes = parseInt(routeInfo.closeTime) || 0;
+                      const openMinutes = typeof routeInfo.openTime === 'number' ? routeInfo.openTime : parseInt(routeInfo.openTime);
+                      const closeMinutes = typeof routeInfo.closeTime === 'number' ? routeInfo.closeTime : parseInt(routeInfo.closeTime);
                       const isCurrentlyOpen = isWednesday && currentTime >= openMinutes && currentTime < closeMinutes;
 
                       // Format time helper (same as formatTime in the main app)
