@@ -1243,11 +1243,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
           duration: step.duration.text
         })));
 
-        // Scroll to the directions panel after a brief delay
+        // Scroll to the directions panel after a brief delay, keeping some map visible
         setTimeout(() => {
           const directionsPanel = document.querySelector('[data-directions-panel]');
           if (directionsPanel) {
-            directionsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            directionsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
         }, 300);
 
