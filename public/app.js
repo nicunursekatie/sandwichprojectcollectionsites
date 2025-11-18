@@ -1134,6 +1134,113 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   }, [mapLoaded, userCoords, viewMode, initializeMap, map]);
 
+  // Auto-focus map on favorite host when page loads
+  React.useEffect(() => {
+    if (!map || !favoriteHostId || !allHosts.length || highlightedHostId) return;
+
+    const favoriteHost = allHosts.find(h => h.id === favoriteHostId);
+    if (!favoriteHost) return;
+
+    // Check if host is available
+    if (!favoriteHost.available) {
+      // Find nearest available hosts to the unavailable favorite
+      const nearbyHosts = availableHosts
+        .filter(h => h.id !== favoriteHostId)
+        .map(h => ({
+          ...h,
+          distance: calculateDistance(favoriteHost.lat, favoriteHost.lng, h.lat, h.lng)
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 3);
+
+      // Show notification with nearby alternatives
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-50 p-4 rounded-lg shadow-xl border-2';
+      notification.style.backgroundColor = '#FFF9E6';
+      notification.style.borderColor = '#FBAD3F';
+      notification.style.maxWidth = '90%';
+      notification.style.width = '450px';
+
+      const nearbyHostsList = nearbyHosts.map((h, i) => `
+        <div class="flex items-center justify-between py-2 px-3 rounded hover:bg-orange-50 cursor-pointer" data-host-id="${h.id}" style="border: 1px solid #FBAD3F; margin-top: 8px;">
+          <div>
+            <p class="font-semibold text-sm" style="color: #236383;">${h.name}</p>
+            <p class="text-xs" style="color: #666;">${h.area}${h.neighborhood ? ' - ' + h.neighborhood : ''}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs font-bold" style="color: #007E8C;">${h.distance.toFixed(1)} mi</p>
+          </div>
+        </div>
+      `).join('');
+
+      notification.innerHTML = `
+        <div class="flex items-start gap-3">
+          <span style="font-size: 24px;">⚠️</span>
+          <div class="flex-1">
+            <p class="font-bold mb-1" style="color: #A31C41;">Your Saved Host is Unavailable</p>
+            <p class="text-sm mb-2" style="color: #666;">${favoriteHost.name} is not accepting drop-offs this week.</p>
+            ${nearbyHosts.length > 0 ? `
+              <p class="text-sm font-semibold mb-1" style="color: #236383;">Nearby alternatives:</p>
+              ${nearbyHostsList}
+            ` : ''}
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666;">&times;</button>
+        </div>
+      `;
+      document.body.appendChild(notification);
+
+      // Add click handlers for nearby hosts
+      nearbyHosts.forEach(host => {
+        const hostElement = notification.querySelector(`[data-host-id="${host.id}"]`);
+        if (hostElement) {
+          hostElement.addEventListener('click', () => {
+            // Focus map on selected host
+            map.setCenter({ lat: host.lat, lng: host.lng });
+            map.setZoom(15);
+            setHighlightedHostId(host.id);
+
+            // Close notification
+            notification.remove();
+
+            // Scroll to host in list
+            const hostCard = document.querySelector(`[data-host-id="${host.id}"]`);
+            if (hostCard) {
+              hostCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            trackEvent('select_nearby_alternative', {
+              event_category: 'Favorites',
+              event_label: 'Selected Alternative to Unavailable Saved Host',
+              unavailable_host_id: favoriteHostId,
+              selected_host_id: host.id
+            });
+          });
+        }
+      });
+
+      // Auto-dismiss after 12 seconds (longer because there's more to read)
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove();
+        }
+      }, 12000);
+      return;
+    }
+
+    // Focus map on favorite host
+    setTimeout(() => {
+      map.setCenter({ lat: favoriteHost.lat, lng: favoriteHost.lng });
+      map.setZoom(15);
+      setHighlightedHostId(favoriteHostId);
+
+      trackEvent('auto_focus_favorite', {
+        event_category: 'Favorites',
+        event_label: 'Auto-focused on Saved Host',
+        host_id: favoriteHostId
+      });
+    }, 500);
+  }, [map, favoriteHostId, allHosts, highlightedHostId]);
+
   // Memoize host IDs string to prevent unnecessary recalculations
   const hostIdsString = React.useMemo(() => {
     return availableHosts.map(h => h.id).sort().join(',');
