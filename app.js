@@ -1201,7 +1201,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Show driving directions on map
   const showDirections = (host) => {
-    if (!directionsService || !directionsRenderer || !userCoords) return;
+    if (!directionsService || !directionsRenderer || !userCoords) {
+      alert('Please enter your address first to get directions.');
+      return;
+    }
 
     trackEvent('show_directions', {
       event_category: 'Directions',
@@ -1239,7 +1242,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
           distance: step.distance.text,
           duration: step.duration.text
         })));
-        
+
+        // Scroll to the directions panel after a brief delay
+        setTimeout(() => {
+          const directionsPanel = document.querySelector('[data-directions-panel]');
+          if (directionsPanel) {
+            directionsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 300);
+
         trackEvent('directions_calculated', {
           event_category: 'Directions',
           event_label: 'Route Displayed',
@@ -1868,7 +1879,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
               {/* Turn-by-Turn Directions */}
               {directionSteps && routeInfo && (
-                <div className="border-t" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}}>
+                <div className="border-t" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}} data-directions-panel>
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-bold" style={{color: '#236383'}}>
