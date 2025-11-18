@@ -1906,12 +1906,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                       // Wednesday is day 3
                       const isWednesday = currentDay === 3;
-                      const openMinutes = routeInfo.openTime;
-                      const closeMinutes = routeInfo.closeTime;
+                      const openMinutes = parseInt(routeInfo.openTime) || 0;
+                      const closeMinutes = parseInt(routeInfo.closeTime) || 0;
                       const isCurrentlyOpen = isWednesday && currentTime >= openMinutes && currentTime < closeMinutes;
 
-                      // Format time helper
+                      // Format time helper (same as formatTime in the main app)
                       const formatTimeForBanner = (minutes) => {
+                        if (!minutes && minutes !== 0) return '';
                         const hours = Math.floor(minutes / 60);
                         const mins = minutes % 60;
                         const period = hours >= 12 ? 'pm' : 'am';
