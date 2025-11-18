@@ -37,6 +37,10 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
+
     <!-- Custom styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -47,6 +51,25 @@
     <!-- End Google Tag Manager (noscript) -->
 
     <div id="root"></div>
+
+    <!-- Firebase Configuration -->
+    <script>
+      // Initialize Firebase Analytics only (no Firestore on GitHub Pages)
+      const firebaseConfig = {
+        apiKey: "AIzaSyAiv_SfZGBGzyw8dEypQIDXI2iB3WAKjXc",
+        authDomain: "tsp-host-finder-tool.firebaseapp.com",
+        projectId: "tsp-host-finder-tool",
+        storageBucket: "tsp-host-finder-tool.firebasestorage.app",
+        messagingSenderId: "773911012242",
+        appId: "1:773911012242:web:60bc4f1fce3b494fb7974b",
+        measurementId: "G-6P9FHSLS3S"
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const analytics = firebase.analytics();
+    </script>
+
     <!-- Helpers -->
     <script src="app.helpers.js?v=20251116c"></script>
     <!-- Configuration -->

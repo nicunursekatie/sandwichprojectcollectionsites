@@ -24,6 +24,11 @@ const HostAvailabilityApp = () => {
   const [initialMapCenter, setInitialMapCenter] = React.useState(null);
   const [initialMapZoom, setInitialMapZoom] = React.useState(null);
   const [hostDriveTimes, setHostDriveTimes] = React.useState({});
+  const [showFeedback, setShowFeedback] = React.useState(false);
+  const [feedbackRating, setFeedbackRating] = React.useState(0);
+  const [feedbackText, setFeedbackText] = React.useState('');
+  const [feedbackEmail, setFeedbackEmail] = React.useState('');
+  const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
@@ -2555,6 +2560,143 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 </form>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Feedback Button - Fixed position */}
+        <button
+          onClick={() => setShowFeedback(true)}
+          className="fixed bottom-6 right-6 px-6 py-3 rounded-full font-bold text-white shadow-2xl hover:shadow-3xl transition-all z-50 flex items-center gap-2"
+          style={{backgroundColor: '#007E8C'}}
+        >
+          <span>💬</span>
+          <span>Give Feedback</span>
+        </button>
+
+        {/* Feedback Modal */}
+        {showFeedback && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+            <div className="bg-white rounded-2xl max-w-md w-full p-8 relative">
+              <button
+                onClick={() => {
+                  setShowFeedback(false);
+                  setFeedbackRating(0);
+                  setFeedbackText('');
+                  setFeedbackEmail('');
+                  setFeedbackSubmitted(false);
+                }}
+                className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+
+              {!feedbackSubmitted ? (
+                <>
+                  <h2 className="text-2xl font-bold mb-6" style={{color: '#236383'}}>
+                    How was your experience?
+                  </h2>
+
+                  {/* Star Rating */}
+                  <div className="mb-6">
+                    <p className="font-semibold mb-3" style={{color: '#236383'}}>Rate your experience:</p>
+                    <div className="flex gap-2 justify-center">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setFeedbackRating(star)}
+                          className="text-4xl transition-all hover:scale-110"
+                        >
+                          {star <= feedbackRating ? '⭐' : '☆'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Conditional feedback text based on rating */}
+                  {feedbackRating > 0 && (
+                    <>
+                      <div className="mb-4">
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>
+                          {feedbackRating >= 4 ? 'What did you like most? (optional)' : 'What can we improve? *'}
+                        </label>
+                        <textarea
+                          value={feedbackText}
+                          onChange={(e) => setFeedbackText(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border-2"
+                          style={{borderColor: '#E0E0E0'}}
+                          rows="4"
+                          placeholder={feedbackRating >= 4 ? 'Tell us what worked well...' : 'Please help us understand what needs improvement...'}
+                          required={feedbackRating < 4}
+                        />
+                      </div>
+
+                      <div className="mb-6">
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>
+                          Email (optional, for follow-up)
+                        </label>
+                        <input
+                          type="email"
+                          value={feedbackEmail}
+                          onChange={(e) => setFeedbackEmail(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border-2"
+                          style={{borderColor: '#E0E0E0'}}
+                          placeholder="your.email@example.com"
+                        />
+                      </div>
+
+                      <button
+                        onClick={async () => {
+                          // Validate
+                          if (feedbackRating < 4 && !feedbackText.trim()) {
+                            alert('Please tell us what we can improve.');
+                            return;
+                          }
+
+                          try {
+                            // Save to Firestore
+                            await db.collection('feedback').add({
+                              rating: feedbackRating,
+                              feedback: feedbackText,
+                              email: feedbackEmail,
+                              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                              userAgent: navigator.userAgent,
+                              url: window.location.href
+                            });
+
+                            // Track in analytics
+                            analytics.logEvent('feedback_submitted', {
+                              rating: feedbackRating,
+                              has_text: feedbackText.length > 0,
+                              has_email: feedbackEmail.length > 0
+                            });
+
+                            setFeedbackSubmitted(true);
+                          } catch (error) {
+                            console.error('Error submitting feedback:', error);
+                            alert('Error submitting feedback. Please try again.');
+                          }
+                        }}
+                        className="w-full px-6 py-3 rounded-xl font-bold text-white"
+                        style={{backgroundColor: '#007E8C'}}
+                      >
+                        Submit Feedback
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">✅</div>
+                  <h3 className="text-2xl font-bold mb-2" style={{color: '#236383'}}>
+                    Thank you!
+                  </h3>
+                  <p className="text-gray-600">
+                    Your feedback helps us improve the Host Finder Tool.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
