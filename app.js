@@ -1636,9 +1636,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-sm sm:text-base mb-1" style={{color: '#666'}}>
                   We'll see everyone next week after the Thanksgiving holiday. Next collection is December 3rd.
                 </p>
-                <p className="text-sm sm:text-base font-semibold" style={{color: '#007E8C'}}>
-                  Thank you for your understanding. Collections will resume next week.
-                </p>
               </div>
             </div>
           </div>
