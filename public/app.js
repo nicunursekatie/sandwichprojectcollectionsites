@@ -34,6 +34,27 @@ const HostAvailabilityApp = () => {
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
 
+  // Mobile optimization: Throttle utility for scroll events
+  const throttle = React.useCallback((func, limit) => {
+    let inThrottle;
+    return function(...args) {
+      if (!inThrottle) {
+        func.apply(this, args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    };
+  }, []);
+
+  // Mobile optimization: Debounce utility for resize events
+  const debounce = React.useCallback((func, delay) => {
+    let timeoutId;
+    return function(...args) {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+  }, []);
+
   // Firebase Analytics tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
     if (window.firebase && window.firebase.analytics) {
@@ -100,50 +121,64 @@ const HostAvailabilityApp = () => {
         const buttonRect = directionsButtonRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        const dropdownWidth = 280; // min-width
-        const dropdownHeight = 200; // approximate height
-        
+        // Mobile optimization: Responsive dropdown width based on viewport
+        const dropdownWidth = Math.min(280, viewportWidth * 0.9);
+        const dropdownHeight = Math.min(200, viewportHeight * 0.8);
+        // Mobile optimization: Responsive margins based on viewport
+        const margin = Math.min(16, viewportWidth * 0.05);
+
         let left = buttonRect.left;
         let top = buttonRect.bottom + 4;
-        
+
         // Ensure dropdown doesn't go off right edge
-        if (left + dropdownWidth > viewportWidth - 16) {
-          left = viewportWidth - dropdownWidth - 16;
+        if (left + dropdownWidth > viewportWidth - margin) {
+          left = viewportWidth - dropdownWidth - margin;
         }
         // Ensure dropdown doesn't go off left edge
-        if (left < 16) {
-          left = 16;
+        if (left < margin) {
+          left = margin;
         }
         // If dropdown would go off bottom, show above button instead
-        if (top + dropdownHeight > viewportHeight - 16) {
+        if (top + dropdownHeight > viewportHeight - margin) {
           top = buttonRect.top - dropdownHeight - 4;
         }
         // Ensure dropdown doesn't go off top edge
-        if (top < 16) {
-          top = 16;
+        if (top < margin) {
+          top = margin;
         }
-        
+
         setDirectionsMenuPosition({ top, left });
       }
     };
     
     if (directionsMenuOpen !== null || mapTooltipMenuOpen) {
+      // Mobile optimization: Prevent body scroll when dropdown is open
+      document.body.style.overflow = 'hidden';
+
+      // Mobile optimization: Throttled and debounced event handlers
+      const throttledScroll = throttle(updateMenuPosition, 100);
+      const debouncedResize = debounce(updateMenuPosition, 250);
+
       // Use setTimeout to avoid immediate closure when opening
       setTimeout(() => {
         document.addEventListener('click', handleClickOutside);
-        document.addEventListener('touchstart', handleClickOutside);
-        // Update position on scroll/resize for mobile
-        window.addEventListener('scroll', updateMenuPosition, true);
-        window.addEventListener('resize', updateMenuPosition);
+        // Mobile optimization: Use touchend instead of touchstart to prevent premature closure
+        document.addEventListener('touchend', handleClickOutside, { passive: true });
+        // Mobile optimization: Throttled scroll for better mobile performance
+        window.addEventListener('scroll', throttledScroll, { passive: true, capture: true });
+        // Mobile optimization: Debounced resize to prevent layout thrashing
+        window.addEventListener('resize', debouncedResize);
       }, 0);
       return () => {
+        // Mobile optimization: Restore body scroll
+        document.body.style.overflow = '';
         document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('touchstart', handleClickOutside);
-        window.removeEventListener('scroll', updateMenuPosition, true);
-        window.removeEventListener('resize', updateMenuPosition);
+        document.removeEventListener('touchend', handleClickOutside);
+        window.removeEventListener('scroll', throttledScroll, true);
+        window.removeEventListener('resize', debouncedResize);
       };
     }
-  }, [directionsMenuOpen, mapTooltipMenuOpen]);
+  }, [directionsMenuOpen, mapTooltipMenuOpen, throttle, debounce]);
 
   // Scroll depth tracking
   React.useEffect(() => {
@@ -192,12 +227,14 @@ const HostAvailabilityApp = () => {
       });
     };
 
-    window.addEventListener('scroll', handleScroll);
+    // Mobile optimization: Throttle scroll event for better performance
+    const throttledHandleScroll = throttle(handleScroll, 100);
+    window.addEventListener('scroll', throttledHandleScroll, { passive: true });
     // Trigger once on mount to catch initial viewport
     handleScroll();
 
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    return () => window.removeEventListener('scroll', throttledHandleScroll);
+  }, [throttle]);
 
   const helperRefs = window.AppHelpers || {};
   const getNextWednesday = helperRefs.getNextWednesday || (() => {
@@ -419,8 +456,9 @@ const HostAvailabilityApp = () => {
     }).catch(() => {
       // Fallback: show in a text area
       const modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
-      modal.innerHTML = `<div style="background:white;padding:20px;border-radius:8px;max-width:90%;max-height:80%;overflow:auto;"><h3>Copy this code:</h3><textarea style="width:600px;height:400px;font-family:monospace;font-size:12px;">${codeStr}</textarea><br><button onclick="this.parentElement.parentElement.remove()" style="margin-top:10px;padding:8px 16px;background:#007E8C;color:white;border:none;border-radius:4px;cursor:pointer;">Close</button></div>`;
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;';
+      // Mobile optimization: Responsive textarea dimensions and improved tap targets
+      modal.innerHTML = `<div style="background:white;padding:20px;border-radius:8px;max-width:90%;max-height:80%;overflow:auto;"><h3>Copy this code:</h3><textarea style="width:min(600px, 85vw);height:min(400px, 60vh);font-family:monospace;font-size:12px;">${codeStr}</textarea><br><button onclick="this.parentElement.parentElement.remove()" style="margin-top:10px;padding:12px 20px;min-height:48px;background:#007E8C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:16px;">Close</button></div>`;
       document.body.appendChild(modal);
     });
   };
@@ -1161,7 +1199,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
       notification.style.backgroundColor = '#FFF9E6';
       notification.style.borderColor = '#FBAD3F';
       notification.style.maxWidth = '90%';
-      notification.style.width = '450px';
+      // Mobile optimization: Responsive notification width
+      notification.style.width = 'min(450px, 90vw)';
 
       const nearbyHostsList = nearbyHosts.map((h, i) => `
         <div class="flex items-center justify-between py-2 px-3 rounded hover:bg-orange-50 cursor-pointer" data-host-id="${h.id}" style="border: 1px solid #FBAD3F; margin-top: 8px;">
@@ -1186,7 +1225,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               ${nearbyHostsList}
             ` : ''}
           </div>
-          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666;">&times;</button>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer;">&times;</button>
         </div>
       `;
       document.body.appendChild(notification);
@@ -1920,7 +1959,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
               </div>
               <div className="relative">
-                <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
+                {/* Mobile optimization: Responsive map height for small screens */}
+                <div id="map" className="h-64 sm:h-80 md:h-96 lg:h-[calc(100vh-400px)]"></div>
 
                 {/* Map Tooltip */}
                 {mapTooltip && (
@@ -1930,8 +1970,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       top: '20px',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      minWidth: '300px',
-                      maxWidth: '340px',
+                      // Mobile optimization: Responsive tooltip width
+                      minWidth: 'min(300px, 85vw)',
+                      maxWidth: 'min(340px, calc(100vw - 40px))',
                       borderColor: '#007E8C',
                       boxShadow: '0 10px 40px rgba(0, 126, 140, 0.3)'
                     }}
@@ -1957,7 +1998,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             map.setZoom(initialMapZoom);
                           }
                         }}
-                        className="text-gray-400 hover:text-gray-600 ml-2 text-2xl leading-none"
+                        className="text-gray-400 hover:text-gray-600 ml-2 text-2xl leading-none flex items-center justify-center"
+                        style={{minWidth: '44px', minHeight: '44px', padding: '8px'}}
                         title="Close"
                       >
                         ×
