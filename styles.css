@@ -7,10 +7,18 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   background: linear-gradient(135deg, #E8F8FF 0%, #D6F1FB 100%);
   min-height: 100vh;
   position: relative;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
 /* Icon replacements */
@@ -235,6 +243,52 @@ body {
   button, a {
     min-height: 44px;
   }
+}
+
+/* Mobile responsive fixes - prevent overflow */
+@media (max-width: 768px) {
+  * {
+    max-width: 100%;
+  }
+  
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .premium-card, .premium-card-header {
+    overflow-x: hidden;
+  }
+  
+  /* Ensure text wraps properly */
+  h1, h2, h3, h4, h5, h6, p, span, div {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Prevent horizontal scroll on containers */
+  .container, [class*="max-w"] {
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Prevent overflow on all screen sizes */
+.container, [class*="container"] {
+  overflow-x: hidden;
+}
+
+/* Ensure flex containers don't overflow */
+.flex, [class*="flex"] {
+  min-width: 0;
+}
+
+/* Text truncation for long content */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Loading spinner for geocoding */

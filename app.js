@@ -1502,8 +1502,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
   }
 
   return (
-    <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8" style={{overflowX: 'hidden', width: '100%', maxWidth: '100vw'}}>
+      <div className="max-w-5xl mx-auto" style={{width: '100%', maxWidth: '100%'}}>
         {/* Header */}
         <div className="bg-white rounded-2xl premium-card-header p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4">
@@ -1624,6 +1624,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
             );
           })()}
+
+          {/* No Collections This Week Banner */}
+          <div className="mb-4 mx-3 sm:mx-4 p-5 sm:p-6 rounded-xl border-2 shadow-lg" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+            <div className="flex items-start gap-4">
+              <div className="text-3xl sm:text-4xl flex-shrink-0">🦃</div>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg sm:text-xl mb-2" style={{color: '#236383'}}>
+                  No Collections This Week
+                </h3>
+                <p className="text-sm sm:text-base mb-1" style={{color: '#666'}}>
+                  Our dedicated hosts collect sandwiches every week throughout the year. This week, we're giving them a well-deserved break for the holidays.
+                </p>
+                <p className="text-sm sm:text-base font-semibold" style={{color: '#007E8C'}}>
+                  Thank you for your understanding. Collections will resume next week.
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Smart Search Section */}
           <div className="p-3 sm:p-4">
@@ -2002,7 +2020,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <i className={`lucide-chevron-down w-3 h-3 transition-transform ${mapTooltipMenuOpen ? 'rotate-180' : ''}`}></i>
                         </button>
                         {mapTooltipMenuOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden min-w-[300px]" style={{borderColor: '#007E8C'}}>
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden" style={{borderColor: '#007E8C', minWidth: 'min(300px, 100%)', maxWidth: '100%'}}>
                             <button
                               type="button"
                               onClick={(e) => {
