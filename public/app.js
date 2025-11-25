@@ -67,6 +67,12 @@ const HostAvailabilityApp = () => {
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
+  // Refs for stable event handler references (prevents memory leaks in event listener cleanup)
+  const menuThrottledScrollRef = React.useRef(null);
+  const menuDebouncedResizeRef = React.useRef(null);
+  const menuClickOutsideRef = React.useRef(null);
+  const menuOpenTimeRef = React.useRef(0);
+  const scrollThrottledHandlerRef = React.useRef(null);
 
   // Firebase Analytics tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
@@ -112,23 +118,6 @@ const HostAvailabilityApp = () => {
 
   // Close directions menu when clicking outside and update position on scroll/resize
   React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (directionsMenuOpen !== null) {
-        // Check if click is on the button or inside the portal dropdown
-        const menuContainer = event.target.closest('[data-directions-menu]');
-        const portalDropdown = event.target.closest('.fixed.bg-white.rounded-lg.shadow-xl');
-        if (!menuContainer && !portalDropdown) {
-          setDirectionsMenuOpen(null);
-        }
-      }
-      if (mapTooltipMenuOpen) {
-        const menuContainer = event.target.closest('[data-map-tooltip-menu]');
-        if (!menuContainer) {
-          setMapTooltipMenuOpen(false);
-        }
-      }
-    };
-
     const updateMenuPosition = () => {
       if (directionsMenuOpen !== null && directionsButtonRef.current) {
         const buttonRect = directionsButtonRef.current.getBoundingClientRect();
@@ -165,30 +154,64 @@ const HostAvailabilityApp = () => {
     };
     
     if (directionsMenuOpen !== null || mapTooltipMenuOpen) {
-      // Mobile optimization: Prevent body scroll when dropdown is open
+      // Record when menu was opened for event filtering
+      menuOpenTimeRef.current = Date.now();
+      
+      // Mobile optimization: Store original overflow and prevent body scroll when dropdown is open
+      // Account for scrollbar width to prevent content jump
+      const originalOverflow = document.body.style.overflow;
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      const originalPaddingRight = document.body.style.paddingRight;
       document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
 
-      // Mobile optimization: Create throttled and debounced event handlers with stable references
-      const throttledScroll = createThrottledFunction(updateMenuPosition, 100);
-      const debouncedResize = createDebouncedFunction(updateMenuPosition, 250);
+      // Create click outside handler that filters events by timestamp
+      const handleClickOutside = (event) => {
+        // Ignore events that occurred before menu was opened (prevents immediate closure)
+        if (event.timeStamp < menuOpenTimeRef.current) {
+          return;
+        }
+        if (directionsMenuOpen !== null) {
+          // Check if click is on the button or inside the portal dropdown
+          const menuContainer = event.target.closest('[data-directions-menu]');
+          const portalDropdown = event.target.closest('.fixed.bg-white.rounded-lg.shadow-xl');
+          if (!menuContainer && !portalDropdown) {
+            setDirectionsMenuOpen(null);
+          }
+        }
+        if (mapTooltipMenuOpen) {
+          const menuContainer = event.target.closest('[data-map-tooltip-menu]');
+          if (!menuContainer) {
+            setMapTooltipMenuOpen(false);
+          }
+        }
+      };
 
-      // Use setTimeout to avoid immediate closure when opening
-      setTimeout(() => {
-        document.addEventListener('click', handleClickOutside);
-        // Mobile optimization: Use touchend instead of touchstart to prevent premature closure
-        document.addEventListener('touchend', handleClickOutside, { passive: true });
-        // Mobile optimization: Throttled scroll for better mobile performance
-        window.addEventListener('scroll', throttledScroll, { passive: true, capture: true });
-        // Mobile optimization: Debounced resize to prevent layout thrashing
-        window.addEventListener('resize', debouncedResize);
-      }, 0);
+      // Store handlers in refs for proper cleanup (maintains stable references)
+      menuClickOutsideRef.current = handleClickOutside;
+      menuThrottledScrollRef.current = createThrottledFunction(updateMenuPosition, 100);
+      menuDebouncedResizeRef.current = createDebouncedFunction(updateMenuPosition, 250);
+
+      // Attach event listeners immediately (timestamp filtering handles premature events)
+      document.addEventListener('click', menuClickOutsideRef.current);
+      // Mobile optimization: Use touchend instead of touchstart to prevent premature closure
+      document.addEventListener('touchend', menuClickOutsideRef.current, { passive: true });
+      // Mobile optimization: Throttled scroll for better mobile performance
+      window.addEventListener('scroll', menuThrottledScrollRef.current, { passive: true, capture: true });
+      // Mobile optimization: Debounced resize to prevent layout thrashing
+      window.addEventListener('resize', menuDebouncedResizeRef.current);
+
       return () => {
-        // Mobile optimization: Restore body scroll
-        document.body.style.overflow = '';
-        document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('touchend', handleClickOutside, { passive: true });
-        window.removeEventListener('scroll', throttledScroll, { passive: true, capture: true });
-        window.removeEventListener('resize', debouncedResize);
+        // Mobile optimization: Restore original body styles
+        document.body.style.overflow = originalOverflow;
+        document.body.style.paddingRight = originalPaddingRight;
+        // Remove event listeners using the same references stored in refs
+        document.removeEventListener('click', menuClickOutsideRef.current);
+        document.removeEventListener('touchend', menuClickOutsideRef.current, { passive: true });
+        window.removeEventListener('scroll', menuThrottledScrollRef.current, { passive: true, capture: true });
+        window.removeEventListener('resize', menuDebouncedResizeRef.current);
       };
     }
   }, [directionsMenuOpen, mapTooltipMenuOpen]);
@@ -240,13 +263,13 @@ const HostAvailabilityApp = () => {
       });
     };
 
-    // Mobile optimization: Throttle scroll event for better performance
-    const throttledHandleScroll = createThrottledFunction(handleScroll, 100);
-    window.addEventListener('scroll', throttledHandleScroll, { passive: true });
+    // Mobile optimization: Store throttled handler in ref for proper cleanup
+    scrollThrottledHandlerRef.current = createThrottledFunction(handleScroll, 100);
+    window.addEventListener('scroll', scrollThrottledHandlerRef.current, { passive: true });
     // Trigger once on mount to catch initial viewport
     handleScroll();
 
-    return () => window.removeEventListener('scroll', throttledHandleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', scrollThrottledHandlerRef.current, { passive: true });
   }, []);
 
   const helperRefs = window.AppHelpers || {};
