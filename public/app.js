@@ -926,7 +926,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
     // Clear previous markers
     markersRef.current = {};
 
-    // Add host markers with numbered labels
+    // Add host markers with numbered labels (only if there are hosts to show)
+    if (hostsToShowOnMap.length === 0) {
+      // Map will be empty - this is handled in the UI message above
+    }
+    
     hostsToShowOnMap.forEach((host, index) => {
       const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
 
@@ -1930,9 +1934,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       All Sandwich Drop-Off Locations
                     </span>
                   </div>
-                  <p className="text-sm font-medium mb-3" style={{color: '#007E8C'}}>
-                    💡 Enter your address or use location to see distances and get directions
-                  </p>
+                  {(() => {
+                    const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
+                    if (hostsForMap.length === 0) {
+                      return (
+                        <div className="mb-3 p-3 rounded-lg border-2" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+                          <p className="text-sm font-medium mb-1" style={{color: '#236383'}}>
+                            🦃 Map is empty because it's a holiday week
+                          </p>
+                          <p className="text-xs" style={{color: '#666'}}>
+                            No hosts are collecting this week. If you need to plan for another week, enter your address and select "I'm planning a future dropoff (not this week)" to see all host locations.
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <p className="text-sm font-medium mb-3" style={{color: '#007E8C'}}>
+                        💡 Enter your address or use location to see distances and get directions
+                      </p>
+                    );
+                  })()}
                 </>
               )}
 
