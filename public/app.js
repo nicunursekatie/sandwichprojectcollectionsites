@@ -1,13 +1,24 @@
 // Mobile optimization: Throttle utility function (defined outside component to avoid re-creation)
 const createThrottledFunction = (func, limit) => {
   let inThrottle = false;
+  let lastArgs = null;
+  let lastContext = null;
+  let timeoutId = null;
   return function(...args) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         inThrottle = false;
+        if (lastArgs) {
+          func.apply(lastContext, lastArgs);
+          lastArgs = null;
+          lastContext = null;
+        }
       }, limit);
+    } else {
+      lastArgs = args;
+      lastContext = this;
     }
   };
 };
