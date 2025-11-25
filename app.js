@@ -830,7 +830,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Initialize Google Map
   const initializeMap = React.useCallback(() => {
-    if (!window.google || map) return;
+    if (!window.google) return;
+    if (map) return; // Map already initialized
 
     // Calculate map center: use user location if available, otherwise center on Atlanta
     const atlBounds = window.CONFIG?.ATLANTA_BOUNDS || {
@@ -1146,12 +1147,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
     };
   }, [GOOGLE_MAPS_API_KEY, mapLoaded]);
 
-  // Reset map when toggle changes
+  // Reset map when toggle changes or when includeUnavailableHosts changes
   React.useEffect(() => {
     if (map) {
       setMap(null); // Force map re-initialization
     }
-  }, [showAllHostsOnMap]);
+  }, [showAllHostsOnMap, includeUnavailableHosts]);
 
   // Reset map when user coordinates change (to re-center and add user marker)
   const prevUserCoords = React.useRef(userCoords);
@@ -1162,20 +1163,40 @@ This is safe because your API key is already restricted to only the Geocoding AP
     prevUserCoords.current = userCoords;
   }, [userCoords, map]);
 
+  // Reset map when includeUnavailableHosts changes to update markers
+  React.useEffect(() => {
+    if (map) {
+      setMap(null); // Force map re-initialization to show/hide unavailable hosts
+    }
+  }, [includeUnavailableHosts]);
+
   // Initialize map when API is loaded AND map div exists (works with or without user location)
   React.useEffect(() => {
     if (viewMode === 'list') {
       // When switching to list-only view, clear the map to allow re-initialization later
-      setMap(null);
-    } else if (mapLoaded) {
-      // Check if map element exists in DOM before initializing
-      const mapElement = document.getElementById('map');
-      if (mapElement && !map) {
-        // Small delay to ensure DOM element is fully ready
-        setTimeout(initializeMap, 100);
+      if (map) {
+        setMap(null);
       }
+      return;
     }
-  }, [mapLoaded, userCoords, viewMode, initializeMap, map]);
+    
+    if (mapLoaded && !map) {
+      // Check if map element exists in DOM before initializing
+      const checkAndInit = () => {
+        const mapElement = document.getElementById('map');
+        if (mapElement && !map) {
+          initializeMap();
+        } else if (!mapElement) {
+          // If map element doesn't exist yet, try again after a short delay
+          setTimeout(checkAndInit, 100);
+        }
+      };
+      
+      // Initial check with a small delay to ensure DOM is ready
+      const timeoutId = setTimeout(checkAndInit, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [mapLoaded, viewMode, initializeMap, map]);
 
   // Auto-focus map on favorite host when page loads
   React.useEffect(() => {
