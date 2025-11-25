@@ -1631,13 +1631,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <div className="text-3xl sm:text-4xl flex-shrink-0">🦃</div>
               <div className="flex-1">
                 <h3 className="font-bold text-lg sm:text-xl mb-2" style={{color: '#236383'}}>
-                  No Collections This Week
+                  No Wednesday Collections This Week
                 </h3>
                 <p className="text-sm sm:text-base mb-1" style={{color: '#666'}}>
-                  Our dedicated hosts collect sandwiches every week throughout the year. This week, we're giving them a well-deserved break for the holidays.
-                </p>
-                <p className="text-sm sm:text-base font-semibold" style={{color: '#007E8C'}}>
-                  Thank you for your understanding. Collections will resume next week.
+                  We'll see everyone next week after the Thanksgiving holiday. Next collection is December 3rd.
                 </p>
               </div>
             </div>
