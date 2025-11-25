@@ -175,7 +175,7 @@ const HostAvailabilityApp = () => {
         // Mobile optimization: Restore body scroll
         document.body.style.overflow = '';
         document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('touchend', handleClickOutside);
+        document.removeEventListener('touchend', handleClickOutside, { passive: true });
         window.removeEventListener('scroll', throttledScroll, true);
         window.removeEventListener('resize', debouncedResize);
       };
