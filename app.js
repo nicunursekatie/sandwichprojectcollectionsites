@@ -2333,8 +2333,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>
                         I'm planning a future dropoff (not this week)—include hosts that are closed this week
                       </h4>
-                      <p className="text-sm" style={{color: '#555'}}>
+                      <p className="text-sm mb-2" style={{color: '#555'}}>
                         By default, we only show hosts that are collecting this week. Check this box to see all host homes for planning future drop-offs. Hosts marked as "NOT Collecting This Week" are shown for reference but are not accepting drop-offs this week.
+                      </p>
+                      <p className="text-xs p-2 rounded-lg" style={{backgroundColor: '#FFF9E6', color: '#991b1b', border: '1px solid #FBAD3F'}}>
+                        <strong>⚠️ Important:</strong> Hosts displayed may not be open next week either. Please check back on the Monday of the week you plan to drop off to ensure your selected host will be collecting that week.
                       </p>
                     </div>
                   </label>
