@@ -1011,7 +1011,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               box-shadow: 0 2px 6px rgba(0,0,0,0.2);
               transition: transform 0.2s ease, box-shadow 0.2s ease;
             ">
-              ${host.distance}mi ${host.available ? '✓' : '✗'}
+              ${host.distance}mi${!showAllHostsOnMap ? (host.available ? ' ✓' : ' ✗') : ''}
             </div>
           </div>
         `;
@@ -1044,27 +1044,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 border-radius: 50%;
             "></div>
             </div>
-            <!-- Availability label -->
-            <div class="marker-label" style="
-              background: ${host.available ? 'white' : '#fee2e2'};
-              border: 2px solid ${host.available ? badgeColor : '#dc2626'};
-              border-radius: 8px;
-              padding: 4px 8px;
-              font-size: 11px;
-              font-weight: bold;
-              color: ${host.available ? '#236383' : '#dc2626'};
-              white-space: nowrap;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-            ">
-              ${host.available ? '✓ Available' : '✗ Not Available'}
-            </div>
           </div>
         `;
       }
 
       const markerTitle = userCoords
-        ? `#${rank}: ${host.name} - ${host.distance} miles away${host.available ? ' (Collecting This Week)' : ' (NOT Collecting This Week)'}`
-        : `${host.name}${host.available ? ' (Collecting This Week)' : ' (NOT Collecting This Week)'}`;
+        ? `#${rank}: ${host.name} - ${host.distance} miles away${!showAllHostsOnMap ? (host.available ? ' (Collecting This Week)' : ' (NOT Collecting This Week)') : ''}`
+        : host.name;
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
