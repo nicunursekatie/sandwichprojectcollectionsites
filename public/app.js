@@ -235,7 +235,7 @@ const HostAvailabilityApp = () => {
     // Trigger once on mount to catch initial viewport
     handleScroll();
 
-    return () => window.removeEventListener('scroll', throttledHandleScroll);
+    return () => window.removeEventListener('scroll', throttledHandleScroll, { passive: true });
   }, [throttle]);
 
   const helperRefs = window.AppHelpers || {};
