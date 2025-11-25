@@ -35,25 +35,27 @@ const HostAvailabilityApp = () => {
   const markersRef = React.useRef({});
 
   // Mobile optimization: Throttle utility for scroll events
-  const throttle = React.useCallback((func, limit) => {
-    let inThrottle;
+  const throttle = (func, limit) => {
+    const inThrottle = React.useRef(false);
     return function(...args) {
-      if (!inThrottle) {
+      if (!inThrottle.current) {
         func.apply(this, args);
-        inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
+        inThrottle.current = true;
+        setTimeout(() => {
+          inThrottle.current = false;
+        }, limit);
       }
     };
-  }, []);
+  };
 
   // Mobile optimization: Debounce utility for resize events
-  const debounce = React.useCallback((func, delay) => {
-    let timeoutId;
+  const debounce = (func, delay) => {
+    const timeoutId = React.useRef();
     return function(...args) {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func.apply(this, args), delay);
+      clearTimeout(timeoutId.current);
+      timeoutId.current = setTimeout(() => func.apply(this, args), delay);
     };
-  }, []);
+  };
 
   // Firebase Analytics tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
