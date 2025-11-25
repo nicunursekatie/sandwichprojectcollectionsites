@@ -3239,8 +3239,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       >
                         Submit Feedback
                       </button>
-                    </>
-                  )}
                 </>
               ) : (
                 <div className="text-center py-8">
