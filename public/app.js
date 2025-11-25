@@ -30,6 +30,7 @@ const HostAvailabilityApp = () => {
   const [feedbackEmail, setFeedbackEmail] = React.useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
+  const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
@@ -724,6 +725,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
   const filteredHosts = React.useMemo(() => {
     let filtered = viewMode === 'proximity' ? sortedHosts : allHostsForDisplay;
 
+    // Filter out unavailable hosts by default (unless user opts in for planning)
+    if (!includeUnavailableHosts) {
+      filtered = filtered.filter(h => h.available);
+    }
+
     // Apply area filter in area view mode
     if (viewMode === 'area' && filterArea !== 'all') {
       filtered = filtered.filter(h => h.area === filterArea);
@@ -740,7 +746,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
 
     return filtered;
-  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch]);
+  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch, includeUnavailableHosts]);
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
@@ -906,8 +912,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
         ...host,
         distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
       })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-      // When showing closest 3, only show available hosts. When showing all, show all hosts.
-      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.filter(h => h.available).slice(0, 3);
+      // Show all hosts in proximity search (including unavailable) for planning purposes
+      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
     } else {
       // No user location - show all hosts without distance sorting
       hostsToShowOnMap = allHostsForDisplay;
@@ -1064,6 +1070,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
       // Add click listener to show tooltip
       marker.addListener('click', (e) => {
+        // Alert if host is not available
+        if (!host.available) {
+          alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+        }
+        
         setMapTooltip(host);
         setHighlightedHostId(host.id);
 
@@ -1474,6 +1485,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Open Apple Maps with directions
   const openAppleMapsDirections = (host) => {
+    if (!host.available) {
+      alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+      return;
+    }
     trackEvent('open_apple_maps', {
       event_category: 'External Navigation',
       event_label: 'Apple Maps',
@@ -1918,10 +1933,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </>
               )}
 
-                {showingDirections && routeInfo && (
-                  <div className="mt-3 p-4 rounded-lg" style={{backgroundColor: '#E6F7FF', borderColor: '#007E8C', border: '1px solid'}}>
+                {showingDirections && routeInfo && (() => {
+                  const hostForRoute = allHostsForDisplay.find(h => h.id === showingDirections);
+                  const isUnavailable = hostForRoute && !hostForRoute.available;
+                  return (
+                  <div className="mt-3 p-4 rounded-lg" style={{backgroundColor: isUnavailable ? '#fee2e2' : '#E6F7FF', borderColor: isUnavailable ? '#dc2626' : '#007E8C', border: '1px solid'}}>
+                    {isUnavailable && (
+                      <div className="mb-3 p-2 rounded-lg border-2" style={{backgroundColor: '#fee2e2', borderColor: '#dc2626'}}>
+                        <p className="text-sm font-bold text-center" style={{color: '#dc2626'}}>
+                          ⚠️ WARNING: This host is NOT collecting this week. You cannot drop off sandwiches here.
+                        </p>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-base font-medium" style={{color: '#007E8C'}}>
+                      <span className="text-base font-medium" style={{color: isUnavailable ? '#dc2626' : '#007E8C'}}>
                         Route to {routeInfo.hostName}
                       </span>
                       <button
@@ -1937,7 +1962,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <span className="font-medium">{routeInfo.duration}</span> • {routeInfo.distance}
                       </div>
                       <button
-                        onClick={() => openGoogleMapsDirections(availableHosts.find(h => h.id === showingDirections))}
+                        onClick={() => openGoogleMapsDirections(allHostsForDisplay.find(h => h.id === showingDirections))}
                         className="text-sm px-4 py-2 rounded flex items-center"
                         style={{backgroundColor: '#007E8C', color: 'white'}}
                       >
@@ -1946,7 +1971,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </button>
                     </div>
                   </div>
-                )}
+                  );
+                })()}
               </div>
               <div className="relative">
                 <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
@@ -1992,6 +2018,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         ×
                       </button>
                     </div>
+
+                    {/* Availability Warning */}
+                    {!mapTooltip.available && (
+                      <div className="mb-3 p-3 rounded-lg border-2" style={{backgroundColor: '#fee2e2', borderColor: '#dc2626'}}>
+                        <p className="text-sm font-bold text-center" style={{color: '#dc2626'}}>
+                          ⚠️ NOT COLLECTING THIS WEEK
+                        </p>
+                        <p className="text-xs text-center mt-1" style={{color: '#991b1b'}}>
+                          You cannot drop off sandwiches here this week. Please choose a host marked as "Collecting This Week".
+                        </p>
+                      </div>
+                    )}
 
                     {/* Distance & Drive Time - Always show if user has location */}
                     {userCoords && (() => {
@@ -2055,6 +2093,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (!mapTooltip.available) {
+                                  alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                  setMapTooltipMenuOpen(false);
+                                  return;
+                                }
                                 showDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
                                 setMapTooltip(null);
@@ -2072,6 +2115,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (!mapTooltip.available) {
+                                  alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                  setMapTooltipMenuOpen(false);
+                                  return;
+                                }
                                 openGoogleMapsDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
                               }}
@@ -2088,6 +2136,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (!mapTooltip.available) {
+                                  alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                  setMapTooltipMenuOpen(false);
+                                  return;
+                                }
                                 openAppleMapsDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
                               }}
@@ -2235,14 +2288,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
             {/* Important Notice About All Hosts */}
             <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-4">
               <div className="flex items-start gap-3">
-                <div className="text-2xl flex-shrink-0">ℹ️</div>
                 <div className="flex-1">
-                  <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>
-                    All Host Homes Are Shown for Planning
-                  </h4>
-                  <p className="text-sm" style={{color: '#555'}}>
-                    <strong>We display all host homes every week</strong> so you can plan ahead. <strong>Look for the availability badge on each host card</strong> to see if they're collecting this week. Hosts marked as "Not Collecting This Week" are shown for reference but are not accepting drop-offs.
-                  </p>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeUnavailableHosts}
+                      onChange={(e) => setIncludeUnavailableHosts(e.target.checked)}
+                      className="mt-1 w-5 h-5 rounded border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                      style={{accentColor: '#007E8C'}}
+                    />
+                    <div>
+                      <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>
+                        I'm planning a future dropoff—include hosts that are closed this week
+                      </h4>
+                      <p className="text-sm" style={{color: '#555'}}>
+                        By default, we only show hosts that are collecting this week. Check this box to see all host homes for planning purposes. Hosts marked as "NOT Collecting This Week" are shown for reference but are not accepting drop-offs this week.
+                      </p>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>
@@ -3078,9 +3141,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     How was your experience?
                   </h2>
 
+                  {/* Feedback Text Box - Always Visible */}
+                  <div className="mb-6">
+                    <label className="block font-semibold mb-2" style={{color: '#236383'}}>
+                      Your Feedback (optional)
+                    </label>
+                    <textarea
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2"
+                      style={{borderColor: '#E0E0E0'}}
+                      rows="4"
+                      placeholder="Share your thoughts, suggestions, or experiences with the collection site..."
+                    />
+                    <p className="text-xs mt-1" style={{color: '#666'}}>
+                      You can provide feedback with or without a star rating below.
+                    </p>
+                  </div>
+
                   {/* Star Rating */}
                   <div className="mb-6">
-                    <p className="font-semibold mb-3" style={{color: '#236383'}}>Rate your experience:</p>
+                    <p className="font-semibold mb-3" style={{color: '#236383'}}>Rate your experience (optional):</p>
                     <div className="flex gap-2 justify-center">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
@@ -3093,45 +3174,39 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </button>
                       ))}
                     </div>
+                    {feedbackRating > 0 && feedbackRating < 4 && (
+                      <p className="text-xs mt-2 text-center" style={{color: '#dc2626'}}>
+                        * Please provide feedback above to help us improve
+                      </p>
+                    )}
                   </div>
 
-                  {/* Conditional feedback text based on rating */}
-                  {feedbackRating > 0 && (
-                    <>
-                      <div className="mb-4">
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>
-                          {feedbackRating >= 4 ? 'What did you like most? (optional)' : 'What can we improve? *'}
-                        </label>
-                        <textarea
-                          value={feedbackText}
-                          onChange={(e) => setFeedbackText(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border-2"
-                          style={{borderColor: '#E0E0E0'}}
-                          rows="4"
-                          placeholder={feedbackRating >= 4 ? 'Tell us what worked well...' : 'Please help us understand what needs improvement...'}
-                          required={feedbackRating < 4}
-                        />
-                      </div>
-
-                      <div className="mb-6">
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>
-                          Email (optional, for follow-up)
-                        </label>
-                        <input
-                          type="email"
-                          value={feedbackEmail}
-                          onChange={(e) => setFeedbackEmail(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border-2"
-                          style={{borderColor: '#E0E0E0'}}
-                          placeholder="your.email@example.com"
-                        />
-                      </div>
+                  {/* Email */}
+                  <div className="mb-6">
+                    <label className="block font-semibold mb-2" style={{color: '#236383'}}>
+                      Email (optional, for follow-up)
+                    </label>
+                    <input
+                      type="email"
+                      value={feedbackEmail}
+                      onChange={(e) => setFeedbackEmail(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2"
+                      style={{borderColor: '#E0E0E0'}}
+                      placeholder="your.email@example.com"
+                    />
+                  </div>
 
                       <button
                         onClick={async () => {
-                          // Validate
-                          if (feedbackRating < 4 && !feedbackText.trim()) {
+                          // Validate - require feedback text if rating is low
+                          if (feedbackRating > 0 && feedbackRating < 4 && !feedbackText.trim()) {
                             alert('Please tell us what we can improve.');
+                            return;
+                          }
+                          
+                          // Require either rating or feedback text
+                          if (feedbackRating === 0 && !feedbackText.trim()) {
+                            alert('Please provide either feedback text or a star rating (or both).');
                             return;
                           }
 
