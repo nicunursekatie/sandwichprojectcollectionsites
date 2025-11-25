@@ -1,3 +1,37 @@
+// Mobile optimization: Throttle utility function (defined outside component to avoid re-creation)
+const createThrottledFunction = (func, limit) => {
+  let inThrottle = false;
+  let lastArgs = null;
+  let lastContext = null;
+  let timeoutId = null;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      timeoutId = setTimeout(() => {
+        inThrottle = false;
+        if (lastArgs) {
+          func.apply(lastContext, lastArgs);
+          lastArgs = null;
+          lastContext = null;
+        }
+      }, limit);
+    } else {
+      lastArgs = args;
+      lastContext = this;
+    }
+  };
+};
+
+// Mobile optimization: Debounce utility function (defined outside component to avoid re-creation)
+const createDebouncedFunction = (func, delay) => {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+};
+
 const HostAvailabilityApp = () => {
   const [userAddress, setUserAddress] = React.useState('');
   const [searchInput, setSearchInput] = React.useState('');
@@ -34,6 +68,13 @@ const HostAvailabilityApp = () => {
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
+  // Refs for stable event handler references (prevents memory leaks in event listener cleanup)
+  const menuThrottledScrollRef = React.useRef(null);
+  const menuDebouncedResizeRef = React.useRef(null);
+  const menuClickOutsideRef = React.useRef(null);
+  const menuReadyRef = React.useRef(false);
+  const originalBodyStylesRef = React.useRef({ overflow: '', paddingRight: '' });
+  const scrollThrottledHandlerRef = React.useRef(null);
 
   // Firebase Analytics tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
@@ -79,69 +120,110 @@ const HostAvailabilityApp = () => {
 
   // Close directions menu when clicking outside and update position on scroll/resize
   React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (directionsMenuOpen !== null) {
-        // Check if click is on the button or inside the portal dropdown
-        const menuContainer = event.target.closest('[data-directions-menu]');
-        const portalDropdown = event.target.closest('.fixed.bg-white.rounded-lg.shadow-xl');
-        if (!menuContainer && !portalDropdown) {
-          setDirectionsMenuOpen(null);
-        }
-      }
-      if (mapTooltipMenuOpen) {
-        const menuContainer = event.target.closest('[data-map-tooltip-menu]');
-        if (!menuContainer) {
-          setMapTooltipMenuOpen(false);
-        }
-      }
-    };
-
     const updateMenuPosition = () => {
       if (directionsMenuOpen !== null && directionsButtonRef.current) {
         const buttonRect = directionsButtonRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        const dropdownWidth = 280; // min-width
-        const dropdownHeight = 200; // approximate height
-        
+        // Mobile optimization: Responsive dropdown width based on viewport
+        const dropdownWidth = Math.min(280, viewportWidth * 0.9);
+        const dropdownHeight = Math.min(200, viewportHeight * 0.8);
+        // Mobile optimization: Responsive margins based on viewport
+        const margin = Math.min(16, viewportWidth * 0.05);
+
         let left = buttonRect.left;
         let top = buttonRect.bottom + 4;
-        
+
         // Ensure dropdown doesn't go off right edge
-        if (left + dropdownWidth > viewportWidth - 16) {
-          left = viewportWidth - dropdownWidth - 16;
+        if (left + dropdownWidth > viewportWidth - margin) {
+          left = viewportWidth - dropdownWidth - margin;
         }
         // Ensure dropdown doesn't go off left edge
-        if (left < 16) {
-          left = 16;
+        if (left < margin) {
+          left = margin;
         }
         // If dropdown would go off bottom, show above button instead
-        if (top + dropdownHeight > viewportHeight - 16) {
+        if (top + dropdownHeight > viewportHeight - margin) {
           top = buttonRect.top - dropdownHeight - 4;
         }
         // Ensure dropdown doesn't go off top edge
-        if (top < 16) {
-          top = 16;
+        if (top < margin) {
+          top = margin;
         }
-        
+
         setDirectionsMenuPosition({ top, left });
       }
     };
     
     if (directionsMenuOpen !== null || mapTooltipMenuOpen) {
-      // Use setTimeout to avoid immediate closure when opening
-      setTimeout(() => {
-        document.addEventListener('click', handleClickOutside);
-        document.addEventListener('touchstart', handleClickOutside);
-        // Update position on scroll/resize for mobile
-        window.addEventListener('scroll', updateMenuPosition, true);
-        window.addEventListener('resize', updateMenuPosition);
-      }, 0);
+      // Use flag-based approach to prevent immediate menu closure
+      menuReadyRef.current = false;
+      
+      // Mobile optimization: Store original body styles in ref to prevent stale closure issues
+      // Account for scrollbar width to prevent content jump
+      originalBodyStylesRef.current = {
+        overflow: document.body.style.overflow,
+        paddingRight: document.body.style.paddingRight
+      };
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+
+      // Create click outside handler that uses flag to prevent premature closure
+      const handleClickOutside = (event) => {
+        // Ignore events until menu is ready (prevents immediate closure from opening click)
+        if (!menuReadyRef.current) {
+          return;
+        }
+        if (directionsMenuOpen !== null) {
+          // Check if click is on the button or inside the portal dropdown
+          const menuContainer = event.target.closest('[data-directions-menu]');
+          const portalDropdown = event.target.closest('.fixed.bg-white.rounded-lg.shadow-xl');
+          if (!menuContainer && !portalDropdown) {
+            setDirectionsMenuOpen(null);
+          }
+        }
+        if (mapTooltipMenuOpen) {
+          const menuContainer = event.target.closest('[data-map-tooltip-menu]');
+          if (!menuContainer) {
+            setMapTooltipMenuOpen(false);
+          }
+        }
+      };
+
+      // Store handlers in refs for proper cleanup (maintains stable references)
+      menuClickOutsideRef.current = handleClickOutside;
+      menuThrottledScrollRef.current = createThrottledFunction(updateMenuPosition, 100);
+      menuDebouncedResizeRef.current = createDebouncedFunction(updateMenuPosition, 250);
+
+      // Attach event listeners immediately
+      document.addEventListener('click', menuClickOutsideRef.current);
+      // Mobile optimization: Use touchend instead of touchstart to prevent premature closure
+      document.addEventListener('touchend', menuClickOutsideRef.current, { passive: true });
+      // Mobile optimization: Throttled scroll for better mobile performance
+      window.addEventListener('scroll', menuThrottledScrollRef.current, { passive: true, capture: true });
+      // Mobile optimization: Debounced resize to prevent layout thrashing
+      window.addEventListener('resize', menuDebouncedResizeRef.current);
+      
+      // Enable click handling after current event loop to prevent immediate closure
+      requestAnimationFrame(() => {
+        menuReadyRef.current = true;
+      });
+
       return () => {
-        document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('touchstart', handleClickOutside);
-        window.removeEventListener('scroll', updateMenuPosition, true);
-        window.removeEventListener('resize', updateMenuPosition);
+        // Reset ready flag
+        menuReadyRef.current = false;
+        // Mobile optimization: Restore original body styles from ref
+        document.body.style.overflow = originalBodyStylesRef.current.overflow;
+        document.body.style.paddingRight = originalBodyStylesRef.current.paddingRight;
+        // Remove event listeners using the same references stored in refs
+        // Note: capture option must match for proper removal; passive is not needed for removal
+        document.removeEventListener('click', menuClickOutsideRef.current);
+        document.removeEventListener('touchend', menuClickOutsideRef.current);
+        window.removeEventListener('scroll', menuThrottledScrollRef.current, { capture: true });
+        window.removeEventListener('resize', menuDebouncedResizeRef.current);
       };
     }
   }, [directionsMenuOpen, mapTooltipMenuOpen]);
@@ -193,11 +275,13 @@ const HostAvailabilityApp = () => {
       });
     };
 
-    window.addEventListener('scroll', handleScroll);
+    // Mobile optimization: Store throttled handler in ref for proper cleanup
+    scrollThrottledHandlerRef.current = createThrottledFunction(handleScroll, 100);
+    window.addEventListener('scroll', scrollThrottledHandlerRef.current, { passive: true });
     // Trigger once on mount to catch initial viewport
     handleScroll();
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', scrollThrottledHandlerRef.current);
   }, []);
 
   const helperRefs = window.AppHelpers || {};
@@ -420,8 +504,9 @@ const HostAvailabilityApp = () => {
     }).catch(() => {
       // Fallback: show in a text area
       const modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
-      modal.innerHTML = `<div style="background:white;padding:20px;border-radius:8px;max-width:90%;max-height:80%;overflow:auto;"><h3>Copy this code:</h3><textarea style="width:600px;height:400px;font-family:monospace;font-size:12px;">${codeStr}</textarea><br><button onclick="this.parentElement.parentElement.remove()" style="margin-top:10px;padding:8px 16px;background:#007E8C;color:white;border:none;border-radius:4px;cursor:pointer;">Close</button></div>`;
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;';
+      // Mobile optimization: Responsive textarea dimensions and improved tap targets
+      modal.innerHTML = `<div style="background:white;padding:20px;border-radius:8px;max-width:90%;max-height:80%;overflow:auto;"><h3>Copy this code:</h3><textarea style="width:min(600px, 85vw);height:min(400px, 60vh);font-family:monospace;font-size:12px;">${codeStr}</textarea><br><button onclick="this.parentElement.parentElement.remove()" style="margin-top:10px;padding:12px 20px;min-height:48px;background:#007E8C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:16px;">Close</button></div>`;
       document.body.appendChild(modal);
     });
   };
@@ -1215,7 +1300,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
       notification.style.backgroundColor = '#FFF9E6';
       notification.style.borderColor = '#FBAD3F';
       notification.style.maxWidth = '90%';
-      notification.style.width = '450px';
+      // Mobile optimization: Responsive notification width
+      notification.style.width = 'min(450px, 90vw)';
 
       const nearbyHostsList = nearbyHosts.map((h, i) => `
         <div class="flex items-center justify-between py-2 px-3 rounded hover:bg-orange-50 cursor-pointer" data-host-id="${h.id}" style="border: 1px solid #FBAD3F; margin-top: 8px;">
@@ -1240,7 +1326,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               ${nearbyHostsList}
             ` : ''}
           </div>
-          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666;">&times;</button>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer;">&times;</button>
         </div>
       `;
       document.body.appendChild(notification);
@@ -2006,7 +2092,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 })()}
               </div>
               <div className="relative">
-                <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
+                {/* Mobile optimization: Responsive map height for small screens */}
+                <div id="map" className="h-64 sm:h-80 md:h-96 lg:h-[calc(100vh-400px)]"></div>
 
                 {/* Map Tooltip */}
                 {mapTooltip && (
@@ -2016,8 +2103,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       top: '20px',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      minWidth: '300px',
-                      maxWidth: '340px',
+                      // Mobile optimization: Responsive tooltip width
+                      minWidth: 'min(300px, 85vw)',
+                      maxWidth: 'min(340px, calc(100vw - 40px))',
                       borderColor: '#007E8C',
                       boxShadow: '0 10px 40px rgba(0, 126, 140, 0.3)'
                     }}
@@ -2043,7 +2131,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             map.setZoom(initialMapZoom);
                           }
                         }}
-                        className="text-gray-400 hover:text-gray-600 ml-2 text-2xl leading-none"
+                        className="text-gray-400 hover:text-gray-600 ml-2 text-2xl leading-none flex items-center justify-center"
+                        style={{minWidth: '44px', minHeight: '44px', padding: '8px'}}
                         title="Close"
                       >
                         ×
