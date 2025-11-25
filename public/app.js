@@ -154,8 +154,8 @@ const HostAvailabilityApp = () => {
     };
     
     if (directionsMenuOpen !== null || mapTooltipMenuOpen) {
-      // Record when menu was opened for event filtering
-      menuOpenTimeRef.current = Date.now();
+      // Record when menu was opened for event filtering (use performance.now() for compatibility with event.timeStamp)
+      menuOpenTimeRef.current = performance.now();
       
       // Mobile optimization: Store original overflow and prevent body scroll when dropdown is open
       // Account for scrollbar width to prevent content jump
@@ -208,9 +208,10 @@ const HostAvailabilityApp = () => {
         document.body.style.overflow = originalOverflow;
         document.body.style.paddingRight = originalPaddingRight;
         // Remove event listeners using the same references stored in refs
+        // Note: capture option must match for proper removal; passive is not needed for removal
         document.removeEventListener('click', menuClickOutsideRef.current);
-        document.removeEventListener('touchend', menuClickOutsideRef.current, { passive: true });
-        window.removeEventListener('scroll', menuThrottledScrollRef.current, { passive: true, capture: true });
+        document.removeEventListener('touchend', menuClickOutsideRef.current);
+        window.removeEventListener('scroll', menuThrottledScrollRef.current, { capture: true });
         window.removeEventListener('resize', menuDebouncedResizeRef.current);
       };
     }
@@ -269,7 +270,7 @@ const HostAvailabilityApp = () => {
     // Trigger once on mount to catch initial viewport
     handleScroll();
 
-    return () => window.removeEventListener('scroll', scrollThrottledHandlerRef.current, { passive: true });
+    return () => window.removeEventListener('scroll', scrollThrottledHandlerRef.current);
   }, []);
 
   const helperRefs = window.AppHelpers || {};
