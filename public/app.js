@@ -71,7 +71,8 @@ const HostAvailabilityApp = () => {
   const menuThrottledScrollRef = React.useRef(null);
   const menuDebouncedResizeRef = React.useRef(null);
   const menuClickOutsideRef = React.useRef(null);
-  const menuOpenTimeRef = React.useRef(0);
+  const menuReadyRef = React.useRef(false);
+  const originalBodyStylesRef = React.useRef({ overflow: '', paddingRight: '' });
   const scrollThrottledHandlerRef = React.useRef(null);
 
   // Firebase Analytics tracking helper
@@ -154,23 +155,25 @@ const HostAvailabilityApp = () => {
     };
     
     if (directionsMenuOpen !== null || mapTooltipMenuOpen) {
-      // Record when menu was opened for event filtering (use performance.now() for compatibility with event.timeStamp)
-      menuOpenTimeRef.current = performance.now();
+      // Use flag-based approach to prevent immediate menu closure
+      menuReadyRef.current = false;
       
-      // Mobile optimization: Store original overflow and prevent body scroll when dropdown is open
+      // Mobile optimization: Store original body styles in ref to prevent stale closure issues
       // Account for scrollbar width to prevent content jump
-      const originalOverflow = document.body.style.overflow;
+      originalBodyStylesRef.current = {
+        overflow: document.body.style.overflow,
+        paddingRight: document.body.style.paddingRight
+      };
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      const originalPaddingRight = document.body.style.paddingRight;
       document.body.style.overflow = 'hidden';
       if (scrollbarWidth > 0) {
         document.body.style.paddingRight = `${scrollbarWidth}px`;
       }
 
-      // Create click outside handler that filters events by timestamp
+      // Create click outside handler that uses flag to prevent premature closure
       const handleClickOutside = (event) => {
-        // Ignore events that occurred before menu was opened (prevents immediate closure)
-        if (event.timeStamp < menuOpenTimeRef.current) {
+        // Ignore events until menu is ready (prevents immediate closure from opening click)
+        if (!menuReadyRef.current) {
           return;
         }
         if (directionsMenuOpen !== null) {
@@ -194,7 +197,7 @@ const HostAvailabilityApp = () => {
       menuThrottledScrollRef.current = createThrottledFunction(updateMenuPosition, 100);
       menuDebouncedResizeRef.current = createDebouncedFunction(updateMenuPosition, 250);
 
-      // Attach event listeners immediately (timestamp filtering handles premature events)
+      // Attach event listeners immediately
       document.addEventListener('click', menuClickOutsideRef.current);
       // Mobile optimization: Use touchend instead of touchstart to prevent premature closure
       document.addEventListener('touchend', menuClickOutsideRef.current, { passive: true });
@@ -202,11 +205,18 @@ const HostAvailabilityApp = () => {
       window.addEventListener('scroll', menuThrottledScrollRef.current, { passive: true, capture: true });
       // Mobile optimization: Debounced resize to prevent layout thrashing
       window.addEventListener('resize', menuDebouncedResizeRef.current);
+      
+      // Enable click handling after current event loop to prevent immediate closure
+      requestAnimationFrame(() => {
+        menuReadyRef.current = true;
+      });
 
       return () => {
-        // Mobile optimization: Restore original body styles
-        document.body.style.overflow = originalOverflow;
-        document.body.style.paddingRight = originalPaddingRight;
+        // Reset ready flag
+        menuReadyRef.current = false;
+        // Mobile optimization: Restore original body styles from ref
+        document.body.style.overflow = originalBodyStylesRef.current.overflow;
+        document.body.style.paddingRight = originalBodyStylesRef.current.paddingRight;
         // Remove event listeners using the same references stored in refs
         // Note: capture option must match for proper removal; passive is not needed for removal
         document.removeEventListener('click', menuClickOutsideRef.current);
