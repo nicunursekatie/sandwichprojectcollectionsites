@@ -1,3 +1,26 @@
+// Mobile optimization: Throttle utility function (defined outside component to avoid re-creation)
+const createThrottledFunction = (func, limit) => {
+  let inThrottle = false;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => {
+        inThrottle = false;
+      }, limit);
+    }
+  };
+};
+
+// Mobile optimization: Debounce utility function (defined outside component to avoid re-creation)
+const createDebouncedFunction = (func, delay) => {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+};
+
 const HostAvailabilityApp = () => {
   const [userAddress, setUserAddress] = React.useState('');
   const [searchInput, setSearchInput] = React.useState('');
@@ -33,29 +56,6 @@ const HostAvailabilityApp = () => {
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
-
-  // Mobile optimization: Throttle utility for scroll events
-  const throttle = (func, limit) => {
-    const inThrottle = React.useRef(false);
-    return function(...args) {
-      if (!inThrottle.current) {
-        func.apply(this, args);
-        inThrottle.current = true;
-        setTimeout(() => {
-          inThrottle.current = false;
-        }, limit);
-      }
-    };
-  };
-
-  // Mobile optimization: Debounce utility for resize events
-  const debounce = (func, delay) => {
-    const timeoutId = React.useRef();
-    return function(...args) {
-      clearTimeout(timeoutId.current);
-      timeoutId.current = setTimeout(() => func.apply(this, args), delay);
-    };
-  };
 
   // Firebase Analytics tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
@@ -157,9 +157,9 @@ const HostAvailabilityApp = () => {
       // Mobile optimization: Prevent body scroll when dropdown is open
       document.body.style.overflow = 'hidden';
 
-      // Mobile optimization: Throttled and debounced event handlers
-      const throttledScroll = throttle(updateMenuPosition, 100);
-      const debouncedResize = debounce(updateMenuPosition, 250);
+      // Mobile optimization: Create throttled and debounced event handlers with stable references
+      const throttledScroll = createThrottledFunction(updateMenuPosition, 100);
+      const debouncedResize = createDebouncedFunction(updateMenuPosition, 250);
 
       // Use setTimeout to avoid immediate closure when opening
       setTimeout(() => {
@@ -180,7 +180,7 @@ const HostAvailabilityApp = () => {
         window.removeEventListener('resize', debouncedResize);
       };
     }
-  }, [directionsMenuOpen, mapTooltipMenuOpen, throttle, debounce]);
+  }, [directionsMenuOpen, mapTooltipMenuOpen]);
 
   // Scroll depth tracking
   React.useEffect(() => {
@@ -230,13 +230,13 @@ const HostAvailabilityApp = () => {
     };
 
     // Mobile optimization: Throttle scroll event for better performance
-    const throttledHandleScroll = throttle(handleScroll, 100);
+    const throttledHandleScroll = createThrottledFunction(handleScroll, 100);
     window.addEventListener('scroll', throttledHandleScroll, { passive: true });
     // Trigger once on mount to catch initial viewport
     handleScroll();
 
     return () => window.removeEventListener('scroll', throttledHandleScroll, { passive: true });
-  }, [throttle]);
+  }, []);
 
   const helperRefs = window.AppHelpers || {};
   const getNextWednesday = helperRefs.getNextWednesday || (() => {
