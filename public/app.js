@@ -176,7 +176,7 @@ const HostAvailabilityApp = () => {
         document.body.style.overflow = '';
         document.removeEventListener('click', handleClickOutside);
         document.removeEventListener('touchend', handleClickOutside, { passive: true });
-        window.removeEventListener('scroll', throttledScroll, true);
+        window.removeEventListener('scroll', throttledScroll, { passive: true, capture: true });
         window.removeEventListener('resize', debouncedResize);
       };
     }
