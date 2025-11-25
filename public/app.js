@@ -1225,7 +1225,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               ${nearbyHostsList}
             ` : ''}
           </div>
-          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer;">&times;</button>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer;">&times;</button>
         </div>
       `;
       document.body.appendChild(notification);
