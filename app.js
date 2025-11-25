@@ -908,16 +908,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
     let hostsWithDistance;
 
     if (userCoords) {
-      hostsWithDistance = allHostsForDisplay.map(host => ({
+      // Filter by availability if checkbox is not checked
+      const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
+      hostsWithDistance = hostsForMap.map(host => ({
         ...host,
         distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
       })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
       // Show all hosts in proximity search (including unavailable) for planning purposes
       hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
     } else {
-      // No user location - show all hosts without distance sorting
-      hostsToShowOnMap = allHostsForDisplay;
-      hostsWithDistance = allHostsForDisplay;
+      // No user location - filter by availability if checkbox is not checked
+      const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
+      hostsToShowOnMap = hostsForMap;
+      hostsWithDistance = hostsForMap;
     }
 
     // Clear previous markers
@@ -1115,7 +1118,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     });
 
     setMap(mapInstance);
-  }, [userCoords, allHostsForDisplay, map, showAllHostsOnMap]);
+  }, [userCoords, allHostsForDisplay, map, showAllHostsOnMap, includeUnavailableHosts]);
 
   // Load Google Maps API on component mount
   React.useEffect(() => {
@@ -2300,10 +2303,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     />
                     <div>
                       <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>
-                        I'm planning a future dropoff—include hosts that are closed this week
+                        I'm planning a future dropoff (not this week)—include hosts that are closed this week
                       </h4>
                       <p className="text-sm" style={{color: '#555'}}>
-                        By default, we only show hosts that are collecting this week. Check this box to see all host homes for planning purposes. Hosts marked as "NOT Collecting This Week" are shown for reference but are not accepting drop-offs this week.
+                        By default, we only show hosts that are collecting this week. Check this box to see all host homes for planning future drop-offs. Hosts marked as "NOT Collecting This Week" are shown for reference but are not accepting drop-offs this week.
                       </p>
                     </div>
                   </label>
