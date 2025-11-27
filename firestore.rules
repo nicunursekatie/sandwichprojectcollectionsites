@@ -12,9 +12,10 @@ service cloud.firestore {
                     && request.resource.data.feedback is string
                     && request.resource.data.timestamp == request.time;
 
-      // Only allow reading/updating/deleting for authenticated admin users
-      // (You can add authentication later if needed)
-      allow read, update, delete: if false;
+      // Allow anyone to read feedback
+      allow read: if true;
+      // Only allow updating/deleting for authenticated admin users
+      allow update, delete: if false;
     }
 
     // Hosts collection - allow full access for now (we can add authentication later)

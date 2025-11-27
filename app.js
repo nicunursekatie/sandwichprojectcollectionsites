@@ -30,6 +30,7 @@ const HostAvailabilityApp = () => {
   const [feedbackEmail, setFeedbackEmail] = React.useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
+  const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
@@ -452,8 +453,10 @@ const HostAvailabilityApp = () => {
   };
 
   // Only show available hosts
-  const availableHosts = (allHosts || []).filter(h => h.available);
-  const areas = [...new Set(availableHosts.map(h => h.area))].sort();
+  // Show ALL hosts for planning purposes, not just available ones
+  const allHostsForDisplay = allHosts || [];
+  const availableHosts = allHostsForDisplay.filter(h => h.available);
+  const areas = [...new Set(allHostsForDisplay.map(h => h.area))].sort();
 
   // Use centralized distance calculation utility
   const calculateDistance = window.HostUtils?.calculateDistance || ((lat1, lon1, lat2, lon2) => '0.0');
@@ -695,9 +698,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
   };
 
   const sortedHosts = React.useMemo(() => {
-    if (!userCoords || viewMode !== 'proximity') return availableHosts;
+    if (!userCoords || viewMode !== 'proximity') return allHostsForDisplay;
 
-    const sorted = availableHosts.map(host => ({
+    const sorted = allHostsForDisplay.map(host => ({
       ...host,
       distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
     })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
@@ -717,10 +720,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
 
     return sorted;
-  }, [userCoords, viewMode, availableHosts, userAddress]);
+  }, [userCoords, viewMode, allHostsForDisplay, userAddress]);
 
   const filteredHosts = React.useMemo(() => {
-    let filtered = viewMode === 'proximity' ? sortedHosts : availableHosts;
+    let filtered = viewMode === 'proximity' ? sortedHosts : allHostsForDisplay;
+
+    // Filter out unavailable hosts by default (unless user opts in for planning)
+    if (!includeUnavailableHosts) {
+      filtered = filtered.filter(h => h.available);
+    }
 
     // Apply area filter in area view mode
     if (viewMode === 'area' && filterArea !== 'all') {
@@ -738,7 +746,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
 
     return filtered;
-  }, [filterArea, viewMode, sortedHosts, availableHosts, nameSearch]);
+  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch, includeUnavailableHosts]);
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
@@ -822,7 +830,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Initialize Google Map
   const initializeMap = React.useCallback(() => {
-    if (!window.google || map) return;
+    if (!window.google) return;
+    if (map) return; // Map already initialized
 
     // Calculate map center: use user location if available, otherwise center on Atlanta
     const atlBounds = window.CONFIG?.ATLANTA_BOUNDS || {
@@ -900,31 +909,44 @@ This is safe because your API key is already restricted to only the Geocoding AP
     let hostsWithDistance;
 
     if (userCoords) {
-      hostsWithDistance = availableHosts.map(host => ({
+      // Filter by availability if checkbox is not checked
+      const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
+      hostsWithDistance = hostsForMap.map(host => ({
         ...host,
         distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
       })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+      // Show all hosts in proximity search (including unavailable) for planning purposes
       hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
     } else {
-      // No user location - show all hosts without distance sorting
-      hostsToShowOnMap = availableHosts;
-      hostsWithDistance = availableHosts;
+      // No user location - filter by availability if checkbox is not checked
+      const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
+      hostsToShowOnMap = hostsForMap;
+      hostsWithDistance = hostsForMap;
     }
 
     // Clear previous markers
     markersRef.current = {};
 
-    // Add host markers with numbered labels
+    // Add host markers with numbered labels (only if there are hosts to show)
+    if (hostsToShowOnMap.length === 0) {
+      // Map will be empty - this is handled in the UI message above
+    }
+    
     hostsToShowOnMap.forEach((host, index) => {
       const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
 
-      // Determine marker styling based on whether we have user location
+      // Determine marker styling based on availability and user location
       let markerColor = '#007E8C'; // Default teal
       let badgeColor = '#007E8C';
       let badgeTextColor = '#FFFFFF';
 
-      if (userCoords) {
-        // With user location, use ranking colors
+      // If host is not available, use red/gray colors
+      if (!host.available) {
+        markerColor = '#dc2626'; // Red
+        badgeColor = '#dc2626';
+        badgeTextColor = '#FFFFFF';
+      } else if (userCoords) {
+        // With user location, use ranking colors for available hosts
         markerColor = '#A31C41'; // Default red
         badgeColor = '#FFFFFF';
         badgeTextColor = '#236383';
@@ -978,18 +1000,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
             <!-- Info label -->
             <div class="marker-label" style="
-              background: white;
-              border: 2px solid ${markerColor};
+              background: ${host.available ? 'white' : '#fee2e2'};
+              border: 2px solid ${host.available ? markerColor : '#dc2626'};
               border-radius: 8px;
               padding: 4px 8px;
               font-size: 11px;
               font-weight: bold;
-              color: #236383;
+              color: ${host.available ? '#236383' : '#dc2626'};
               white-space: nowrap;
               box-shadow: 0 2px 6px rgba(0,0,0,0.2);
               transition: transform 0.2s ease, box-shadow 0.2s ease;
             ">
-              ${host.distance}mi
+              ${host.distance}mi${!showAllHostsOnMap ? (host.available ? ' ✓' : ' ✗') : ''}
             </div>
           </div>
         `;
@@ -1015,12 +1037,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
               background: white;
               border-radius: 50%;
             "></div>
+            </div>
           </div>
         `;
       }
 
       const markerTitle = userCoords
-        ? `#${rank}: ${host.name} - ${host.distance} miles away`
+        ? `#${rank}: ${host.name} - ${host.distance} miles away${!showAllHostsOnMap ? (host.available ? ' (Collecting This Week)' : ' (NOT Collecting This Week)') : ''}`
         : host.name;
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
@@ -1035,6 +1058,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
       // Add click listener to show tooltip
       marker.addListener('click', (e) => {
+        // Alert if host is not available
+        if (!host.available) {
+          alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+        }
+        
         setMapTooltip(host);
         setHighlightedHostId(host.id);
 
@@ -1081,7 +1109,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     });
 
     setMap(mapInstance);
-  }, [userCoords, availableHosts, map, showAllHostsOnMap]);
+  }, [userCoords, allHostsForDisplay, map, showAllHostsOnMap, includeUnavailableHosts]);
 
   // Load Google Maps API on component mount
   React.useEffect(() => {
@@ -1105,12 +1133,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
     };
   }, [GOOGLE_MAPS_API_KEY, mapLoaded]);
 
-  // Reset map when toggle changes
+  // Reset map when toggle changes or when includeUnavailableHosts changes
   React.useEffect(() => {
     if (map) {
       setMap(null); // Force map re-initialization
     }
-  }, [showAllHostsOnMap]);
+  }, [showAllHostsOnMap, includeUnavailableHosts]);
 
   // Reset map when user coordinates change (to re-center and add user marker)
   const prevUserCoords = React.useRef(userCoords);
@@ -1121,20 +1149,40 @@ This is safe because your API key is already restricted to only the Geocoding AP
     prevUserCoords.current = userCoords;
   }, [userCoords, map]);
 
+  // Reset map when includeUnavailableHosts changes to update markers
+  React.useEffect(() => {
+    if (map) {
+      setMap(null); // Force map re-initialization to show/hide unavailable hosts
+    }
+  }, [includeUnavailableHosts]);
+
   // Initialize map when API is loaded AND map div exists (works with or without user location)
   React.useEffect(() => {
     if (viewMode === 'list') {
       // When switching to list-only view, clear the map to allow re-initialization later
-      setMap(null);
-    } else if (mapLoaded) {
-      // Check if map element exists in DOM before initializing
-      const mapElement = document.getElementById('map');
-      if (mapElement && !map) {
-        // Small delay to ensure DOM element is fully ready
-        setTimeout(initializeMap, 100);
+      if (map) {
+        setMap(null);
       }
+      return;
     }
-  }, [mapLoaded, userCoords, viewMode, initializeMap, map]);
+    
+    if (mapLoaded && !map) {
+      // Check if map element exists in DOM before initializing
+      const checkAndInit = () => {
+        const mapElement = document.getElementById('map');
+        if (mapElement && !map) {
+          initializeMap();
+        } else if (!mapElement) {
+          // If map element doesn't exist yet, try again after a short delay
+          setTimeout(checkAndInit, 100);
+        }
+      };
+      
+      // Initial check with a small delay to ensure DOM is ready
+      const timeoutId = setTimeout(checkAndInit, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [mapLoaded, viewMode, initializeMap, map]);
 
   // Auto-focus map on favorite host when page loads
   React.useEffect(() => {
@@ -1245,13 +1293,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Memoize host IDs string to prevent unnecessary recalculations
   const hostIdsString = React.useMemo(() => {
-    return availableHosts.map(h => h.id).sort().join(',');
-  }, [availableHosts]);
+    return allHostsForDisplay.map(h => h.id).sort().join(',');
+  }, [allHostsForDisplay]);
 
   // Calculate drive times for all hosts when user enters address
   React.useEffect(() => {
     // Early return if conditions aren't met
-    if (!userCoords || !directionsService || !availableHosts.length || !window.google || !window.google.maps) {
+    if (!userCoords || !directionsService || !allHostsForDisplay.length || !window.google || !window.google.maps) {
       return;
     }
 
@@ -1264,11 +1312,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
     const origin = { lat: userCoords.lat, lng: userCoords.lng };
     let completedRequests = 0;
-    const totalRequests = availableHosts.length;
+    const totalRequests = allHostsForDisplay.length;
     const newDriveTimes = {};
 
     // Calculate drive time for each host
-    availableHosts.forEach(host => {
+    allHostsForDisplay.forEach(host => {
       const destination = { lat: host.lat, lng: host.lng };
 
       directionsService.route(
@@ -1291,7 +1339,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         }
       );
     });
-  }, [userCoords, directionsService, hostIdsString, availableHosts]);
+  }, [userCoords, directionsService, hostIdsString, allHostsForDisplay]);
 
   // Handle marker highlighting when highlightedHostId changes
   React.useEffect(() => {
@@ -1344,6 +1392,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
   const showDirections = (host) => {
     if (!directionsService || !directionsRenderer || !userCoords) {
       alert('Please enter your address first to get directions.');
+      return;
+    }
+
+    // Alert if host is not available
+    if (!host.available) {
+      alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
       return;
     }
 
@@ -1425,6 +1479,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Open Google Maps with directions
   const openGoogleMapsDirections = (host) => {
+    if (!host.available) {
+      alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+      return;
+    }
     trackEvent('open_google_maps', {
       event_category: 'External Navigation',
       event_label: 'Google Maps',
@@ -1445,6 +1503,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Open Apple Maps with directions
   const openAppleMapsDirections = (host) => {
+    if (!host.available) {
+      alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+      return;
+    }
     trackEvent('open_apple_maps', {
       event_category: 'External Navigation',
       event_label: 'Apple Maps',
@@ -1854,7 +1916,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         border: `2px solid ${showAllHostsOnMap ? '#007E8C' : 'rgba(0, 126, 140, 0.3)'}`
                       }}
                     >
-                      {showAllHostsOnMap ? `Showing All ${availableHosts.length} Hosts` : 'Show Closest 3 Hosts'}
+                      {showAllHostsOnMap ? `Showing All ${allHostsForDisplay.length} Hosts` : 'Show Closest 3 Available Hosts'}
                     </button>
                     <button
                       onClick={() => {
@@ -1880,16 +1942,43 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       All Sandwich Drop-Off Locations
                     </span>
                   </div>
-                  <p className="text-sm font-medium mb-3" style={{color: '#007E8C'}}>
-                    💡 Enter your address or use location to see distances and get directions
-                  </p>
+                  {(() => {
+                    const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
+                    if (hostsForMap.length === 0) {
+                      return (
+                        <div className="mb-3 p-3 rounded-lg border-2" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+                          <p className="text-sm font-medium mb-1" style={{color: '#236383'}}>
+                            🦃 Map is empty because it's a holiday week
+                          </p>
+                          <p className="text-xs" style={{color: '#666'}}>
+                            No hosts are collecting this week. If you need to plan for another week, enter your address and select "I'm planning a future dropoff (not this week)" to see all host locations.
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <p className="text-sm font-medium mb-3" style={{color: '#007E8C'}}>
+                        💡 Enter your address or use location to see distances and get directions
+                      </p>
+                    );
+                  })()}
                 </>
               )}
 
-                {showingDirections && routeInfo && (
-                  <div className="mt-3 p-4 rounded-lg" style={{backgroundColor: '#E6F7FF', borderColor: '#007E8C', border: '1px solid'}}>
+                {showingDirections && routeInfo && (() => {
+                  const hostForRoute = allHostsForDisplay.find(h => h.id === showingDirections);
+                  const isUnavailable = hostForRoute && !hostForRoute.available;
+                  return (
+                  <div className="mt-3 p-4 rounded-lg" style={{backgroundColor: isUnavailable ? '#fee2e2' : '#E6F7FF', borderColor: isUnavailable ? '#dc2626' : '#007E8C', border: '1px solid'}}>
+                    {isUnavailable && (
+                      <div className="mb-3 p-2 rounded-lg border-2" style={{backgroundColor: '#fee2e2', borderColor: '#dc2626'}}>
+                        <p className="text-sm font-bold text-center" style={{color: '#dc2626'}}>
+                          ⚠️ WARNING: This host is NOT collecting this week. You cannot drop off sandwiches here.
+                        </p>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-base font-medium" style={{color: '#007E8C'}}>
+                      <span className="text-base font-medium" style={{color: isUnavailable ? '#dc2626' : '#007E8C'}}>
                         Route to {routeInfo.hostName}
                       </span>
                       <button
@@ -1905,7 +1994,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <span className="font-medium">{routeInfo.duration}</span> • {routeInfo.distance}
                       </div>
                       <button
-                        onClick={() => openGoogleMapsDirections(availableHosts.find(h => h.id === showingDirections))}
+                        onClick={() => openGoogleMapsDirections(allHostsForDisplay.find(h => h.id === showingDirections))}
                         className="text-sm px-4 py-2 rounded flex items-center"
                         style={{backgroundColor: '#007E8C', color: 'white'}}
                       >
@@ -1914,7 +2003,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </button>
                     </div>
                   </div>
-                )}
+                  );
+                })()}
               </div>
               <div className="relative">
                 <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
@@ -1960,6 +2050,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         ×
                       </button>
                     </div>
+
+                    {/* Availability Warning */}
+                    {!mapTooltip.available && (
+                      <div className="mb-3 p-3 rounded-lg border-2" style={{backgroundColor: '#fee2e2', borderColor: '#dc2626'}}>
+                        <p className="text-sm font-bold text-center" style={{color: '#dc2626'}}>
+                          ⚠️ NOT COLLECTING THIS WEEK
+                        </p>
+                        <p className="text-xs text-center mt-1" style={{color: '#991b1b'}}>
+                          You cannot drop off sandwiches here this week. Please choose a host marked as "Collecting This Week".
+                        </p>
+                      </div>
+                    )}
 
                     {/* Distance & Drive Time - Always show if user has location */}
                     {userCoords && (() => {
@@ -2023,6 +2125,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (!mapTooltip.available) {
+                                  alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                  setMapTooltipMenuOpen(false);
+                                  return;
+                                }
                                 showDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
                                 setMapTooltip(null);
@@ -2040,6 +2147,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (!mapTooltip.available) {
+                                  alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                  setMapTooltipMenuOpen(false);
+                                  return;
+                                }
                                 openGoogleMapsDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
                               }}
@@ -2056,6 +2168,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (!mapTooltip.available) {
+                                  alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                  setMapTooltipMenuOpen(false);
+                                  return;
+                                }
                                 openAppleMapsDirections(mapTooltip);
                                 setMapTooltipMenuOpen(false);
                               }}
@@ -2200,6 +2317,33 @@ This is safe because your API key is already restricted to only the Geocoding AP
             {/* Host List */}
             {viewMode !== 'map' && (
               <div className="space-y-4 lg:max-h-[1400px] lg:overflow-y-auto">
+            {/* Option to Include Unavailable Hosts for Planning */}
+            <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeUnavailableHosts}
+                      onChange={(e) => setIncludeUnavailableHosts(e.target.checked)}
+                      className="mt-1 w-5 h-5 rounded border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                      style={{accentColor: '#007E8C'}}
+                    />
+                    <div>
+                      <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>
+                        I'm planning a future dropoff (not this week)—include hosts that are closed this week
+                      </h4>
+                      <p className="text-sm mb-2" style={{color: '#555'}}>
+                        By default, we only show hosts that are collecting this week. Check this box to see all host homes for planning future drop-offs. Hosts marked as "NOT Collecting This Week" are shown for reference but are not accepting drop-offs this week.
+                      </p>
+                      <p className="text-xs p-2 rounded-lg" style={{backgroundColor: '#FFF9E6', color: '#991b1b', border: '1px solid #FBAD3F'}}>
+                        <strong>⚠️ Important:</strong> Hosts displayed may not be open next week either. Please check back on the Monday of the week you plan to drop off to ensure your selected host will be collecting that week.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
             {userCoords && viewMode === 'proximity' && (
               <div className="distance-banner p-4 mb-2">
                 <div className="flex items-center">
@@ -2219,11 +2363,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <div
                   key={host.id}
                   data-host-id={host.id}
-                  className={`bg-white rounded-2xl premium-card p-6 md:p-8 transition-all border-2 border-transparent ${
-                    // Only add hover effects and cursor pointer on desktop (md breakpoint and up)
-                    'md:hover:shadow-xl md:hover:scale-[1.02] md:cursor-pointer md:hover:border-blue-200'
+                  className={`bg-white rounded-2xl premium-card p-6 md:p-8 transition-all border-2 ${
+                    host.available 
+                      ? 'border-transparent md:hover:border-blue-200' 
+                      : 'border-red-200 bg-red-50/30'
                   } ${
-                    userCoords && viewMode === 'proximity' && index < 3
+                    // Only add hover effects and cursor pointer on desktop (md breakpoint and up) for available hosts
+                    host.available ? 'md:hover:shadow-xl md:hover:scale-[1.02] md:cursor-pointer' : 'opacity-75'
+                  } ${
+                    userCoords && viewMode === 'proximity' && index < 3 && host.available
                       ? `top-host-card top-host-${index + 1}`
                       : ''
                   } ${highlightedHostId === host.id ? 'ring-4 ring-yellow-400 shadow-xl' : ''}`}
@@ -2290,15 +2438,33 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col gap-3 mb-3">
-                        <div className="flex items-center gap-3">
-                          {userCoords && viewMode === 'proximity' && index < 3 && (
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {userCoords && viewMode === 'proximity' && index < 3 && host.available && (
                             <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
                               index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
                             }`}>
                               {index + 1}
                             </span>
                           )}
-                          <h3 className="font-bold text-2xl flex-1">{host.name}</h3>
+                          <h3 className={`font-bold text-2xl flex-1 ${!host.available ? 'opacity-60' : ''}`}>{host.name}</h3>
+                          {/* Prominent Availability Badge */}
+                          <div className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 flex-shrink-0 ${
+                            host.available 
+                              ? 'bg-green-100 text-green-800 border-2 border-green-300' 
+                              : 'bg-red-100 text-red-800 border-2 border-red-300'
+                          }`}>
+                            {host.available ? (
+                              <>
+                                <span className="text-lg">✅</span>
+                                <span>Collecting This Week</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-lg">❌</span>
+                                <span>NOT Collecting This Week</span>
+                              </>
+                            )}
+                          </div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -2318,6 +2484,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (!host.available) {
+                                alert('This host is not collecting this week. Please choose a host marked as "Collecting This Week".');
+                                return;
+                              }
                               if (!userCoords) {
                                 alert('Please enter your address first to see the route on the map!');
                                 // Focus on the search input
@@ -2330,9 +2500,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               }
                               showingDirections === host.id ? clearDirections() : showDirections(host);
                             }}
-                            className="btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+                            disabled={!host.available}
+                            className={`btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all touch-manipulation ${
+                              host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                            }`}
                             style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F', minHeight: '48px'}}
-                            title={!userCoords ? 'Enter your address to see route on map' : (showingDirections === host.id ? 'Clear route from map' : 'Show route on the map')}
+                            title={!host.available ? 'This host is not collecting this week' : (!userCoords ? 'Enter your address to see route on map' : (showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'))}
                           >
                             <i className="lucide-route w-5 h-5"></i>
                             <span>{showingDirections === host.id ? 'Clear Route' : 'Show Route'}</span>
@@ -2380,9 +2553,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                   host_area: host.area
                                 });
                               }}
-                              className="btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation w-full"
+                              className={`btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all touch-manipulation w-full ${
+                                host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                              }`}
                               style={{backgroundColor: '#007E8C', minHeight: '48px'}}
-                              title="Choose your maps app"
+                              title={!host.available ? 'This host is not collecting this week' : 'Choose your maps app'}
                             >
                               <i className="lucide-navigation w-5 h-5"></i>
                               <span>Get Directions</span>
@@ -2439,11 +2614,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (!host.available) {
+                                alert('This host is not collecting this week. Please choose a host marked as "Collecting This Week".');
+                                return;
+                              }
                               handleAddToCalendar(host);
                             }}
-                            className="btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+                            disabled={!host.available}
+                            className={`btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all touch-manipulation ${
+                              host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                            }`}
                             style={{backgroundColor: '#236383', minHeight: '48px'}}
-                            title="Download an event reminder for this host"
+                            title={!host.available ? 'This host is not collecting this week' : 'Download an event reminder for this host'}
                           >
                             <i className="lucide-calendar-plus w-5 h-5"></i>
                             <span>Add to Calendar</span>
@@ -2989,9 +3171,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     How was your experience?
                   </h2>
 
+                  {/* Feedback Text Box - Always Visible */}
+                  <div className="mb-6">
+                    <label className="block font-semibold mb-2" style={{color: '#236383'}}>
+                      Your Feedback (optional)
+                    </label>
+                    <textarea
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2"
+                      style={{borderColor: '#E0E0E0'}}
+                      rows="4"
+                      placeholder="Share your thoughts, suggestions, or experiences with the collection site..."
+                    />
+                    <p className="text-xs mt-1" style={{color: '#666'}}>
+                      You can provide feedback with or without a star rating below.
+                    </p>
+                  </div>
+
                   {/* Star Rating */}
                   <div className="mb-6">
-                    <p className="font-semibold mb-3" style={{color: '#236383'}}>Rate your experience:</p>
+                    <p className="font-semibold mb-3" style={{color: '#236383'}}>Rate your experience (optional):</p>
                     <div className="flex gap-2 justify-center">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
@@ -3004,45 +3204,39 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </button>
                       ))}
                     </div>
+                    {feedbackRating > 0 && feedbackRating < 4 && (
+                      <p className="text-xs mt-2 text-center" style={{color: '#dc2626'}}>
+                        * Please provide feedback above to help us improve
+                      </p>
+                    )}
                   </div>
 
-                  {/* Conditional feedback text based on rating */}
-                  {feedbackRating > 0 && (
-                    <>
-                      <div className="mb-4">
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>
-                          {feedbackRating >= 4 ? 'What did you like most? (optional)' : 'What can we improve? *'}
-                        </label>
-                        <textarea
-                          value={feedbackText}
-                          onChange={(e) => setFeedbackText(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border-2"
-                          style={{borderColor: '#E0E0E0'}}
-                          rows="4"
-                          placeholder={feedbackRating >= 4 ? 'Tell us what worked well...' : 'Please help us understand what needs improvement...'}
-                          required={feedbackRating < 4}
-                        />
-                      </div>
-
-                      <div className="mb-6">
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>
-                          Email (optional, for follow-up)
-                        </label>
-                        <input
-                          type="email"
-                          value={feedbackEmail}
-                          onChange={(e) => setFeedbackEmail(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border-2"
-                          style={{borderColor: '#E0E0E0'}}
-                          placeholder="your.email@example.com"
-                        />
-                      </div>
+                  {/* Email */}
+                  <div className="mb-6">
+                    <label className="block font-semibold mb-2" style={{color: '#236383'}}>
+                      Email (optional, for follow-up)
+                    </label>
+                    <input
+                      type="email"
+                      value={feedbackEmail}
+                      onChange={(e) => setFeedbackEmail(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2"
+                      style={{borderColor: '#E0E0E0'}}
+                      placeholder="your.email@example.com"
+                    />
+                  </div>
 
                       <button
                         onClick={async () => {
-                          // Validate
-                          if (feedbackRating < 4 && !feedbackText.trim()) {
+                          // Validate - require feedback text if rating is low
+                          if (feedbackRating > 0 && feedbackRating < 4 && !feedbackText.trim()) {
                             alert('Please tell us what we can improve.');
+                            return;
+                          }
+                          
+                          // Require either rating or feedback text
+                          if (feedbackRating === 0 && !feedbackText.trim()) {
+                            alert('Please provide either feedback text or a star rating (or both).');
                             return;
                           }
 
@@ -3075,8 +3269,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       >
                         Submit Feedback
                       </button>
-                    </>
-                  )}
                 </>
               ) : (
                 <div className="text-center py-8">

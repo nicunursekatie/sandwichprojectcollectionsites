@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Viewer - The Sandwich Project</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .star-rating {
+            color: #FBAD3F;
+            font-size: 1.2rem;
+        }
+        .feedback-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .feedback-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-[#236383]">Feedback Viewer</h1>
+                    <p class="text-sm text-gray-600">The Sandwich Project</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="text-sm text-gray-600 mb-1">Total Feedback</div>
+                    <div id="totalCount" class="text-3xl font-bold text-[#236383]">-</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="text-sm text-gray-600 mb-1">Average Rating</div>
+                    <div id="avgRating" class="text-3xl font-bold text-[#007E8C]">-</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="text-sm text-gray-600 mb-1">With Email</div>
+                    <div id="withEmail" class="text-3xl font-bold text-[#47B3CB]">-</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="text-sm text-gray-600 mb-1">This Month</div>
+                    <div id="thisMonth" class="text-3xl font-bold text-[#FBAD3F]">-</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-200">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Rating</label>
+                        <select id="ratingFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007E8C]">
+                            <option value="all">All Ratings</option>
+                            <option value="5">5 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="2">2 Stars</option>
+                            <option value="1">1 Star</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                        <select id="sortBy" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007E8C]">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="rating-high">Highest Rating</option>
+                            <option value="rating-low">Lowest Rating</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                        <input type="text" id="searchInput" placeholder="Search feedback text..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007E8C]">
+                    </div>
+                    <div class="flex items-end">
+                        <button id="exportBtn" 
+                                class="w-full px-4 py-2 bg-[#007E8C] text-white rounded-lg font-semibold hover:bg-[#006a77] transition-colors">
+                            Export CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#007E8C]"></div>
+                <p class="mt-4 text-gray-600">Loading feedback...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="hidden bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-6"></div>
+
+            <!-- Feedback List -->
+            <div id="feedbackList" class="space-y-4"></div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden text-center py-12">
+                <p class="text-gray-600 text-lg">No feedback found matching your filters.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAiv_SfZGBGzyw8dEypQIDXI2iB3WAKjXc",
+            authDomain: "tsp-host-finder-tool.firebaseapp.com",
+            projectId: "tsp-host-finder-tool",
+            storageBucket: "tsp-host-finder-tool.firebasestorage.app",
+            messagingSenderId: "773911012242",
+            appId: "1:773911012242:web:60bc4f1fce3b494fb7974b",
+            measurementId: "G-6P9FHSLS3S"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // State
+        let allFeedback = [];
+        let filteredFeedback = [];
+
+        // DOM Elements
+        const feedbackList = document.getElementById('feedbackList');
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const emptyState = document.getElementById('emptyState');
+        const ratingFilter = document.getElementById('ratingFilter');
+        const sortBy = document.getElementById('sortBy');
+        const searchInput = document.getElementById('searchInput');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // Load feedback on page load
+        loadFeedback();
+
+        // Load feedback
+        async function loadFeedback() {
+            loadingState.classList.remove('hidden');
+            errorState.classList.add('hidden');
+            feedbackList.innerHTML = '';
+            emptyState.classList.add('hidden');
+
+            try {
+                const snapshot = await db.collection('feedback')
+                    .orderBy('timestamp', 'desc')
+                    .get();
+
+                allFeedback = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                // If no feedback exists, show empty state
+                if (allFeedback.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    emptyState.innerHTML = `
+                        <p class="text-gray-600 text-lg mb-2">No feedback has been submitted yet.</p>
+                        <p class="text-gray-500 text-sm">Feedback will appear here once users submit it through the main site.</p>
+                    `;
+                }
+
+                updateStats();
+                applyFilters();
+            } catch (error) {
+                console.error('Error loading feedback:', error);
+                
+                // More helpful error messages
+                if (error.code === 'permission-denied' || error.message.includes('permission')) {
+                    errorState.textContent = `Permission denied. Please make sure Firestore rules allow reading the feedback collection. Error: ${error.message}`;
+                } else if (error.message.includes('index')) {
+                    errorState.textContent = `Index required. The query needs a Firestore index. Check the browser console for a link to create it. Error: ${error.message}`;
+                } else {
+                    errorState.textContent = `Error loading feedback: ${error.message}`;
+                }
+                errorState.classList.remove('hidden');
+            } finally {
+                loadingState.classList.add('hidden');
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = allFeedback.length;
+            const avgRating = total > 0 
+                ? (allFeedback.reduce((sum, f) => sum + (f.rating || 0), 0) / total).toFixed(1)
+                : '0.0';
+            const withEmailCount = allFeedback.filter(f => f.email && f.email.trim()).length;
+            
+            const now = new Date();
+            const thisMonthCount = allFeedback.filter(f => {
+                if (!f.timestamp) return false;
+                const date = f.timestamp.toDate ? f.timestamp.toDate() : new Date(f.timestamp);
+                return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+            }).length;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('avgRating').textContent = avgRating;
+            document.getElementById('withEmail').textContent = withEmailCount;
+            document.getElementById('thisMonth').textContent = thisMonthCount;
+        }
+
+        // Apply filters
+        function applyFilters() {
+            let filtered = [...allFeedback];
+
+            // Rating filter
+            const ratingValue = ratingFilter.value;
+            if (ratingValue !== 'all') {
+                filtered = filtered.filter(f => f.rating === parseInt(ratingValue));
+            }
+
+            // Search filter
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            if (searchTerm) {
+                filtered = filtered.filter(f => 
+                    (f.feedback && f.feedback.toLowerCase().includes(searchTerm)) ||
+                    (f.email && f.email.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            // Sort
+            const sortValue = sortBy.value;
+            filtered.sort((a, b) => {
+                switch (sortValue) {
+                    case 'newest':
+                        const aTime = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : 0;
+                        const bTime = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : 0;
+                        return bTime - aTime;
+                    case 'oldest':
+                        const aTime2 = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : 0;
+                        const bTime2 = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : 0;
+                        return aTime2 - bTime2;
+                    case 'rating-high':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'rating-low':
+                        return (a.rating || 0) - (b.rating || 0);
+                    default:
+                        return 0;
+                }
+            });
+
+            filteredFeedback = filtered;
+            renderFeedback();
+        }
+
+        // Render feedback
+        function renderFeedback() {
+            if (filteredFeedback.length === 0) {
+                feedbackList.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            feedbackList.innerHTML = filteredFeedback.map(feedback => {
+                const date = feedback.timestamp?.toDate 
+                    ? feedback.timestamp.toDate() 
+                    : new Date(feedback.timestamp || Date.now());
+                const dateStr = date.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const stars = '⭐'.repeat(feedback.rating || 0) + '☆'.repeat(5 - (feedback.rating || 0));
+                const ratingColor = feedback.rating >= 4 ? 'text-green-600' : feedback.rating >= 3 ? 'text-yellow-600' : 'text-red-600';
+
+                return `
+                    <div class="feedback-card bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="star-rating text-xl">${stars}</span>
+                                    <span class="font-semibold ${ratingColor}">${feedback.rating || 0}/5</span>
+                                </div>
+                                <div class="text-sm text-gray-600">
+                                    ${dateStr}
+                                </div>
+                            </div>
+                            ${feedback.email ? `
+                                <div class="text-sm">
+                                    <span class="text-gray-500">Email:</span>
+                                    <a href="mailto:${feedback.email}" class="text-[#007E8C] hover:underline ml-1">
+                                        ${feedback.email}
+                                    </a>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="mb-3">
+                            <p class="text-gray-800 whitespace-pre-wrap">${feedback.feedback || 'No feedback text provided.'}</p>
+                        </div>
+                        <div class="flex gap-4 text-xs text-gray-500 pt-3 border-t border-gray-100">
+                            ${feedback.url ? `<span>URL: <span class="text-[#007E8C]">${feedback.url}</span></span>` : ''}
+                            ${feedback.userAgent ? `<span class="truncate max-w-md">Browser: ${feedback.userAgent}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Event listeners
+        ratingFilter.addEventListener('change', applyFilters);
+        sortBy.addEventListener('change', applyFilters);
+        searchInput.addEventListener('input', applyFilters);
+
+        // Export CSV
+        exportBtn.addEventListener('click', () => {
+            const headers = ['Date', 'Rating', 'Feedback', 'Email', 'URL'];
+            const rows = filteredFeedback.map(f => {
+                const date = f.timestamp?.toDate 
+                    ? f.timestamp.toDate() 
+                    : new Date(f.timestamp || Date.now());
+                return [
+                    date.toISOString(),
+                    f.rating || '',
+                    (f.feedback || '').replace(/"/g, '""'),
+                    f.email || '',
+                    f.url || ''
+                ];
+            });
+
+            const csv = [
+                headers.join(','),
+                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `feedback-export-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
