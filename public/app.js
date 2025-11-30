@@ -1770,24 +1770,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
             );
           })()}
 
-          {/* No Collections This Week Banner */}
-          <div className="mb-4 mx-3 sm:mx-4 p-5 sm:p-6 rounded-xl border-2 shadow-lg" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
-            <div className="flex items-start gap-4">
-              <div className="text-3xl sm:text-4xl flex-shrink-0">🦃</div>
-              <div className="flex-1">
-                <h3 className="font-bold text-lg sm:text-xl mb-2" style={{color: '#236383'}}>
-                  No Collections This Week
-                </h3>
-                <p className="text-sm sm:text-base mb-1" style={{color: '#666'}}>
-                  Our dedicated hosts collect sandwiches every week throughout the year. This week, we're giving them a well-deserved break for the holidays.
-                </p>
-                <p className="text-sm sm:text-base font-semibold" style={{color: '#007E8C'}}>
-                  Thank you for your understanding. Collections will resume next week.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Smart Search Section */}
           <div className="p-3 sm:p-4">
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
@@ -2034,7 +2016,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       return (
                         <div className="mb-3 p-3 rounded-lg border-2" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
                           <p className="text-sm font-medium mb-1" style={{color: '#236383'}}>
-                            🦃 Map is empty because it's a holiday week
+                            No hosts available
                           </p>
                           <p className="text-xs" style={{color: '#666'}}>
                             No hosts are collecting this week. If you need to plan for another week, enter your address and select "I'm planning a future dropoff (not this week)" to see all host locations.
