@@ -315,13 +315,13 @@ const HostAvailabilityApp = () => {
       { id: 24, name: 'Cynthia C.', area: 'Southwest Atlanta', neighborhood: 'Cascade Hills Subdivision ', lat: 33.7286854, lng: -84.5622846, phone: '678.860.6442', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
       { id: 25, name: 'Jason S.', area: 'Suwanee/Johns Creek', neighborhood: 'Superior Play Systems', lat: 34.065908, lng: -84.160894, phone: '678.245.2110', hours: '7 am to 6 pm', openTime: '07:00', closeTime: '18:00', notes: '', available: true },
       { id: 26, name: 'Stacey & Jack G.', area: 'Virginia Highland', neighborhood: 'Virginia Highland/Morningside/Midtown HS', lat: 33.77723595, lng: -84.362274174978, phone: '404.451.7648', hours: '6pm-8pm', openTime: '18:00', closeTime: '20:00', notes: '', available: false },
-      { id: 27, name: 'Della F.', area: 'Westminster/Milmar Neighborhood', lat: 33.83844, lng: -84.42356, phone: '404.556.0277', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.', available: true },
+      { id: 27, name: 'Della F.', area: 'Westminster/Milmar Neighborhood', lat: 33.83844, lng: -84.42356, phone: '404.556.0277', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.', available: false },
       { id: 28, name: 'Rayna N.', area: 'College Park', lat: 33.63388, lng: -84.53605, phone: '404.376.8028 ', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Please text when you arrive. ', available: true },
       { id: 29, name: 'Ashley R.', area: 'Decatur', neighborhood: 'Diamond Head', lat: 33.82314, lng: -84.27547, phone: '678.480.8786', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Deliver to fridge in carport', available: true },
       { id: 30, name: 'Judy T.', area: 'East Cobb', neighborhood: 'Indian Hills', lat: 33.967939, lng: -84.43849, phone: '404-683-5823', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: 'Ring doorbell', available: true },
       { id: 31, name: 'Kristina M.', area: 'Flowery Branch', neighborhood: 'Sterling on the Lake', lat: 34.1490957945782, lng: -83.8990866162653, phone: '678.372.7959', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Drop off in clubhouse', available: true },
-      { id: 32, name: 'Angie B.', area: 'Intown (Candler Park)', neighborhood: 'Candler Park', lat: 33.7633147, lng: -84.3440672755145, phone: '404.668.6886', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: true },
-      { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: true },
+      { id: 32, name: 'Angie B.', area: 'Intown (Candler Park)', neighborhood: 'Candler Park', lat: 33.7633147, lng: -84.3440672755145, phone: '404.668.6886', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: false },
+      { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: false },
       { id: 34, name: 'Natalia W.', area: 'TBD', neighborhood: 'Bentley Farms', lat: 33.8, lng: -84.4, phone: '864.520.9058', hours: '10 am to 2 pm', openTime: '10:00', closeTime: '14:00', notes: 'Please text prior to delivering to make sure host is available to receive the sandwiches.', available: true }
     ];
     
@@ -1080,6 +1080,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
         });
       });
     });
+
+    // Fit map bounds to show all markers when no user location is provided
+    if (!userCoords && hostsToShowOnMap.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      hostsToShowOnMap.forEach(host => {
+        bounds.extend({ lat: host.lat, lng: host.lng });
+      });
+      // Fit bounds with padding
+      mapInstance.fitBounds(bounds, { padding: 50 });
+    }
 
     // Initialize directions service and renderer
     const directionsServiceInstance = new google.maps.DirectionsService();
