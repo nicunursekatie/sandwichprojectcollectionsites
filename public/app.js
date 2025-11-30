@@ -1172,8 +1172,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     });
 
-    // Fit map bounds to show all markers when no user location is provided
-    if (!userCoords && hostsToShowOnMap.length > 0) {
+    // Fit map bounds appropriately
+    if (userCoords && hostsToShowOnMap.length > 0) {
+      // When user location is available, zoom in on the 3 closest hosts + user location
+      const bounds = new google.maps.LatLngBounds();
+      // Add user location to bounds
+      bounds.extend({ lat: userCoords.lat, lng: userCoords.lng });
+      // Add the 3 closest hosts to bounds
+      hostsToShowOnMap.forEach(host => {
+        bounds.extend({ lat: host.lat, lng: host.lng });
+      });
+      // Fit bounds with padding to show all markers nicely
+      mapInstance.fitBounds(bounds, { padding: 80 });
+    } else if (!userCoords && hostsToShowOnMap.length > 0) {
+      // When no user location, show all available hosts
       const bounds = new google.maps.LatLngBounds();
       hostsToShowOnMap.forEach(host => {
         bounds.extend({ lat: host.lat, lng: host.lng });
@@ -2425,6 +2437,38 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </div>
             </div>
+            {/* Search Bar for Host List */}
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by host name or area..."
+                  value={nameSearch}
+                  onChange={(e) => setNameSearch(e.target.value)}
+                  className="w-full px-4 py-3 pl-10 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base"
+                  style={{backgroundColor: 'white'}}
+                />
+                <svg 
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {nameSearch && (
+                  <button
+                    onClick={() => setNameSearch('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
             {userCoords && viewMode === 'proximity' && (
               <div className="distance-banner p-4 mb-2">
                 <div className="flex items-center">
@@ -2531,9 +2575,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           {/* Prominent Availability Badge */}
                           <div className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 flex-shrink-0 ${
                             host.available 
-                              ? 'bg-green-100 text-green-800 border-2 border-green-300' 
+                              ? 'border-2' 
                               : 'bg-red-100 text-red-800 border-2 border-red-300'
-                          }`}>
+                          }`}
+                          style={host.available ? {
+                            backgroundColor: '#47bc3b',
+                            color: 'white',
+                            borderColor: '#47bc3b'
+                          } : {}}>
                             {host.available ? (
                               <>
                                 <span className="text-lg">✅</span>
@@ -2955,8 +3004,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex items-center gap-3 mb-2">
                             <h4 className="font-bold text-lg">{host.name}</h4>
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                              host.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
+                              host.available ? '' : 'bg-red-100 text-red-800'
+                            }`}
+                            style={host.available ? {
+                              backgroundColor: '#47bc3b',
+                              color: 'white'
+                            } : {}}>
                               {host.available ? '✅ Available' : '❌ Unavailable'}
                             </span>
                           </div>
