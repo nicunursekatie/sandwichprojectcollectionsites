@@ -1793,10 +1793,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   <ul className="space-y-2">
                     <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
                       <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
-                      Chet B.
-                    </li>
-                    <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
-                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
                       Angie B.
                     </li>
                     <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
