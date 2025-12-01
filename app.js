@@ -2448,11 +2448,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           )}
                           <h3 className={`font-bold text-2xl flex-1 ${!host.available ? 'opacity-60' : ''}`}>{host.name}</h3>
                           {/* Prominent Availability Badge */}
-                          <div className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 flex-shrink-0 ${
-                            host.available 
-                              ? 'bg-green-100 text-green-800 border-2 border-green-300' 
-                              : 'bg-red-100 text-red-800 border-2 border-red-300'
-                          }`}>
+                          <div 
+                            className="px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 flex-shrink-0 border-2"
+                            style={{
+                              backgroundColor: host.available 
+                                ? 'rgba(251, 173, 63, 0.15)' // accent color with opacity
+                                : 'rgba(163, 28, 65, 0.15)', // danger color with opacity
+                              color: host.available 
+                                ? window.CONFIG?.COLORS?.accent || '#FBAD3F' // accent color
+                                : window.CONFIG?.COLORS?.danger || '#A31C41', // danger color
+                              borderColor: host.available 
+                                ? window.CONFIG?.COLORS?.accent || '#FBAD3F' // accent color
+                                : window.CONFIG?.COLORS?.danger || '#A31C41' // danger color
+                            }}
+                          >
                             {host.available ? (
                               <>
                                 <span className="text-lg">✅</span>
