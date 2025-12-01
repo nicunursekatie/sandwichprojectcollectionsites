@@ -399,13 +399,14 @@ const HostAvailabilityApp = () => {
       { id: 24, name: 'Cynthia C.', area: 'Southwest Atlanta', neighborhood: 'Cascade Hills Subdivision ', lat: 33.7286854, lng: -84.5622846, phone: '678.860.6442', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
       { id: 25, name: 'Jason S.', area: 'Suwanee/Johns Creek', neighborhood: 'Superior Play Systems', lat: 34.065908, lng: -84.160894, phone: '678.245.2110', hours: '7 am to 6 pm', openTime: '07:00', closeTime: '18:00', notes: '', available: true },
       { id: 26, name: 'Stacey & Jack G.', area: 'Virginia Highland', neighborhood: 'Virginia Highland/Morningside/Midtown HS', lat: 33.77723595, lng: -84.362274174978, phone: '404.451.7648', hours: '6pm-8pm', openTime: '18:00', closeTime: '20:00', notes: '', available: false },
-      { id: 27, name: 'Della F.', area: 'Westminster/Milmar Neighborhood', lat: 33.83844, lng: -84.42356, phone: '404.556.0277', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.', available: true },
+      { id: 27, name: 'Della F.', area: 'Westminster/Milmar Neighborhood', lat: 33.83844, lng: -84.42356, phone: '404.556.0277', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.', available: false },
       { id: 28, name: 'Rayna N.', area: 'College Park', lat: 33.63388, lng: -84.53605, phone: '404.376.8028 ', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Please text when you arrive. ', available: true },
       { id: 29, name: 'Ashley R.', area: 'Decatur', neighborhood: 'Diamond Head', lat: 33.82314, lng: -84.27547, phone: '678.480.8786', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Deliver to fridge in carport', available: true },
       { id: 30, name: 'Judy T.', area: 'East Cobb', neighborhood: 'Indian Hills', lat: 33.967939, lng: -84.43849, phone: '404-683-5823', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: 'Ring doorbell', available: true },
       { id: 31, name: 'Kristina M.', area: 'Flowery Branch', neighborhood: 'Sterling on the Lake', lat: 34.1490957945782, lng: -83.8990866162653, phone: '678.372.7959', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Drop off in clubhouse', available: true },
-      { id: 32, name: 'Angie B.', area: 'Intown (Candler Park)', neighborhood: 'Candler Park', lat: 33.7633147, lng: -84.3440672755145, phone: '404.668.6886', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: true },
-      { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: true }
+      { id: 32, name: 'Angie B.', area: 'Intown (Candler Park)', neighborhood: 'Candler Park', lat: 33.7633147, lng: -84.3440672755145, phone: '404.668.6886', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: false },
+      { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: false },
+      { id: 34, name: 'Natalia W.', area: 'TBD', neighborhood: 'Bentley Farms', lat: 33.8, lng: -84.4, phone: '864.520.9058', hours: '10 am to 2 pm', openTime: '10:00', closeTime: '14:00', notes: 'Please text prior to delivering to make sure host is available to receive the sandwiches.', available: true }
     ];
     
     // Return all hosts (including inactive) so admin management is possible after a version update
@@ -1171,6 +1172,28 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     });
 
+    // Fit map bounds appropriately
+    if (userCoords && hostsToShowOnMap.length > 0) {
+      // When user location is available, zoom in on the 3 closest hosts + user location
+      const bounds = new google.maps.LatLngBounds();
+      // Add user location to bounds
+      bounds.extend({ lat: userCoords.lat, lng: userCoords.lng });
+      // Add the 3 closest hosts to bounds
+      hostsToShowOnMap.forEach(host => {
+        bounds.extend({ lat: host.lat, lng: host.lng });
+      });
+      // Fit bounds with padding to show all markers nicely
+      mapInstance.fitBounds(bounds, { padding: 80 });
+    } else if (!userCoords && hostsToShowOnMap.length > 0) {
+      // When no user location, show all available hosts
+      const bounds = new google.maps.LatLngBounds();
+      hostsToShowOnMap.forEach(host => {
+        bounds.extend({ lat: host.lat, lng: host.lng });
+      });
+      // Fit bounds with padding
+      mapInstance.fitBounds(bounds, { padding: 50 });
+    }
+
     // Initialize directions service and renderer
     const directionsServiceInstance = new google.maps.DirectionsService();
     const directionsRendererInstance = new google.maps.DirectionsRenderer({
@@ -1769,24 +1792,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
             );
           })()}
 
-          {/* No Collections This Week Banner */}
-          <div className="mb-4 mx-3 sm:mx-4 p-5 sm:p-6 rounded-xl border-2 shadow-lg" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
-            <div className="flex items-start gap-4">
-              <div className="text-3xl sm:text-4xl flex-shrink-0">🦃</div>
-              <div className="flex-1">
-                <h3 className="font-bold text-lg sm:text-xl mb-2" style={{color: '#236383'}}>
-                  No Collections This Week
-                </h3>
-                <p className="text-sm sm:text-base mb-1" style={{color: '#666'}}>
-                  Our dedicated hosts collect sandwiches every week throughout the year. This week, we're giving them a well-deserved break for the holidays.
-                </p>
-                <p className="text-sm sm:text-base font-semibold" style={{color: '#007E8C'}}>
-                  Thank you for your understanding. Collections will resume next week.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Smart Search Section */}
           <div className="p-3 sm:p-4">
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
@@ -2033,7 +2038,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       return (
                         <div className="mb-3 p-3 rounded-lg border-2" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
                           <p className="text-sm font-medium mb-1" style={{color: '#236383'}}>
-                            🦃 Map is empty because it's a holiday week
+                            No hosts available
                           </p>
                           <p className="text-xs" style={{color: '#666'}}>
                             No hosts are collecting this week. If you need to plan for another week, enter your address and select "I'm planning a future dropoff (not this week)" to see all host locations.
@@ -2432,6 +2437,38 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </div>
             </div>
+            {/* Search Bar for Host List */}
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by host name or area..."
+                  value={nameSearch}
+                  onChange={(e) => setNameSearch(e.target.value)}
+                  className="w-full px-4 py-3 pl-10 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base"
+                  style={{backgroundColor: 'white'}}
+                />
+                <svg 
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {nameSearch && (
+                  <button
+                    onClick={() => setNameSearch('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
             {userCoords && viewMode === 'proximity' && (
               <div className="distance-banner p-4 mb-2">
                 <div className="flex items-center">
@@ -2538,9 +2575,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           {/* Prominent Availability Badge */}
                           <div className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 flex-shrink-0 ${
                             host.available 
-                              ? 'bg-green-100 text-green-800 border-2 border-green-300' 
+                              ? 'border-2' 
                               : 'bg-red-100 text-red-800 border-2 border-red-300'
-                          }`}>
+                          }`}
+                          style={host.available ? {
+                            backgroundColor: '#47bc3b',
+                            color: 'white',
+                            borderColor: '#47bc3b'
+                          } : {}}>
                             {host.available ? (
                               <>
                                 <span className="text-lg">✅</span>
@@ -2962,8 +3004,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex items-center gap-3 mb-2">
                             <h4 className="font-bold text-lg">{host.name}</h4>
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                              host.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
+                              host.available ? '' : 'bg-red-100 text-red-800'
+                            }`}
+                            style={host.available ? {
+                              backgroundColor: '#47bc3b',
+                              color: 'white'
+                            } : {}}>
                               {host.available ? '✅ Available' : '❌ Unavailable'}
                             </span>
                           </div>
