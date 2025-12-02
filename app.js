@@ -264,29 +264,7 @@ const HostAvailabilityApp = () => {
   const [allHosts, setAllHosts] = React.useState([]);
   const [hostsLoading, setHostsLoading] = React.useState(true);
 
-  // Load hosts from Firestore on mount
-  React.useEffect(() => {
-    const loadHosts = async () => {
-      try {
-        const snapshot = await db.collection('hosts').get();
-        const hostsData = [];
-        snapshot.forEach(doc => {
-          hostsData.push({ ...doc.data(), id: doc.data().id });
-        });
-        // Sort by ID
-        hostsData.sort((a, b) => a.id - b.id);
-        setAllHosts(hostsData);
-        setHostsLoading(false);
-      } catch (error) {
-        console.error('Error loading hosts:', error);
-        setHostsLoading(false);
-      }
-    };
-
-    loadHosts();
-  }, []);
-
-  // Legacy code - keep structure but don't use
+  // Default hosts function - used as fallback when Firestore is empty or fails
   const getInitialHosts = () => {
     // This function is no longer used - hosts come from Firestore
     const defaultHosts = [
@@ -328,6 +306,40 @@ const HostAvailabilityApp = () => {
     // Return all hosts (including inactive) so admin management is possible after a version update
     return defaultHosts;
   };
+
+  // Load hosts from Firestore on mount
+  React.useEffect(() => {
+    const loadHosts = async () => {
+      try {
+        const snapshot = await db.collection('hosts').get();
+        const hostsData = [];
+        snapshot.forEach(doc => {
+          hostsData.push({ ...doc.data(), id: doc.data().id });
+        });
+        // Sort by ID
+        hostsData.sort((a, b) => a.id - b.id);
+        
+        // Fallback to default hosts if Firestore is empty
+        if (hostsData.length === 0) {
+          console.warn('Firestore returned no hosts, using default hosts as fallback');
+          const defaultHosts = getInitialHosts();
+          setAllHosts(defaultHosts);
+        } else {
+          setAllHosts(hostsData);
+        }
+        setHostsLoading(false);
+      } catch (error) {
+        console.error('Error loading hosts:', error);
+        // Fallback to default hosts on error
+        console.warn('Using default hosts as fallback due to error');
+        const defaultHosts = getInitialHosts();
+        setAllHosts(defaultHosts);
+        setHostsLoading(false);
+      }
+    };
+
+    loadHosts();
+  }, []);
 
   // Admin functions - now save to Firestore
   const addHost = async (hostData) => {
