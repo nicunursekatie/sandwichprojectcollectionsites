@@ -176,9 +176,8 @@ body {
     row-gap: 0.75rem;
   }
   
-  /* Ensure badges maintain their content on one line */
+  /* Ensure badges don't shrink and maintain spacing */
   .premium-card h3 + div[class*="flex-shrink-0"] {
-    white-space: nowrap;
     flex-shrink: 0;
   }
 }
