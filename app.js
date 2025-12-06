@@ -264,29 +264,7 @@ const HostAvailabilityApp = () => {
   const [allHosts, setAllHosts] = React.useState([]);
   const [hostsLoading, setHostsLoading] = React.useState(true);
 
-  // Load hosts from Firestore on mount
-  React.useEffect(() => {
-    const loadHosts = async () => {
-      try {
-        const snapshot = await db.collection('hosts').get();
-        const hostsData = [];
-        snapshot.forEach(doc => {
-          hostsData.push({ ...doc.data(), id: doc.data().id });
-        });
-        // Sort by ID
-        hostsData.sort((a, b) => a.id - b.id);
-        setAllHosts(hostsData);
-        setHostsLoading(false);
-      } catch (error) {
-        console.error('Error loading hosts:', error);
-        setHostsLoading(false);
-      }
-    };
-
-    loadHosts();
-  }, []);
-
-  // Legacy code - keep structure but don't use
+  // Default hosts function - used as fallback when Firestore is empty or fails
   const getInitialHosts = () => {
     // This function is no longer used - hosts come from Firestore
     const defaultHosts = [
@@ -328,6 +306,40 @@ const HostAvailabilityApp = () => {
     // Return all hosts (including inactive) so admin management is possible after a version update
     return defaultHosts;
   };
+
+  // Load hosts from Firestore on mount
+  React.useEffect(() => {
+    const loadHosts = async () => {
+      try {
+        const snapshot = await db.collection('hosts').get();
+        const hostsData = [];
+        snapshot.forEach(doc => {
+          hostsData.push({ ...doc.data(), id: doc.data().id });
+        });
+        // Sort by ID
+        hostsData.sort((a, b) => a.id - b.id);
+        
+        // Fallback to default hosts if Firestore is empty
+        if (hostsData.length === 0) {
+          console.warn('Firestore returned no hosts, using default hosts as fallback');
+          const defaultHosts = getInitialHosts();
+          setAllHosts(defaultHosts);
+        } else {
+          setAllHosts(hostsData);
+        }
+        setHostsLoading(false);
+      } catch (error) {
+        console.error('Error loading hosts:', error);
+        // Fallback to default hosts on error
+        console.warn('Using default hosts as fallback due to error');
+        const defaultHosts = getInitialHosts();
+        setAllHosts(defaultHosts);
+        setHostsLoading(false);
+      }
+    };
+
+    loadHosts();
+  }, []);
 
   // Admin functions - now save to Firestore
   const addHost = async (hostData) => {
@@ -1791,10 +1803,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </summary>
                 <div className="p-4 mt-2 rounded-lg" style={{backgroundColor: '#FEF2F2', border: '2px solid #FCA5A5'}}>
                   <ul className="space-y-2">
-                    <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
-                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
-                      Chet B.
-                    </li>
                     <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
                       <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
                       Angie B.
