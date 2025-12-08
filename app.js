@@ -1663,7 +1663,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <span className="text-xl sm:text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
             <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>3</div>
-              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Click "Show Route" or "Get Directions"</span>
+              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Click "Get Directions" to see route options</span>
             </div>
           </div>
 
@@ -1692,24 +1692,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => {
-                          if (!userCoords) {
-                            alert('Please enter your address first to see the route on the map!');
-                            const searchInput = document.querySelector('input[placeholder*="e.g."]');
-                            if (searchInput) {
-                              searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              setTimeout(() => searchInput.focus(), 500);
-                            }
-                            return;
-                          }
-                          showDirections(favoriteHost);
+                          setDirectionsMenuOpen(favoriteHostId);
                         }}
-                        className="px-3 py-2 rounded-lg text-white text-sm font-semibold hover:opacity-90 transition-all"
-                        style={{backgroundColor: '#FBAD3F'}}
-                      >
-                        Show Route
-                      </button>
-                      <button
-                        onClick={() => setDirectionsMenuOpen(favoriteHostId)}
                         className="px-3 py-2 rounded-lg text-sm font-semibold hover:bg-orange-100 transition-all"
                         style={{color: '#007E8C', border: '2px solid #007E8C'}}
                       >
@@ -2516,36 +2500,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             )}
                           </button>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!host.available) {
-                                alert('This host is not collecting this week. Please choose a host marked as "Collecting This Week".');
-                                return;
-                              }
-                              if (!userCoords) {
-                                alert('Please enter your address first to see the route on the map!');
-                                // Focus on the search input
-                                const searchInput = document.querySelector('input[placeholder*="e.g."]');
-                                if (searchInput) {
-                                  searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                  setTimeout(() => searchInput.focus(), 500);
-                                }
-                                return;
-                              }
-                              showingDirections === host.id ? clearDirections() : showDirections(host);
-                            }}
-                            disabled={!host.available}
-                            className={`btn-primary px-4 py-3 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all touch-manipulation ${
-                              host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
-                            }`}
-                            style={{backgroundColor: showingDirections === host.id ? '#A31C41' : '#FBAD3F', minHeight: '48px'}}
-                            title={!host.available ? 'This host is not collecting this week' : (!userCoords ? 'Enter your address to see route on map' : (showingDirections === host.id ? 'Clear route from map' : 'Show route on the map'))}
-                          >
-                            <i className="lucide-route w-5 h-5"></i>
-                            <span>{showingDirections === host.id ? 'Clear Route' : 'Show Route'}</span>
-                          </button>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="relative" data-directions-menu style={{zIndex: directionsMenuOpen === host.id ? 1000 : 'auto'}}>
                             <button
                               ref={directionsMenuOpen === host.id ? directionsButtonRef : null}
@@ -2614,25 +2569,44 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {userCoords && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (!host.available) {
-                                        alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
-                                        setDirectionsMenuOpen(null);
-                                        return;
-                                      }
-                                      showDirections(host);
-                                      setDirectionsMenuOpen(null);
-                                    }}
-                                    className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
-                                  >
-                                    <div className="flex items-center justify-center gap-3 mb-1">
-                                      <i className="lucide-route w-6 h-6" style={{color: '#007E8C'}}></i>
-                                      <div className="font-bold text-base" style={{color: '#236383'}}>Show Directions In-App</div>
-                                    </div>
-                                    <div className="text-sm text-gray-600">View turn-by-turn directions below map</div>
-                                  </button>
+                                  <>
+                                    {showingDirections === host.id ? (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          clearDirections();
+                                          setDirectionsMenuOpen(null);
+                                        }}
+                                        className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                                      >
+                                        <div className="flex items-center justify-center gap-3 mb-1">
+                                          <i className="lucide-x w-6 h-6" style={{color: '#007E8C'}}></i>
+                                          <div className="font-bold text-base" style={{color: '#236383'}}>Clear Route</div>
+                                        </div>
+                                        <div className="text-sm text-gray-600">Remove route from map</div>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (!host.available) {
+                                            alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                            setDirectionsMenuOpen(null);
+                                            return;
+                                          }
+                                          showDirections(host);
+                                          setDirectionsMenuOpen(null);
+                                        }}
+                                        className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                                      >
+                                        <div className="flex items-center justify-center gap-3 mb-1">
+                                          <i className="lucide-route w-6 h-6" style={{color: '#007E8C'}}></i>
+                                          <div className="font-bold text-base" style={{color: '#236383'}}>Show Directions In-App</div>
+                                        </div>
+                                        <div className="text-sm text-gray-600">View turn-by-turn directions below map</div>
+                                      </button>
+                                    )}
+                                  </>
                                 )}
                                 <button
                                   onClick={(e) => {
