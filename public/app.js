@@ -1860,35 +1860,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </p>
               </div>
             )}
-
-            {/* Collapsible Alerts Below Search */}
-            <div className="mt-4 space-y-2">
-              {/* Hosts NOT Available - Collapsible */}
-              <details className="group">
-                <summary className="cursor-pointer list-none p-3 rounded-lg text-sm font-bold" style={{backgroundColor: '#FEE2E2', color: '#991B1B', border: '2px solid #DC2626'}}>
-                  <span className="inline-flex items-center gap-2">
-                    <span className="group-open:rotate-90 transition-transform">▶</span>
-                    Hosts NOT available this week (click to expand)
-                  </span>
-                </summary>
-                <div className="p-4 mt-2 rounded-lg" style={{backgroundColor: '#FEF2F2', border: '2px solid #FCA5A5'}}>
-                  <ul className="space-y-2">
-                    <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
-                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
-                      Jenny V.W.
-                    </li>
-                    <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
-                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
-                      Carrey H.
-                    </li>
-                    <li className="flex items-center gap-2 text-base font-bold" style={{color: '#991B1B'}}>
-                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: '#DC2626'}}></span>
-                      Stacey & Jack G.
-                    </li>
-                  </ul>
-                </div>
-              </details>
-            </div>
           </div>
 
           {/* View Toggle */}
