@@ -2690,12 +2690,34 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
+                                {userCoords && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!host.available) {
+                                        alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                        setDirectionsMenuOpen(null);
+                                        return;
+                                      }
+                                      showDirections(host);
+                                      setDirectionsMenuOpen(null);
+                                    }}
+                                    className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                                  >
+                                    <div className="flex items-center justify-center gap-3 mb-1">
+                                      <i className="lucide-route w-6 h-6" style={{color: '#007E8C'}}></i>
+                                      <div className="font-bold text-base" style={{color: '#236383'}}>Show Directions In-App</div>
+                                    </div>
+                                    <div className="text-sm text-gray-600">View turn-by-turn directions below map</div>
+                                  </button>
+                                )}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     openGoogleMapsDirections(host);
                                   }}
-                                  className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                                  className={`w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center ${userCoords ? 'border-t' : ''}`}
+                                  style={userCoords ? {borderColor: '#e0e0e0'} : {}}
                                 >
                                   <div className="flex items-center justify-center gap-3 mb-1">
                                     <i className="lucide-map w-6 h-6" style={{color: '#007E8C'}}></i>
