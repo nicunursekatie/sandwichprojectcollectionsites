@@ -2383,7 +2383,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
               </div>
             ) : (
-              filteredHosts.map((host, index) => (
+              filteredHosts.map((host, index) => {
+                // Calculate actual distance rank from sortedHosts (not filtered index)
+                const actualRank = userCoords && viewMode === 'proximity' && sortedHosts.length > 0
+                  ? sortedHosts.findIndex(h => h.id === host.id) + 1
+                  : null;
+                const isTopThree = actualRank !== null && actualRank <= 3 && host.available;
+                
+                return (
                 <div
                   key={host.id}
                   data-host-id={host.id}
@@ -2395,8 +2402,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     // Only add hover effects and cursor pointer on desktop (md breakpoint and up) for available hosts
                     host.available ? 'md:hover:shadow-xl md:hover:scale-[1.02] md:cursor-pointer' : 'opacity-75'
                   } ${
-                    userCoords && viewMode === 'proximity' && index < 3 && host.available
-                      ? `top-host-card top-host-${index + 1}`
+                    isTopThree
+                      ? `top-host-card top-host-${actualRank}`
                       : ''
                   } ${highlightedHostId === host.id ? 'ring-4 ring-yellow-400 shadow-xl' : ''}`}
                   onClick={(e) => {
@@ -2463,11 +2470,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col gap-3 mb-3">
                         <div className="flex items-center gap-3 flex-wrap">
-                          {userCoords && viewMode === 'proximity' && index < 3 && host.available && (
+                          {isTopThree && (
                             <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                              index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                              actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                             }`}>
-                              {index + 1}
+                              {actualRank}
                             </span>
                           )}
                           <h3 className={`font-bold text-2xl flex-1 ${!host.available ? 'opacity-60' : ''}`}>{host.name}</h3>
@@ -2751,7 +2758,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 </div>
               </div>
-              ))
+                );
+              })
             )}
               </div>
             )}
