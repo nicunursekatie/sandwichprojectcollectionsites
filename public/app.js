@@ -2507,7 +2507,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   {!isExpanded ? (
                     <div className="p-4 md:p-5">
                       {/* Header Row: Rank Badge, Name, Favorite */}
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {isTopThree && (
                             <span className={`w-6 h-6 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
@@ -2516,8 +2516,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               {actualRank}
                             </span>
                           )}
-                          <h3 className={`font-bold text-lg truncate ${!host.available ? 'opacity-60' : ''}`}>
-                            {host.name} — {host.area}{host.neighborhood ? ` (${host.neighborhood})` : ''}
+                          <h3 className={`font-bold text-lg ${!host.available ? 'opacity-60' : ''}`}>
+                            {host.name}
                           </h3>
                         </div>
                         <button
@@ -2534,6 +2534,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <span className="text-lg opacity-30 hover:opacity-60">⭐</span>
                           )}
                         </button>
+                      </div>
+
+                      {/* Location Badges: Area and Neighborhood */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{backgroundColor: '#236383', color: '#fff'}}>
+                          {host.area}
+                        </span>
+                        {host.neighborhood && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{backgroundColor: '#007e8c', color: '#fff'}}>
+                            {host.neighborhood}
+                          </span>
+                        )}
                       </div>
 
                       {/* Info Line: Hours • Status • Distance/Drive Time */}
