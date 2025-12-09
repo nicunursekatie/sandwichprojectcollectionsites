@@ -1640,12 +1640,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-sm sm:text-base font-medium mb-1 sm:mb-2" style={{color: '#236383'}}>
                   Drop-off options for THIS Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
                 </p>
-                <p className="text-xs sm:text-sm">
+                <p className="text-sm">
                   <button
                     onClick={() => {
                       document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className="text-blue-600 underline hover:no-underline font-medium"
+                    className="underline hover:no-underline font-semibold"
+                    style={{color: '#007E8C'}}
                   >
                     Need sandwich-making guides?
                   </button>
@@ -2372,16 +2373,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
               </div>
             </div>
-            {userCoords && viewMode === 'proximity' && (
-              <div className="distance-banner p-4 mb-2">
-                <div className="flex items-center">
-                  <i className="lucide-map-pin w-5 h-5 mr-2.5" style={{color: '#007E8C'}}></i>
-                  <span className="text-base font-semibold" style={{color: '#236383'}}>
-                    Hosts sorted by distance from your location
-                  </span>
-                </div>
-              </div>
-            )}
             {filteredHosts.length === 0 ? (
               <div className="bg-white rounded-2xl premium-card p-12 text-center">
                 <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
@@ -2393,14 +2384,42 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   ? sortedHosts.findIndex(h => h.id === host.id) + 1
                   : null;
                 const isTopThree = actualRank !== null && actualRank <= 3 && host.available;
+
+                // Count how many available hosts are in the top 3 to know when to show divider
+                const availableTopThreeCount = userCoords && viewMode === 'proximity' && sortedHosts.length > 0
+                  ? sortedHosts.slice(0, 3).filter(h => h.available).length
+                  : 0;
+
+                // Show section headers based on position
+                const showTopThreeHeader = userCoords && viewMode === 'proximity' && index === 0 && availableTopThreeCount > 0;
+                const showOtherHostsHeader = userCoords && viewMode === 'proximity' && actualRank === availableTopThreeCount + 1;
                 
                 const isExpanded = expandedHosts.has(host.id);
                 const availability = getHostAvailability(host);
                 const isOpenNow = availability && availability.status === 'open';
                 
                 return (
+                <React.Fragment key={host.id}>
+                  {/* Section header: Your 3 Closest Hosts */}
+                  {showTopThreeHeader && (
+                    <div className="mb-3">
+                      <h2 className="text-lg font-bold" style={{color: '#236383'}}>
+                        Your {availableTopThreeCount} Closest Host{availableTopThreeCount !== 1 ? 's' : ''}
+                      </h2>
+                      <p className="text-sm" style={{color: '#666'}}>
+                        Based on {userAddress || 'your location'}
+                      </p>
+                    </div>
+                  )}
+                  {/* Section header: All Other Hosts */}
+                  {showOtherHostsHeader && (
+                    <div className="mt-6 mb-3 pt-4 border-t-2" style={{borderColor: '#e5e7eb'}}>
+                      <h2 className="text-base font-semibold" style={{color: '#666'}}>
+                        All Other Hosts Collecting This Week
+                      </h2>
+                    </div>
+                  )}
                 <div
-                  key={host.id}
                   data-host-id={host.id}
                   className={`bg-white rounded-2xl premium-card transition-all border-2 ${
                     host.available 
@@ -2416,72 +2435,73 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 >
                   {/* Collapsed View (Default) */}
                   {!isExpanded ? (
-                    <div className="p-4 md:p-6">
-                      {/* Header: Name — Area (Neighborhood) */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            {isTopThree && (
-                              <span className={`w-6 h-6 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                                actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
-                              }`}>
-                                {actualRank}
-                              </span>
-                            )}
-                            <h3 className={`font-bold text-lg md:text-xl ${!host.available ? 'opacity-60' : ''}`}>
-                              {host.name} — {host.area}{host.neighborhood ? ` (${host.neighborhood})` : ''}
-                            </h3>
-                          </div>
-                          
-                          {/* Status Line: OPEN NOW · distance · drive time */}
-                          {userCoords && host.distance && (
-                            <div className="flex items-center gap-2 flex-wrap text-sm mb-2">
-                              {isOpenNow && (
-                                <>
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
-                                    🟢 OPEN NOW
-                                  </span>
-                                  <span className="text-gray-500">·</span>
-                                </>
-                              )}
-                              <span style={{color: '#007E8C'}}>{host.distance} miles</span>
-                              {hostDriveTimes[host.id] && (
-                                <>
-                                  <span className="text-gray-500">·</span>
-                                  <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]} drive</span>
-                                </>
-                              )}
-                            </div>
+                    <div className="p-4 md:p-5">
+                      {/* Header Row: Rank Badge, Name, Favorite */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {isTopThree && (
+                            <span className={`w-6 h-6 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                              actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
+                            }`}>
+                              {actualRank}
+                            </span>
                           )}
-                          
-                          {/* Condensed Hours */}
-                          <div className="text-sm font-medium" style={{color: '#007E8C'}}>
-                            {formatCondensedHours(host)}
-                          </div>
+                          <h3 className={`font-bold text-lg truncate ${!host.available ? 'opacity-60' : ''}`}>
+                            {host.name} — {host.area}{host.neighborhood ? ` (${host.neighborhood})` : ''}
+                          </h3>
                         </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavoriteHost(host.id);
                           }}
-                          className="flex-shrink-0 p-1.5 rounded-lg transition-all hover:bg-gray-100 ml-2"
+                          className="flex-shrink-0 p-1 rounded-lg transition-all hover:bg-gray-100 ml-2"
                           title={favoriteHostId === host.id ? 'Remove from favorites' : 'Save as my host'}
                         >
                           {favoriteHostId === host.id ? (
-                            <span className="text-xl">⭐</span>
+                            <span className="text-lg">⭐</span>
                           ) : (
-                            <span className="text-xl opacity-30 hover:opacity-60">⭐</span>
+                            <span className="text-lg opacity-30 hover:opacity-60">⭐</span>
                           )}
                         </button>
                       </div>
-                      
+
+                      {/* Info Line: Hours • Status • Distance/Drive Time */}
+                      <div className="flex items-center flex-wrap gap-x-1 text-sm mb-3">
+                        <span className="font-medium" style={{color: '#555'}}>{formatCondensedHours(host)}</span>
+                        <span className="text-gray-400">•</span>
+                        {host.available ? (
+                          <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
+                        ) : (
+                          <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
+                        )}
+                        {userCoords && host.distance && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span style={{color: '#007E8C'}}>{host.distance} mi</span>
+                            {hostDriveTimes[host.id] && (
+                              <>
+                                <span className="text-gray-400">•</span>
+                                <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]}</span>
+                              </>
+                            )}
+                          </>
+                        )}
+                        {isOpenNow && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
+                          </>
+                        )}
+                      </div>
+
                       {/* Show Details Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleHostExpanded(host.id);
                         }}
-                        className="w-full mt-3 px-4 py-2 rounded-lg font-medium text-sm transition-all hover:bg-gray-50 border-2"
+                        className="w-full px-4 py-2 rounded-lg font-medium text-sm transition-all hover:bg-gray-50 border-2"
                         style={{borderColor: '#007E8C', color: '#007E8C'}}
                       >
                         Show Details
@@ -2851,6 +2871,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                   )}
                 </div>
+                </React.Fragment>
                 );
               })
             )}
