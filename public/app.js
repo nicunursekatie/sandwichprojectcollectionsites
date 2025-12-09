@@ -65,6 +65,7 @@ const HostAvailabilityApp = () => {
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
+  const [expandedHosts, setExpandedHosts] = React.useState(new Set());
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
@@ -293,6 +294,25 @@ const HostAvailabilityApp = () => {
     nextWednesday.setDate(today.getDate() + daysUntilWednesday);
     return nextWednesday;
   });
+  // Helper to format condensed hours (8am–8pm)
+  const formatCondensedHours = (host) => {
+    if (!host.openTime || !host.closeTime) return host.hours || 'Hours not available';
+    return `${formatTime(host.openTime)}–${formatTime(host.closeTime)}`;
+  };
+
+  // Toggle expanded state for host card
+  const toggleHostExpanded = (hostId) => {
+    setExpandedHosts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(hostId)) {
+        newSet.delete(hostId);
+      } else {
+        newSet.add(hostId);
+      }
+      return newSet;
+    });
+  };
+
   const formatTime = helperRefs.formatTime || ((time24) => {
     if (!time24 || typeof time24 !== 'string') return '';
     const [hours, minutes = '00'] = time24.split(':');
@@ -2443,134 +2463,161 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   ? sortedHosts.findIndex(h => h.id === host.id) + 1
                   : null;
                 const isTopThree = actualRank !== null && actualRank <= 3 && host.available;
+                const isExpanded = expandedHosts.has(host.id);
+                const availability = getHostAvailability(host);
+                const isOpenNow = availability && availability.status === 'open';
                 
                 return (
                 <div
                   key={host.id}
                   data-host-id={host.id}
-                  className={`bg-white rounded-2xl premium-card p-6 md:p-8 transition-all border-2 ${
+                  className={`bg-white rounded-2xl premium-card transition-all border-2 ${
                     host.available 
                       ? 'border-transparent md:hover:border-blue-200' 
                       : 'border-red-200 bg-red-50/30'
                   } ${
-                    // Only add hover effects and cursor pointer on desktop (md breakpoint and up) for available hosts
-                    host.available ? 'md:hover:shadow-xl md:hover:scale-[1.02] md:cursor-pointer' : 'opacity-75'
+                    host.available ? 'md:hover:shadow-xl md:cursor-pointer' : 'opacity-75'
                   } ${
                     isTopThree
                       ? `top-host-card top-host-${actualRank}`
                       : ''
                   } ${highlightedHostId === host.id ? 'ring-4 ring-yellow-400 shadow-xl' : ''}`}
-                  onClick={(e) => {
-                    // Only handle card clicks on desktop and when clicking on non-interactive areas
-                    const isMobile = window.innerWidth < 768;
-                    const clickedElement = e.target;
-                    const isInteractive = clickedElement.closest('button, a, input, select, textarea, [role="button"]');
-                    
-                    // On mobile, don't do anything if clicking on interactive elements
-                    if (isMobile && isInteractive) {
-                      return;
-                    }
-                    
-                    // On desktop, allow card clicks but still check if it's an interactive element
-                    if (!isMobile && isInteractive) {
-                      return;
-                    }
-                    
-                    setHighlightedHostId(host.id);
-                    trackEvent('host_card_click', {
-                      event_category: 'Host List',
-                      event_label: 'Host Card Clicked',
-                      host_name: host.name,
-                      host_area: host.area
-                    });
-                    // Scroll map into view if on mobile (but only if not clicking a button)
-                    if (viewMode !== 'list' && isMobile && !isInteractive) {
-                      document.getElementById('map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                  }}
                 >
-                  <div className="flex gap-5 items-start">
-                    {/* Show map thumbnail in list view or when no address entered */}
-                    {(viewMode === 'list' || !userCoords) && (
-                      <div className="flex-shrink-0" style={{width: '85px'}}>
-                        {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
-                          <img
-                            src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=15&size=85x85&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
-                            alt={`Map of ${host.name}`}
-                            className="rounded-lg border border-gray-200 shadow-sm"
-                            style={{width: '85px', height: '85px', objectFit: 'cover'}}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div
-                          className="rounded-lg border border-gray-200 shadow-sm flex items-center justify-center"
-                          style={{
-                            width: '85px',
-                            height: '85px',
-                            backgroundColor: '#f8f9fa',
-                            display: GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE' ? 'flex' : 'none'
-                          }}
-                        >
-                          <div className="text-center text-xs" style={{color: '#236383'}}>
-                            <i className="lucide-map-pin w-4 h-4 mx-auto mb-1"></i>
-                            <div className="font-semibold text-xs">{host.area}</div>
+                  {/* Collapsed View (Default) */}
+                  {!isExpanded ? (
+                    <div className="p-4 md:p-6">
+                      {/* Header: Name — Area (Neighborhood) */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            {isTopThree && (
+                              <span className={`w-6 h-6 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
+                              }`}>
+                                {actualRank}
+                              </span>
+                            )}
+                            <h3 className={`font-bold text-lg md:text-xl ${!host.available ? 'opacity-60' : ''}`}>
+                              {host.name} — {host.area}{host.neighborhood ? ` (${host.neighborhood})` : ''}
+                            </h3>
                           </div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col gap-3 mb-3">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          {isTopThree && (
-                            <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                              actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
-                            }`}>
-                              {actualRank}
-                            </span>
+                          
+                          {/* Status Line: OPEN NOW · distance · drive time */}
+                          {userCoords && host.distance && (
+                            <div className="flex items-center gap-2 flex-wrap text-sm mb-2">
+                              {isOpenNow && (
+                                <>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                                    🟢 OPEN NOW
+                                  </span>
+                                  <span className="text-gray-500">·</span>
+                                </>
+                              )}
+                              <span style={{color: '#007E8C'}}>{host.distance} miles</span>
+                              {hostDriveTimes[host.id] && (
+                                <>
+                                  <span className="text-gray-500">·</span>
+                                  <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]} drive</span>
+                                </>
+                              )}
+                            </div>
                           )}
-                          <h3 className={`font-bold text-2xl flex-1 ${!host.available ? 'opacity-60' : ''}`}>{host.name}</h3>
-                          {/* Prominent Availability Badge */}
-                          <div className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 flex-shrink-0 ${
-                            host.available 
-                              ? 'border-2' 
-                              : 'bg-red-100 text-red-800 border-2 border-red-300'
-                          }`}
-                          style={host.available ? {
-                            backgroundColor: '#47bc3b',
-                            color: 'white',
-                            borderColor: '#47bc3b'
-                          } : {}}>
-                            {host.available ? (
-                              <>
-                                <span className="text-lg">✅</span>
-                                <span>Collecting This Week</span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-lg">❌</span>
-                                <span>NOT Collecting This Week</span>
-                              </>
-                            )}
+                          
+                          {/* Condensed Hours */}
+                          <div className="text-sm font-medium" style={{color: '#007E8C'}}>
+                            {formatCondensedHours(host)}
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavoriteHost(host.id);
-                            }}
-                            className="flex-shrink-0 p-2 rounded-lg transition-all hover:bg-gray-100"
-                            title={favoriteHostId === host.id ? 'Remove from favorites' : 'Save as my host'}
-                          >
-                            {favoriteHostId === host.id ? (
-                              <span className="text-2xl">⭐</span>
-                            ) : (
-                              <span className="text-2xl opacity-30 hover:opacity-60">⭐</span>
-                            )}
-                          </button>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavoriteHost(host.id);
+                          }}
+                          className="flex-shrink-0 p-1.5 rounded-lg transition-all hover:bg-gray-100 ml-2"
+                          title={favoriteHostId === host.id ? 'Remove from favorites' : 'Save as my host'}
+                        >
+                          {favoriteHostId === host.id ? (
+                            <span className="text-xl">⭐</span>
+                          ) : (
+                            <span className="text-xl opacity-30 hover:opacity-60">⭐</span>
+                          )}
+                        </button>
+                      </div>
+                      
+                      {/* Show Details Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleHostExpanded(host.id);
+                        }}
+                        className="w-full mt-3 px-4 py-2 rounded-lg font-medium text-sm transition-all hover:bg-gray-50 border-2"
+                        style={{borderColor: '#007E8C', color: '#007E8C'}}
+                      >
+                        Show Details
+                      </button>
+                    </div>
+                  ) : (
+                    /* Expanded View */
+                    <div className="p-6 md:p-8">
+                      <div className="flex gap-5 items-start">
+                        {/* Show map thumbnail in list view or when no address entered */}
+                        {(viewMode === 'list' || !userCoords) && (
+                          <div className="flex-shrink-0" style={{width: '85px'}}>
+                            {GOOGLE_MAPS_API_KEY !== 'YOUR_API_KEY_HERE' ? (
+                              <img
+                                src={`https://maps.googleapis.com/maps/api/staticmap?center=${host.lat},${host.lng}&zoom=15&size=85x85&maptype=roadmap&markers=color:red%7C${host.lat},${host.lng}&key=${GOOGLE_MAPS_API_KEY}`}
+                                alt={`Map of ${host.name}`}
+                                className="rounded-lg border border-gray-200 shadow-sm"
+                                style={{width: '85px', height: '85px', objectFit: 'cover'}}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div
+                              className="rounded-lg border border-gray-200 shadow-sm flex items-center justify-center"
+                              style={{
+                                width: '85px',
+                                height: '85px',
+                                backgroundColor: '#f8f9fa',
+                                display: GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE' ? 'flex' : 'none'
+                              }}
+                            >
+                              <div className="text-center text-xs" style={{color: '#236383'}}>
+                                <i className="lucide-map-pin w-4 h-4 mx-auto mb-1"></i>
+                                <div className="font-semibold text-xs">{host.area}</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col gap-3 mb-3">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {isTopThree && (
+                                <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                  actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
+                                }`}>
+                                  {actualRank}
+                                </span>
+                              )}
+                              <h3 className={`font-bold text-2xl flex-1 ${!host.available ? 'opacity-60' : ''}`}>{host.name}</h3>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleFavoriteHost(host.id);
+                                }}
+                                className="flex-shrink-0 p-2 rounded-lg transition-all hover:bg-gray-100"
+                                title={favoriteHostId === host.id ? 'Remove from favorites' : 'Save as my host'}
+                              >
+                                {favoriteHostId === host.id ? (
+                                  <span className="text-2xl">⭐</span>
+                                ) : (
+                                  <span className="text-2xl opacity-30 hover:opacity-60">⭐</span>
+                                )}
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="relative" data-directions-menu style={{zIndex: directionsMenuOpen === host.id ? 1000 : 'auto'}}>
                             <button
                               ref={directionsMenuOpen === host.id ? directionsButtonRef : null}
@@ -2750,7 +2797,42 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <i className="lucide-clock w-5 h-5 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
                             <div className="flex-1">
                               <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours</div>
-                              <div className="font-medium mb-2" style={{color: '#007E8C'}}>{host.hours}</div>
+                              <div className="font-medium mb-2 flex items-center gap-2 flex-wrap" style={{color: '#007E8C'}}>
+                                <span>{host.hours}</span>
+                                {(() => {
+                                  const availability = getHostAvailability(host);
+                                  if (availability && availability.status === 'open') {
+                                    return (
+                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                                        OPEN NOW
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                                <div className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 ${
+                                  host.available 
+                                    ? 'border-2' 
+                                    : 'bg-red-100 text-red-800 border-2 border-red-300'
+                                }`}
+                                style={host.available ? {
+                                  backgroundColor: '#47b3cb',
+                                  color: 'white',
+                                  borderColor: '#47b3cb'
+                                } : {}}>
+                                  {host.available ? (
+                                    <>
+                                      <span className="text-sm">✅</span>
+                                      <span>Collecting This Week</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="text-sm">❌</span>
+                                      <span>NOT Collecting This Week</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
                               {host.customDropoffDays && (
                                 <div className="mb-2 p-2 rounded-lg" style={{backgroundColor: 'rgba(251, 173, 63, 0.1)', border: '1px solid #FBAD3F'}}>
                                   <div className="text-sm font-semibold" style={{color: '#A31C41'}}>
@@ -2826,9 +2908,23 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                   </div>
                 )}
-                  </div>
+                      
+                      {/* Hide Details Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleHostExpanded(host.id);
+                        }}
+                        className="w-full mt-4 px-4 py-2 rounded-lg font-medium text-sm transition-all hover:bg-gray-50 border-2"
+                        style={{borderColor: '#007E8C', color: '#007E8C'}}
+                      >
+                        Hide Details
+                      </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
                 );
               })
             )}
