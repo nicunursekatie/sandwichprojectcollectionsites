@@ -1704,11 +1704,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1 sm:mb-2 tracking-tight" style={{letterSpacing: '-0.02em'}}>
                   <b>The Sandwich Project</b> Host Finder Tool
                 </h1>
-                <p className="text-base sm:text-xl font-bold mb-1 sm:mb-2" style={{color: '#007E8C'}}>
+                <p className="text-lg sm:text-2xl font-bold mb-1" style={{color: '#007E8C'}}>
                   {dropOffDate}
                 </p>
-                <p className="text-sm sm:text-base md:text-lg font-semibold mb-1 sm:mb-2" style={{color: '#236383'}}>
-                  We collect on Wednesdays <span className="text-xs sm:text-sm font-normal" style={{color: '#666'}}>(some hosts accept early Thursday AM drop-offs)</span>
+                <p className="text-sm sm:text-base font-medium mb-1 sm:mb-2" style={{color: '#236383'}}>
+                  Drop-off options for THIS Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
                 </p>
                 <p className="text-xs sm:text-sm">
                   <button
