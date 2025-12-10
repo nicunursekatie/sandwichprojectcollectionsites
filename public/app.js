@@ -1759,22 +1759,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
           </div>
 
-          {/* Tip and Simple View Toggle */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mb-4 px-3">
-            <div className="text-sm" style={{color: '#666'}}>
-              Looking for a specific host? Use the <span className="font-semibold" style={{color: '#007E8C'}}>search bar</span> below.
-            </div>
+          {/* Simple View Toggle - Prominent */}
+          <div className="flex flex-col items-center gap-3 mb-6 px-3">
             <button
               onClick={() => setSimpleView(!simpleView)}
-              className="text-sm px-3 py-1.5 rounded-lg font-medium transition-all hover:shadow-md"
+              className="px-6 py-3 rounded-xl font-bold text-lg transition-all hover:shadow-lg"
               style={{
-                backgroundColor: simpleView ? '#007E8C' : 'white',
-                color: simpleView ? 'white' : '#007E8C',
-                border: '2px solid #007E8C'
+                backgroundColor: simpleView ? '#007E8C' : '#FBAD3F',
+                color: 'white',
+                minWidth: '280px'
               }}
             >
-              {simpleView ? '← Back to Interactive View' : 'Simple List View'}
+              {simpleView ? '← Back to Interactive Map View' : '📋 Switch to Simple List View'}
             </button>
+            {!simpleView && (
+              <p className="text-sm text-center" style={{color: '#666'}}>
+                Prefer a simple list? Click above. Or use the search bar below to find a host.
+              </p>
+            )}
           </div>
 
           {/* Favorite Host Banner */}
@@ -1817,32 +1819,69 @@ This is safe because your API key is already restricted to only the Geocoding AP
           {/* Simple View - Plain list grouped by area */}
           {simpleView && (
             <div className="p-4">
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-xl font-bold mb-4" style={{color: '#236383'}}>All Hosts by Area</h2>
-                <p className="text-sm mb-6" style={{color: '#666'}}>
-                  Showing only hosts collecting this week. Click any phone number to call.
+              <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center" style={{color: '#236383'}}>All Hosts by Area</h2>
+                <p className="text-base mb-6 text-center" style={{color: '#666'}}>
+                  Showing hosts collecting this week. Tap phone to call, or tap Directions.
                 </p>
+
+                {/* Search bar for simple view */}
+                <div className="mb-6">
+                  <input
+                    type="text"
+                    placeholder="🔍 Search by host name or area..."
+                    value={nameSearch}
+                    onChange={(e) => setNameSearch(e.target.value)}
+                    className="w-full px-5 py-4 rounded-xl border-2 text-lg"
+                    style={{borderColor: '#007E8C'}}
+                  />
+                </div>
+
                 {(() => {
-                  const availableHosts = allHosts.filter(h => h.available);
+                  let availableHosts = allHosts.filter(h => h.available);
+                  // Apply search filter
+                  if (nameSearch.trim()) {
+                    const searchLower = nameSearch.toLowerCase();
+                    availableHosts = availableHosts.filter(h =>
+                      h.name.toLowerCase().includes(searchLower) ||
+                      h.area.toLowerCase().includes(searchLower) ||
+                      (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
+                    );
+                  }
                   const areas = [...new Set(availableHosts.map(h => h.area))].sort();
+
+                  if (availableHosts.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <p className="text-lg" style={{color: '#666'}}>No hosts found matching "{nameSearch}"</p>
+                      </div>
+                    );
+                  }
+
                   return areas.map(area => (
-                    <div key={area} className="mb-6">
-                      <h3 className="font-bold text-lg mb-3 pb-2 border-b-2" style={{color: '#007E8C', borderColor: '#007E8C'}}>{area}</h3>
-                      <div className="space-y-3">
+                    <div key={area} className="mb-8">
+                      <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
+                      <div className="space-y-4">
                         {availableHosts.filter(h => h.area === area).map(host => (
-                          <div key={host.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50">
+                          <div key={host.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
                             <div className="flex-1">
-                              <span className="font-semibold" style={{color: '#236383'}}>{host.name}</span>
-                              {host.neighborhood && <span className="text-sm text-gray-500 ml-2">({host.neighborhood})</span>}
+                              <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
+                              {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
+                              <div className="text-base mt-1" style={{color: '#555'}}>{formatCondensedHours(host)}</div>
                             </div>
-                            <div className="text-sm" style={{color: '#555'}}>{formatCondensedHours(host)}</div>
-                            <a href={`tel:${host.phone}`} className="font-medium hover:underline" style={{color: '#007E8C'}}>{host.phone}</a>
+                            <a
+                              href={`tel:${host.phone}`}
+                              className="font-bold text-lg px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                              style={{color: '#007E8C'}}
+                            >
+                              📞 {host.phone}
+                            </a>
                             <button
                               onClick={() => openGoogleMapsDirections(host)}
-                              className="text-sm px-3 py-1 rounded font-medium text-white"
+                              className="px-5 py-3 rounded-lg font-bold text-base text-white hover:shadow-md transition-all"
                               style={{backgroundColor: '#007E8C'}}
                             >
-                              Directions
+                              📍 Directions
                             </button>
                           </div>
                         ))}
