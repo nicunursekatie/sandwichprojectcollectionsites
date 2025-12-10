@@ -2621,7 +2621,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {isTopThree && (
-                            <span className={`w-7 h-7 rank-badge rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${
+                            <span className={`w-10 h-10 rank-badge rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0 ${
                               actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                             }`}>
                               {actualRank}
@@ -2765,7 +2765,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex flex-col gap-3 mb-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               {isTopThree && (
-                                <span className={`w-9 h-9 rank-badge rounded-full flex items-center justify-center text-base font-bold text-white flex-shrink-0 ${
+                                <span className={`w-12 h-12 rank-badge rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0 ${
                                   actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                                 }`}>
                                   {actualRank}
