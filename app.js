@@ -28,6 +28,7 @@ const HostAvailabilityApp = () => {
   const [feedbackRating, setFeedbackRating] = React.useState(0);
   const [feedbackText, setFeedbackText] = React.useState('');
   const [feedbackEmail, setFeedbackEmail] = React.useState('');
+  const [simpleView, setSimpleView] = React.useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
@@ -1688,6 +1689,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
           </div>
 
+          {/* Tip and Simple View Toggle */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mb-4 px-3">
+            <div className="text-sm" style={{color: '#666'}}>
+              Looking for a specific host? Use the <span className="font-semibold" style={{color: '#007E8C'}}>search bar</span> below.
+            </div>
+            <button
+              onClick={() => setSimpleView(!simpleView)}
+              className="text-sm px-3 py-1.5 rounded-lg font-medium transition-all hover:shadow-md"
+              style={{
+                backgroundColor: simpleView ? '#007E8C' : 'white',
+                color: simpleView ? 'white' : '#007E8C',
+                border: '2px solid #007E8C'
+              }}
+            >
+              {simpleView ? '← Back to Interactive View' : 'Simple List View'}
+            </button>
+          </div>
+
           {/* Favorite Host Banner */}
           {favoriteHostId && (() => {
             const favoriteHost = allHosts.find(h => h.id === favoriteHostId);
@@ -1727,8 +1746,48 @@ This is safe because your API key is already restricted to only the Geocoding AP
             );
           })()}
 
+          {/* Simple View - Plain list grouped by area */}
+          {simpleView && (
+            <div className="p-4">
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-bold mb-4" style={{color: '#236383'}}>All Hosts by Area</h2>
+                <p className="text-sm mb-6" style={{color: '#666'}}>
+                  Showing only hosts collecting this week. Click any phone number to call.
+                </p>
+                {(() => {
+                  const availableHosts = allHosts.filter(h => h.available);
+                  const areas = [...new Set(availableHosts.map(h => h.area))].sort();
+                  return areas.map(area => (
+                    <div key={area} className="mb-6">
+                      <h3 className="font-bold text-lg mb-3 pb-2 border-b-2" style={{color: '#007E8C', borderColor: '#007E8C'}}>{area}</h3>
+                      <div className="space-y-3">
+                        {availableHosts.filter(h => h.area === area).map(host => (
+                          <div key={host.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50">
+                            <div className="flex-1">
+                              <span className="font-semibold" style={{color: '#236383'}}>{host.name}</span>
+                              {host.neighborhood && <span className="text-sm text-gray-500 ml-2">({host.neighborhood})</span>}
+                            </div>
+                            <div className="text-sm" style={{color: '#555'}}>{formatCondensedHours(host)}</div>
+                            <a href={`tel:${host.phone}`} className="font-medium hover:underline" style={{color: '#007E8C'}}>{host.phone}</a>
+                            <button
+                              onClick={() => openGoogleMapsDirections(host)}
+                              className="text-sm px-3 py-1 rounded font-medium text-white"
+                              style={{backgroundColor: '#007E8C'}}
+                            >
+                              Directions
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* Smart Search Section */}
-          <div className="p-3 sm:p-4">
+          <div className="p-3 sm:p-4" style={{display: simpleView ? 'none' : 'block'}}>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
               <div className="relative flex-1">
                 <input
@@ -2507,16 +2566,42 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         )}
                       </div>
 
-                      {/* Show Details Button */}
+                      {/* Phone Number */}
+                      <a
+                        href={`tel:${host.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-sm mb-2 hover:underline"
+                        style={{color: '#236383'}}
+                      >
+                        <i className="lucide-phone w-4 h-4"></i>
+                        {host.phone}
+                      </a>
+
+                      {/* Notes */}
+                      {host.notes && (
+                        <p className="text-sm text-gray-600 mb-3 italic">
+                          {host.notes}
+                        </p>
+                      )}
+
+                      {/* Get Directions Button - Direct to Google Maps */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleHostExpanded(host.id);
+                          if (!host.available) {
+                            alert('⚠️ This host is NOT collecting this week.');
+                            return;
+                          }
+                          openGoogleMapsDirections(host);
                         }}
-                        className="w-full px-4 py-2 rounded-lg font-medium text-sm transition-all hover:bg-gray-50 border-2"
-                        style={{borderColor: '#007E8C', color: '#007E8C'}}
+                        disabled={!host.available}
+                        className={`w-full px-4 py-3 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all ${
+                          host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        style={{backgroundColor: '#007E8C'}}
                       >
-                        Show Details
+                        <i className="lucide-navigation w-5 h-5"></i>
+                        Get Directions
                       </button>
                     </div>
                   ) : (
