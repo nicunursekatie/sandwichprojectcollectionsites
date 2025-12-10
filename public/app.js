@@ -1863,26 +1863,39 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
                       <div className="space-y-4">
                         {availableHosts.filter(h => h.area === area).map(host => (
-                          <div key={host.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
-                            <div className="flex-1">
-                              <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
-                              {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
-                              <div className="text-base mt-1" style={{color: '#555'}}>{formatCondensedHours(host)}</div>
+                          <div key={host.id} className="flex flex-col gap-3 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+                              <div className="flex-1">
+                                <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
+                                {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
+                                <div className="text-base mt-1" style={{color: '#555'}}>{formatCondensedHours(host)}</div>
+                              </div>
+                              <a
+                                href={`tel:${host.phone}`}
+                                className="font-bold text-lg px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                                style={{color: '#007E8C'}}
+                              >
+                                📞 {host.phone}
+                              </a>
+                              <button
+                                onClick={() => openGoogleMapsDirections(host)}
+                                className="px-5 py-3 rounded-lg font-bold text-base text-white hover:shadow-md transition-all"
+                                style={{backgroundColor: '#007E8C'}}
+                              >
+                                📍 Directions
+                              </button>
                             </div>
-                            <a
-                              href={`tel:${host.phone}`}
-                              className="font-bold text-lg px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
-                              style={{color: '#007E8C'}}
-                            >
-                              📞 {host.phone}
-                            </a>
-                            <button
-                              onClick={() => openGoogleMapsDirections(host)}
-                              className="px-5 py-3 rounded-lg font-bold text-base text-white hover:shadow-md transition-all"
-                              style={{backgroundColor: '#007E8C'}}
-                            >
-                              📍 Directions
-                            </button>
+                            {host.notes && (
+                              <div className="p-3 rounded-lg" style={{backgroundColor: 'rgba(163, 28, 65, 0.08)'}}>
+                                <div className="flex items-start gap-2">
+                                  <span className="text-base">⚠️</span>
+                                  <div>
+                                    <span className="font-bold text-sm" style={{color: '#A31C41'}}>Special Instructions: </span>
+                                    <span className="text-sm" style={{color: '#236383'}}>{host.notes}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1935,7 +1948,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <button
               onClick={getCurrentLocation}
               className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
-              style={{backgroundColor: '#FBAD3F', color: 'white', minHeight: '52px'}}
+              style={{backgroundColor: '#236383', color: 'white', minHeight: '52px'}}
             >
               <i className="lucide-locate w-4 h-4 sm:w-5 sm:h-5"></i>
               Use My Current Location
@@ -2608,7 +2621,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {isTopThree && (
-                            <span className={`w-6 h-6 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                            <span className={`w-7 h-7 rank-badge rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${
                               actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                             }`}>
                               {actualRank}
@@ -2752,7 +2765,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex flex-col gap-3 mb-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               {isTopThree && (
-                                <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                <span className={`w-9 h-9 rank-badge rounded-full flex items-center justify-center text-base font-bold text-white flex-shrink-0 ${
                                   actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                                 }`}>
                                   {actualRank}
