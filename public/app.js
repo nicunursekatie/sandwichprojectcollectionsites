@@ -1759,6 +1759,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
           </div>
 
+          {/* Hosts Not Collecting This Week Banner */}
+          <div className="mx-3 sm:mx-4 mb-4 p-4 rounded-xl" style={{backgroundColor: '#F0F9FA', border: '2px solid #47B3CB'}}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl flex-shrink-0">📅</span>
+              <div>
+                <p className="font-semibold text-sm sm:text-base" style={{color: '#236383'}}>
+                  <span className="font-bold">Heads up:</span> Julie B., Carrey H., and Silke S. are not collecting this week.
+                </p>
+                <p className="text-xs sm:text-sm mt-1" style={{color: '#666'}}>
+                  Please choose from the other available hosts below.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Simple View Toggle - Prominent */}
           <div className="flex flex-col items-center gap-3 mb-6 px-3">
             <button
