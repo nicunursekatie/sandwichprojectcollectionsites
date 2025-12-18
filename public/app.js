@@ -51,6 +51,8 @@ const HostAvailabilityApp = () => {
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
+  const [userRole, setUserRole] = React.useState(null);
+  const [showReadOnlyModal, setShowReadOnlyModal] = React.useState(false);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
   const [directionsMenuOpen, setDirectionsMenuOpen] = React.useState(null);
   const [directionsMenuPosition, setDirectionsMenuPosition] = React.useState({ top: 0, left: 0 });
@@ -1719,6 +1721,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               onClick={() => {
                 const password = prompt('Enter admin password:');
                 if (password === 'sandwich2024') {
+                  setUserRole('admin');
                   setShowAdmin(true);
                 } else if (password !== null) {
                   alert('Incorrect password');
