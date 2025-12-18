@@ -1805,19 +1805,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-lg sm:text-2xl font-bold mb-1" style={{color: '#007E8C'}}>
                   {dropOffDate}
                 </p>
-                <p className="text-sm sm:text-base font-medium mb-1 sm:mb-2" style={{color: '#236383'}}>
+                <p className="text-sm sm:text-base font-medium" style={{color: '#236383'}}>
                   Drop-off options for THIS Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
-                </p>
-                <p className="text-sm">
-                  <button
-                    onClick={() => {
-                      document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }}
-                    className="underline hover:no-underline font-semibold"
-                    style={{color: '#007E8C'}}
-                  >
-                    Need sandwich-making guides?
-                  </button>
                 </p>
               </div>
             </div>
@@ -1839,36 +1828,83 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </button>
           </div>
 
-          {/* Visual How-to Steps */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-center gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-5 px-3 sm:px-4 py-3" style={{background: 'linear-gradient(135deg, #F0F9FA 0%, #E6F7F9 100%)', borderRadius: '12px'}}>
-            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>1</div>
-              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Enter your address</span>
+          {/* Address Search - Primary Action */}
+          <div className="px-3 sm:px-4 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Enter your address (e.g., 123 Peachtree St, Atlanta, GA)"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSmartSearch()}
+                  className="w-full px-4 sm:px-5 py-4 pr-10 rounded-xl text-base sm:text-lg border-2 transition-all"
+                  style={{borderColor: '#007E8C', backgroundColor: 'white'}}
+                  disabled={geocoding}
+                  autoFocus
+                />
+                {searchInput && (
+                  <button
+                    onClick={() => {
+                      setSearchInput('');
+                      setNameSearch('');
+                      setUserCoords(null);
+                      setUserAddress('');
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={handleSmartSearch}
+                disabled={geocoding || !searchInput.trim()}
+                className="btn-primary px-6 sm:px-8 py-4 text-white rounded-xl font-bold text-base sm:text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transition-all touch-manipulation w-full sm:w-auto"
+                style={{backgroundColor: '#007E8C', minHeight: '52px'}}
+              >
+                <i className="lucide-search w-5 h-5 sm:w-6 sm:h-6 mr-2"></i>
+                {geocoding ? 'Searching...' : 'Search'}
+              </button>
             </div>
-            <span className="text-xl sm:text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
-            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>2</div>
-              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>View your 3 nearest hosts</span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3">
+              <button
+                onClick={getCurrentLocation}
+                className="px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+                style={{backgroundColor: '#236383', color: 'white'}}
+              >
+                <i className="lucide-locate w-4 h-4"></i>
+                Use My Current Location
+              </button>
+              <span className="text-xs text-center sm:text-left" style={{color: '#666'}}>
+                or <button onClick={() => document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="underline hover:no-underline" style={{color: '#007E8C'}}>need sandwich-making guides?</button>
+              </span>
             </div>
-            <span className="text-xl sm:text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
-            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>3</div>
-              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Click "Get Directions" to see route options</span>
-            </div>
-          </div>
-
-          {/* Hosts Not Collecting This Week Banner */}
-          <div className="mx-3 sm:mx-4 mb-4 p-4 rounded-xl" style={{backgroundColor: '#F0F9FA', border: '2px solid #47B3CB'}}>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl flex-shrink-0">📅</span>
-              <div>
-                <p className="font-semibold text-sm sm:text-base" style={{color: '#236383'}}>
-                  <span className="font-bold">Heads up:</span> Julie B., Carrey H., and Silke S. are not collecting this week.
-                </p>
-                <p className="text-xs sm:text-sm mt-1" style={{color: '#666'}}>
-                  Please choose from the other available hosts below.
+            {userAddress && userCoords && (
+              <div className="mt-3 p-3 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
+                <p className="text-sm font-medium" style={{color: '#236383'}}>
+                  📍 Showing hosts near: <span className="font-semibold">{userAddress}</span>
                 </p>
               </div>
+            )}
+          </div>
+
+          {/* Holiday Break Banner */}
+          <div className="mx-3 sm:mx-4 mb-4 p-5 rounded-xl text-center" style={{backgroundColor: '#FFF9E6', border: '2px solid #FBAD3F'}}>
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-3xl">🎄</span>
+              <h2 className="text-xl sm:text-2xl font-bold" style={{color: '#236383'}}>
+                Holiday Break
+              </h2>
+              <p className="text-base sm:text-lg font-medium" style={{color: '#555'}}>
+                No collections on <span className="font-bold" style={{color: '#236383'}}>12/24</span> or <span className="font-bold" style={{color: '#236383'}}>12/31</span>
+              </p>
+              <p className="text-sm sm:text-base mt-1" style={{color: '#007E8C'}}>
+                Next collection: <span className="font-bold text-lg">Tuesday, January 7th</span>
+              </p>
+              <p className="text-xs mt-2" style={{color: '#888'}}>
+                Happy Holidays from The Sandwich Project! 🥪❤️
+              </p>
             </div>
           </div>
 
@@ -2027,110 +2063,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
             </div>
           )}
-
-          {/* Smart Search Section */}
-          <div className="p-3 sm:p-4" style={{display: simpleView ? 'none' : 'block'}}>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="e.g., 123 Peachtree St, Atlanta, GA or 30308"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSmartSearch()}
-                  className="w-full px-4 sm:px-5 py-4 sm:py-5 pr-10 sm:pr-12 premium-input rounded-xl text-base sm:text-lg border-2 transition-all"
-                  style={{borderColor: '#007E8C'}}
-                  disabled={geocoding}
-                  autoFocus
-                />
-                {searchInput && (
-                  <button
-                    onClick={() => {
-                      setSearchInput('');
-                      setNameSearch('');
-                      setUserCoords(null);
-                      setUserAddress('');
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={handleSmartSearch}
-                disabled={geocoding || !searchInput.trim()}
-                className="btn-primary px-6 sm:px-8 py-4 sm:py-5 text-white rounded-xl font-bold text-base sm:text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transition-all touch-manipulation w-full sm:w-auto"
-                style={{backgroundColor: '#007E8C', minHeight: '52px'}}
-              >
-                <i className="lucide-search w-5 h-5 sm:w-6 sm:h-6 mr-2"></i>
-                {geocoding ? 'Searching...' : 'Search'}
-              </button>
-            </div>
-            <button
-              onClick={getCurrentLocation}
-              className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
-              style={{backgroundColor: '#236383', color: 'white', minHeight: '52px'}}
-            >
-              <i className="lucide-locate w-4 h-4 sm:w-5 sm:h-5"></i>
-              Use My Current Location
-            </button>
-
-            {/* Drop-off Time Filter */}
-            <div className="w-full mt-4 p-4 rounded-xl" style={{backgroundColor: 'rgba(251, 173, 63, 0.1)', border: '1px solid rgba(251, 173, 63, 0.3)'}}>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <label className="font-semibold text-sm sm:text-base flex items-center gap-2" style={{color: '#236383'}}>
-                  <span>⏰</span>
-                  <span>I need to drop off at:</span>
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="time"
-                    value={dropOffTime}
-                    onChange={(e) => setDropOffTime(e.target.value)}
-                    className="px-4 py-2 rounded-lg border-2 text-base font-medium"
-                    style={{borderColor: '#FBAD3F', color: '#236383'}}
-                  />
-                  {dropOffTime && (
-                    <button
-                      onClick={() => setDropOffTime('')}
-                      className="text-sm px-3 py-1 rounded-lg hover:bg-orange-100 transition-colors"
-                      style={{color: '#A31C41'}}
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                {dropOffTime && (
-                  <span className="text-sm" style={{color: '#666'}}>
-                    Showing only hosts open at {formatTime(dropOffTime)}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {userAddress && userCoords && (
-              <div className="mt-4 p-4 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
-                <p className="text-base font-medium" style={{color: '#236383'}}>
-                  📍 Showing hosts near: <span className="font-semibold">{userAddress}</span>
-                </p>
-              </div>
-            )}
-            {nameSearch && !userCoords && (
-              <div className="mt-4 p-4 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
-                <p className="text-base font-medium" style={{color: '#236383'}}>
-                  🔍 Filtering by: <span className="font-semibold">{nameSearch}</span>
-                  <button
-                    onClick={() => { setNameSearch(''); setSearchInput(''); }}
-                    className="ml-2 text-sm underline hover:no-underline"
-                    style={{color: '#007E8C'}}
-                  >
-                    Clear
-                  </button>
-                </p>
-              </div>
-            )}
-          </div>
 
           {/* View Toggle */}
           <div className="flex flex-wrap justify-center gap-3">
@@ -2651,33 +2583,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
             {/* Host List */}
             {viewMode !== 'map' && (
               <div className="space-y-4 lg:max-h-[1400px] lg:overflow-y-auto">
-            {/* Important Notice About All Hosts */}
-            <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-1">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={includeUnavailableHosts}
-                      onChange={(e) => setIncludeUnavailableHosts(e.target.checked)}
-                      className="mt-1 w-5 h-5 rounded border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                      style={{accentColor: '#007E8C'}}
-                    />
-                    <div>
-                      <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>
-                        I'm planning a future dropoff (not this week)—include hosts that are closed this week
-                      </h4>
-                      <p className="text-sm mb-2" style={{color: '#555'}}>
-                        By default, we only show hosts that are collecting this week. Check this box to see all host homes for planning future drop-offs. Hosts marked as "NOT Collecting This Week" are shown for reference but are not accepting drop-offs this week.
-                      </p>
-                      <p className="text-xs p-2 rounded-lg" style={{backgroundColor: '#FFF9E6', color: '#991b1b', border: '1px solid #FBAD3F'}}>
-                        <strong>⚠️ Important:</strong> Hosts displayed may not be open next week either. Please check back on the Monday of the week you plan to drop off to ensure your selected host will be collecting that week.
-                      </p>
-                    </div>
-                  </label>
-                </div>
+            {/* Planning for next week - collapsible accordion */}
+            <details className="mb-4 rounded-lg border border-gray-200 bg-gray-50">
+              <summary className="px-4 py-2 cursor-pointer text-sm font-medium flex items-center gap-2" style={{color: '#666'}}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Planning for next week?
+                {includeUnavailableHosts && <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700">Showing closed hosts</span>}
+              </summary>
+              <div className="px-4 pb-3 pt-2 border-t border-gray-200">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeUnavailableHosts}
+                    onChange={(e) => setIncludeUnavailableHosts(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                    style={{accentColor: '#007E8C'}}
+                  />
+                  <span className="text-sm" style={{color: '#555'}}>
+                    Include hosts not collecting this week
+                  </span>
+                </label>
+                {includeUnavailableHosts && (
+                  <p className="mt-2 text-xs p-2 rounded" style={{backgroundColor: '#FFF9E6', color: '#92400e'}}>
+                    ⚠️ Closed hosts shown for planning only. Check back Monday to confirm availability.
+                  </p>
+                )}
               </div>
-            </div>
+            </details>
             {/* Search Bar for Host List */}
             <div className="mb-4">
               <div className="relative">
