@@ -2453,7 +2453,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <i className={`lucide-chevron-down w-3 h-3 transition-transform ${mapTooltipMenuOpen ? 'rotate-180' : ''}`}></i>
                         </button>
                         {mapTooltipMenuOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden" style={{borderColor: '#007E8C', minWidth: 'min(300px, 100%)', maxWidth: '100%'}}>
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden" style={{borderColor: '#007E8C', width: '100%', maxWidth: '100%'}}>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2984,7 +2984,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 if (isOpening) {
                                   const viewportWidth = window.innerWidth;
                                   const viewportHeight = window.innerHeight;
-                                  const dropdownWidth = 280;
+                                  const dropdownWidth = Math.min(280, viewportWidth - 32);
                                   const dropdownHeight = 200;
                                   
                                   let left = buttonRect.left;
@@ -3031,8 +3031,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 className="fixed bg-white rounded-lg shadow-xl border-2 overflow-hidden"
                                 style={{
                                   borderColor: '#007E8C',
-                                  minWidth: '280px',
-                                  width: 'max-content',
+                                  width: 'min(280px, calc(100vw - 2rem))',
                                   maxWidth: 'calc(100vw - 2rem)',
                                   zIndex: 10000,
                                   top: `${directionsMenuPosition.top}px`,
@@ -3355,9 +3354,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
         {/* Admin Modal */}
         {showAdmin && (
-          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowAdmin(false)}>
+          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50" onClick={() => setShowAdmin(false)}>
             <div className="modal-content bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto premium-card-header" onClick={e => e.stopPropagation()}>
-              <div className="p-8">
+              <div className="p-4 sm:p-8">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold" style={{color: '#236383'}}>🔧 Admin: Manage Hosts</h2>
                   <button
@@ -3372,15 +3371,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Import/Export Controls */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-6">
                   <h3 className="font-semibold mb-3" style={{color: '#236383'}}>📁 Backup & Deploy</h3>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                     <button
                       onClick={exportHosts}
-                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      className="w-full sm:w-auto px-4 py-2 rounded-lg font-medium text-white"
                       style={{backgroundColor: '#007E8C'}}
                     >
                       📤 Export JSON
                     </button>
-                    <label className="px-4 py-2 rounded-lg font-medium text-white cursor-pointer" style={{backgroundColor: '#FBAD3F'}}>
+                    <label className="w-full sm:w-auto px-4 py-2 rounded-lg font-medium text-white cursor-pointer text-center" style={{backgroundColor: '#FBAD3F'}}>
                       📥 Import JSON
                       <input
                         type="file"
@@ -3391,7 +3390,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </label>
                     <button
                       onClick={copyAsCode}
-                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      className="w-full sm:w-auto px-4 py-2 rounded-lg font-medium text-white"
                       style={{backgroundColor: '#A31C41'}}
                       title="Copy as code to paste into app.js"
                     >
@@ -3437,8 +3436,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   <h3 className="font-semibold text-lg mb-3" style={{color: '#236383'}}>All Hosts ({(allHosts || []).length})</h3>
                   {(allHosts || []).map(host => (
                     <div key={host.id} className={`p-4 rounded-xl border-2 ${host.available ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                             <h4 className="font-bold text-lg">{host.name}</h4>
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -3459,7 +3458,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             {host.notes && <p><strong>Notes:</strong> {host.notes}</p>}
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
                           <button
                             onClick={() => toggleHostAvailability(host.id)}
                             className="px-3 py-2 rounded-lg text-sm font-medium text-white"
@@ -3499,9 +3498,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
         {/* Edit Host Modal */}
         {editingHost && (
-          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setEditingHost(null)}>
+          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50" onClick={() => setEditingHost(null)}>
             <div className="modal-content bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto premium-card-header" onClick={e => e.stopPropagation()}>
-              <div className="p-8">
+              <div className="p-4 sm:p-8">
                 <h3 className="text-2xl font-bold mb-6" style={{color: '#236383'}}>
                   {editingHost.id === 'new' ? '➕ Add New Host' : `✏️ Edit ${editingHost.name}`}
                 </h3>
@@ -3572,7 +3571,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       />
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Latitude</label>
                         <input
@@ -3624,7 +3623,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <p className="text-sm mt-1" style={{color: '#007E8C'}}>This is shown to users as-is</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Wednesday Open Time</label>
                         <input
@@ -3651,7 +3650,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Thursday Open Time (optional)</label>
                         <input
@@ -3698,10 +3697,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                   </div>
                   
-                  <div className="flex gap-3 mt-8">
+                  <div className="flex flex-col sm:flex-row gap-3 mt-8">
                     <button
                       type="submit"
-                      className="flex-1 px-6 py-3 rounded-xl font-semibold text-white"
+                      className="w-full sm:flex-1 px-6 py-3 rounded-xl font-semibold text-white"
                       style={{backgroundColor: '#007E8C'}}
                     >
                     {editingHost.id === 'new' ? '➕ Add Host' : '💾 Save Changes'}
@@ -3709,7 +3708,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <button
                       type="button"
                       onClick={() => setEditingHost(null)}
-                      className="px-6 py-3 rounded-xl font-semibold"
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold"
                       style={{backgroundColor: 'white', color: '#236383', border: '2px solid rgba(71, 179, 203, 0.3)'}}
                     >
                       Cancel
@@ -3724,17 +3723,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {/* Feedback Button - Fixed position */}
         <button
           onClick={() => setShowFeedback(true)}
-          className="fixed bottom-6 right-6 px-6 py-3 rounded-full font-bold text-white shadow-2xl hover:shadow-3xl transition-all z-50 flex items-center gap-2"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 px-4 sm:px-6 py-3 rounded-full font-bold text-white shadow-2xl hover:shadow-3xl transition-all z-50 flex items-center gap-2 max-w-[calc(100vw-2rem)]"
           style={{backgroundColor: '#007E8C'}}
+          aria-label="Give Feedback"
         >
           <span>💬</span>
-          <span>Give Feedback</span>
+          <span className="hidden sm:inline">Give Feedback</span>
         </button>
 
         {/* Feedback Modal */}
         {showFeedback && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
-            <div className="bg-white rounded-2xl max-w-md w-full p-8 relative">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-[9999]">
+            <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto">
               <button
                 onClick={() => {
                   setShowFeedback(false);

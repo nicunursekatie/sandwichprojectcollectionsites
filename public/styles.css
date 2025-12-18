@@ -7,6 +7,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Predictable sizing to prevent subtle horizontal overflow on narrow screens */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html {
   overflow-x: hidden;
   width: 100%;
@@ -296,6 +301,11 @@ body {
   h1, h2, h3, h4, h5, h6, p, span, div {
     word-wrap: break-word;
     overflow-wrap: break-word;
+  }
+
+  /* Long URLs / emails / phone strings */
+  a, code, pre, textarea, input {
+    overflow-wrap: anywhere;
   }
   
   /* Prevent horizontal scroll on containers */
