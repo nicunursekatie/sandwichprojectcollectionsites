@@ -1073,102 +1073,123 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     }
 
-    // Prepare host data: sort by distance if user coords available, otherwise show all
-    let hostsToShowOnMap;
+    // Prepare host data: sort by distance if user coords available
     let hostsWithDistance;
-    const MAX_INITIAL_MARKERS = 15; // Limit markers for cleaner map view
+    let topThreeHosts = [];
+    let otherHosts = [];
 
     if (userCoords) {
-      // Filter by availability if checkbox is not checked
-      const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
-      hostsWithDistance = hostsForMap.map(host => ({
+      // Filter to only available hosts for ranking (unavailable shown separately if checkbox checked)
+      const availableHosts = allHostsForDisplay.filter(h => h.available);
+      const unavailableHosts = includeUnavailableHosts ? allHostsForDisplay.filter(h => !h.available) : [];
+
+      hostsWithDistance = availableHosts.map(host => ({
         ...host,
         distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
       })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-      // Show top 3 by default, or up to MAX_INITIAL_MARKERS when "show all" is clicked
-      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance.slice(0, MAX_INITIAL_MARKERS) : hostsWithDistance.slice(0, 3);
+
+      // Top 3 closest AVAILABLE hosts - these are the "sore thumbs"
+      topThreeHosts = hostsWithDistance.slice(0, 3);
+      // Other hosts only shown when "show all" is clicked
+      otherHosts = showAllHostsOnMap ? [
+        ...hostsWithDistance.slice(3),
+        ...unavailableHosts.map(h => ({
+          ...h,
+          distance: calculateDistance(userCoords.lat, userCoords.lng, h.lat, h.lng)
+        }))
+      ] : [];
     } else {
-      // No user location - filter by availability and limit to MAX_INITIAL_MARKERS
+      // No user location - show all available hosts as equal (no Top 3 highlighting)
       const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
-      hostsToShowOnMap = hostsForMap.slice(0, MAX_INITIAL_MARKERS);
       hostsWithDistance = hostsForMap;
+      topThreeHosts = [];
+      otherHosts = hostsForMap;
     }
 
     // Clear previous markers
     markersRef.current = {};
 
-    // Add host markers with numbered labels (only if there are hosts to show)
-    if (hostsToShowOnMap.length === 0) {
-      // Map will be empty - this is handled in the UI message above
+    // ========== TOP 3 MARKERS: HUGE, GOLD, NUMBERED, PULSING ==========
+    // These must be unmistakable - the "sore thumbs"
+
+    // Add CSS animation for pulsing halo (only once)
+    if (!document.getElementById('marker-pulse-style')) {
+      const style = document.createElement('style');
+      style.id = 'marker-pulse-style';
+      style.textContent = `
+        @keyframes markerPulse {
+          0% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.4); opacity: 0; }
+          100% { transform: scale(1); opacity: 0; }
+        }
+        .marker-pulse-ring {
+          animation: markerPulse 2s ease-out infinite;
+        }
+      `;
+      document.head.appendChild(style);
     }
-    
-    // Create markers array for clustering
-    const markers = [];
 
-    hostsToShowOnMap.forEach((host, index) => {
-      const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
+    topThreeHosts.forEach((host, index) => {
+      const rank = index + 1;
 
-      // Simple marker styling: teal for available, muted gray for unavailable
-      const markerColor = host.available ? '#007E8C' : '#B0B0B0';
-
-      // Create host marker content - clean, uniform markers
+      // Create the "sore thumb" marker - LARGE, GOLD, NUMBERED
       const hostMarkerContent = document.createElement('div');
       hostMarkerContent.innerHTML = `
-        <div style="
-          width: 28px;
-          height: 28px;
-          background: ${markerColor};
-          border: 2px solid white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          cursor: pointer;
-          opacity: ${host.available ? '1' : '0.6'};
-        ">
-          <div style="
-            width: 8px;
-            height: 8px;
-            background: white;
+        <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+          <!-- Pulsing halo ring -->
+          <div class="marker-pulse-ring" style="
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            background: #FBAD3F;
             border-radius: 50%;
+            z-index: 1;
           "></div>
+          <!-- Main pin -->
+          <div style="
+            position: relative;
+            z-index: 2;
+            width: 44px;
+            height: 44px;
+            background: #FBAD3F;
+            border: 4px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            cursor: pointer;
+          ">
+            <span style="
+              color: #1a1a1a;
+              font-weight: 800;
+              font-size: 18px;
+              font-family: 'Plus Jakarta Sans', sans-serif;
+            ">${rank}</span>
+          </div>
         </div>
       `;
 
-      // Simple tooltip with name and distance
-      const markerTitle = userCoords
-        ? `${host.name} - ${host.distance} mi`
-        : host.name;
+      const markerTitle = `#${rank} Closest: ${host.name} - ${host.distance} mi`;
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
         map: mapInstance,
         title: markerTitle,
-        content: hostMarkerContent
+        content: hostMarkerContent,
+        zIndex: 1000 + (3 - rank) // Top 3 always on top, #1 highest
       });
 
-      // Store marker reference
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
-      markers.push(marker);
 
-      // Add click listener to show tooltip
-      marker.addListener('click', (e) => {
-        // Alert if host is not available
-        if (!host.available) {
-          alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
-        }
-
+      marker.addListener('click', () => {
         setMapTooltip(host);
         setHighlightedHostId(host.id);
-
-        // Zoom in and center on the clicked marker
         mapInstance.setZoom(14);
         mapInstance.panTo({ lat: host.lat, lng: host.lng });
-
         trackEvent('map_marker_click', {
           event_category: 'Map',
-          event_label: 'Marker Clicked',
+          event_label: 'Top 3 Marker Clicked',
           host_name: host.name,
           host_area: host.area,
           rank: rank
@@ -1176,59 +1197,118 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     });
 
-    // Add marker clustering for cleaner map when zoomed out
-    if (markers.length > 5 && window.markerClusterer) {
+    // ========== OTHER MARKERS: TINY, MUTED, BACKGROUND NOISE ==========
+    // These should fade into the background - just small dots
+
+    const backgroundMarkers = []; // For clustering
+
+    otherHosts.forEach((host) => {
+      const isUnavailable = !host.available;
+
+      // Tiny muted dot - barely visible
+      const hostMarkerContent = document.createElement('div');
+      hostMarkerContent.innerHTML = `
+        <div style="
+          width: 10px;
+          height: 10px;
+          background: ${isUnavailable ? '#9CA3AF' : '#5BA3A8'};
+          border: 1px solid white;
+          border-radius: 50%;
+          opacity: ${isUnavailable ? '0.3' : '0.5'};
+          cursor: pointer;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        "></div>
+      `;
+
+      const markerTitle = userCoords
+        ? `${host.name} - ${host.distance} mi${isUnavailable ? ' (Not collecting)' : ''}`
+        : `${host.name}${isUnavailable ? ' (Not collecting)' : ''}`;
+
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        position: { lat: host.lat, lng: host.lng },
+        map: mapInstance,
+        title: markerTitle,
+        content: hostMarkerContent,
+        zIndex: isUnavailable ? 1 : 10 // Low z-index, below Top 3
+      });
+
+      markersRef.current[host.id] = { marker, content: hostMarkerContent };
+      backgroundMarkers.push(marker);
+
+      marker.addListener('click', () => {
+        if (isUnavailable) {
+          alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+        }
+        setMapTooltip(host);
+        setHighlightedHostId(host.id);
+        mapInstance.setZoom(14);
+        mapInstance.panTo({ lat: host.lat, lng: host.lng });
+        trackEvent('map_marker_click', {
+          event_category: 'Map',
+          event_label: 'Background Marker Clicked',
+          host_name: host.name,
+          host_area: host.area
+        });
+      });
+    });
+
+    // ========== CLUSTERING: Only for background markers ==========
+    if (backgroundMarkers.length > 5 && window.markerClusterer) {
       new window.markerClusterer.MarkerClusterer({
         map: mapInstance,
-        markers: markers,
+        markers: backgroundMarkers,
         renderer: {
           render: ({ count, position }) => {
-            // Custom cluster marker
             const clusterContent = document.createElement('div');
             clusterContent.innerHTML = `
               <div style="
-                width: 40px;
-                height: 40px;
-                background: #007E8C;
-                border: 3px solid white;
+                width: 28px;
+                height: 28px;
+                background: #5BA3A8;
+                border: 2px solid white;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
                 color: white;
                 font-weight: 600;
-                font-size: 14px;
+                font-size: 11px;
+                opacity: 0.7;
               ">${count}</div>
             `;
             return new google.maps.marker.AdvancedMarkerElement({
               position,
-              content: clusterContent
+              content: clusterContent,
+              zIndex: 5 // Below top 3
             });
           }
         }
       });
     }
 
-    // Fit map bounds appropriately
-    if (userCoords && hostsToShowOnMap.length > 0) {
-      // When user location is available, zoom in on the 3 closest hosts + user location
+    // ========== FOCUS MODE: Fit bounds to user + Top 3 ==========
+    if (userCoords && topThreeHosts.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      // Add user location to bounds
       bounds.extend({ lat: userCoords.lat, lng: userCoords.lng });
-      // Add the 3 closest hosts to bounds
-      hostsToShowOnMap.forEach(host => {
+      topThreeHosts.forEach(host => {
         bounds.extend({ lat: host.lat, lng: host.lng });
       });
-      // Fit bounds with padding to show all markers nicely
-      mapInstance.fitBounds(bounds, { padding: 80 });
-    } else if (!userCoords && hostsToShowOnMap.length > 0) {
-      // When no user location, show all available hosts
+      // Fit bounds with generous padding for clear separation
+      mapInstance.fitBounds(bounds, { padding: 60 });
+
+      // Ensure minimum zoom for readability (don't zoom out too far)
+      google.maps.event.addListenerOnce(mapInstance, 'bounds_changed', () => {
+        if (mapInstance.getZoom() > 13) {
+          mapInstance.setZoom(13);
+        }
+      });
+    } else if (otherHosts.length > 0) {
+      // No user location - show all hosts
       const bounds = new google.maps.LatLngBounds();
-      hostsToShowOnMap.forEach(host => {
+      otherHosts.forEach(host => {
         bounds.extend({ lat: host.lat, lng: host.lng });
       });
-      // Fit bounds with padding
       mapInstance.fitBounds(bounds, { padding: 50 });
     }
 
