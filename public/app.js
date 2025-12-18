@@ -1024,10 +1024,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
       return;
     }
 
+    // Muted map style for better marker visibility
+    const mutedMapStyles = [
+      { elementType: 'geometry', stylers: [{ saturation: -50 }, { lightness: 10 }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#666666' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { lightness: 50 }] },
+      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+      { featureType: 'poi.park', stylers: [{ visibility: 'simplified' }, { saturation: -50 }] },
+      { featureType: 'road', elementType: 'geometry', stylers: [{ lightness: 30 }, { saturation: -30 }] },
+      { featureType: 'road', elementType: 'labels', stylers: [{ saturation: -50 }] },
+      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+      { featureType: 'water', stylers: [{ saturation: -30 }, { lightness: 20 }] },
+      { featureType: 'administrative', elementType: 'labels', stylers: [{ saturation: -50 }] }
+    ];
+
     const mapInstance = new window.google.maps.Map(mapElement, {
       center: mapCenter,
       zoom: mapZoom,
-      mapId: 'SANDWICH_DROP_OFF_MAP'
+      styles: mutedMapStyles,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false
     });
 
     // Store initial values in closure for reset functionality
@@ -1098,123 +1115,50 @@ This is safe because your API key is already restricted to only the Geocoding AP
     
     hostsToShowOnMap.forEach((host, index) => {
       const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
+      const isTopThree = userCoords && rank <= 3;
 
-      // Determine marker styling based on availability and user location
-      let markerColor = '#007E8C'; // Default teal
-      let badgeColor = '#007E8C';
-      let badgeTextColor = '#FFFFFF';
+      // Simplified marker styling: size indicates proximity, color indicates availability
+      const markerSize = isTopThree ? 36 : 28;
+      const innerDotSize = isTopThree ? 14 : 10;
+      const markerColor = host.available ? '#007E8C' : '#9CA3AF'; // Teal for available, gray for unavailable
+      const borderStyle = host.available ? '3px solid white' : '3px dashed white'; // Dashed border for unavailable
 
-      // If host is not available, use red/gray colors
-      if (!host.available) {
-        markerColor = '#dc2626'; // Red
-        badgeColor = '#dc2626';
-        badgeTextColor = '#FFFFFF';
-      } else if (userCoords) {
-        // With user location, use ranking colors for available hosts
-        markerColor = '#A31C41'; // Default red
-        badgeColor = '#FFFFFF';
-        badgeTextColor = '#236383';
-
-        if (rank === 1) {
-          markerColor = '#FBBF24'; // Gold
-          badgeColor = '#FBBF24';
-          badgeTextColor = '#000000';
-        } else if (rank === 2) {
-          markerColor = '#9CA3AF'; // Silver
-          badgeColor = '#9CA3AF';
-          badgeTextColor = '#000000';
-        } else if (rank === 3) {
-          markerColor = '#F59E0B'; // Bronze
-          badgeColor = '#F59E0B';
-          badgeTextColor = '#000000';
-        }
-      }
-
-      // Create host marker content
+      // Create host marker content - clean, simple markers
       const hostMarkerContent = document.createElement('div');
-
-      if (userCoords) {
-        // Show numbered markers with distance when user location is known
-        hostMarkerContent.innerHTML = `
-          <div class="marker-wrapper" style="
+      hostMarkerContent.innerHTML = `
+        <div class="marker-wrapper" style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        ">
+          <div style="
+            width: ${markerSize}px;
+            height: ${markerSize}px;
+            background: ${markerColor};
+            border: ${borderStyle};
+            border-radius: 50%;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-          ">
-            <!-- Numbered badge -->
-            <div class="marker-badge" style="
-              width: 32px;
-              height: 32px;
-              background: ${badgeColor};
-              border: 3px solid white;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 700;
-              font-size: 14px;
-              color: ${badgeTextColor};
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              margin-bottom: 4px;
-              transition: transform 0.2s ease, box-shadow 0.2s ease;
-            ">
-              ${rank}
-            </div>
-            <!-- Info label -->
-            <div class="marker-label" style="
-              background: ${host.available ? 'white' : '#fee2e2'};
-              border: 2px solid ${host.available ? markerColor : '#dc2626'};
-              border-radius: 8px;
-              padding: 4px 8px;
-              font-size: 11px;
-              font-weight: bold;
-              color: ${host.available ? '#236383' : '#dc2626'};
-              white-space: nowrap;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-              transition: transform 0.2s ease, box-shadow 0.2s ease;
-            ">
-              ${host.distance}mi${!showAllHostsOnMap ? (host.available ? ' ✓' : ' ✗') : ''}
-            </div>
-          </div>
-        `;
-      } else {
-        // Show simple markers without distance when no user location
-        hostMarkerContent.innerHTML = `
-          <div class="marker-wrapper" style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.2s ease;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
           ">
             <div style="
-              width: 32px;
-              height: 32px;
-              background: ${badgeColor};
-              border: 3px solid white;
+              width: ${innerDotSize}px;
+              height: ${innerDotSize}px;
+              background: white;
               border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              margin-bottom: 4px;
-            ">
-              <div style="
-                width: 12px;
-                height: 12px;
-                background: white;
-                border-radius: 50%;
             "></div>
-            </div>
           </div>
-        `;
-      }
+        </div>
+      `;
 
+      // Tooltip shows details on hover
       const markerTitle = userCoords
-        ? `#${rank}: ${host.name} - ${host.distance} miles away${!showAllHostsOnMap ? (host.available ? ' (Collecting This Week)' : ' (NOT Collecting This Week)') : ''}`
-        : host.name;
+        ? `${host.name} - ${host.distance} mi${host.available ? '' : ' (Not collecting this week)'}`
+        : `${host.name}${host.available ? '' : ' (Not collecting this week)'}`;
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
