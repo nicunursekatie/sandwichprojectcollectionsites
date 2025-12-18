@@ -1041,6 +1041,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     const mapInstance = new window.google.maps.Map(mapElement, {
       center: mapCenter,
       zoom: mapZoom,
+      mapId: 'SANDWICH_DROP_OFF_MAP',
       styles: mutedMapStyles,
       mapTypeControl: false,
       streetViewControl: false,
