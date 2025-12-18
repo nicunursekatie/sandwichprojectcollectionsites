@@ -51,6 +51,8 @@ const HostAvailabilityApp = () => {
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
+  const [userRole, setUserRole] = React.useState(null);
+  const [showReadOnlyModal, setShowReadOnlyModal] = React.useState(false);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
   const [directionsMenuOpen, setDirectionsMenuOpen] = React.useState(null);
   const [directionsMenuPosition, setDirectionsMenuPosition] = React.useState({ top: 0, left: 0 });
@@ -58,10 +60,12 @@ const HostAvailabilityApp = () => {
   const [initialMapCenter, setInitialMapCenter] = React.useState(null);
   const [initialMapZoom, setInitialMapZoom] = React.useState(null);
   const [hostDriveTimes, setHostDriveTimes] = React.useState({});
+  const [dropOffTime, setDropOffTime] = React.useState(''); // User's intended drop-off time (HH:MM format)
   const [showFeedback, setShowFeedback] = React.useState(false);
   const [feedbackRating, setFeedbackRating] = React.useState(0);
   const [feedbackText, setFeedbackText] = React.useState('');
   const [feedbackEmail, setFeedbackEmail] = React.useState('');
+  const [simpleView, setSimpleView] = React.useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
@@ -300,6 +304,61 @@ const HostAvailabilityApp = () => {
     return `${formatTime(host.openTime)}–${formatTime(host.closeTime)}`;
   };
 
+  // Helper to check if host is open at a specific time and how much buffer there is
+  const checkHostTimeAvailability = (host, timeStr) => {
+    if (!timeStr || !host.openTime || !host.closeTime) {
+      return { isOpen: true, warning: null, minutesUntilClose: null };
+    }
+
+    // Convert time strings to minutes since midnight for comparison
+    const timeToMinutes = (t) => {
+      const [hours, minutes] = t.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const dropOffMinutes = timeToMinutes(timeStr);
+    const openMinutes = timeToMinutes(host.openTime);
+    const closeMinutes = timeToMinutes(host.closeTime);
+
+    // Check if drop-off time is within host's hours
+    if (dropOffMinutes < openMinutes) {
+      return {
+        isOpen: false,
+        warning: `Opens at ${formatTime(host.openTime)}`,
+        minutesUntilClose: null
+      };
+    }
+    if (dropOffMinutes >= closeMinutes) {
+      return {
+        isOpen: false,
+        warning: `Closes at ${formatTime(host.closeTime)}`,
+        minutesUntilClose: null
+      };
+    }
+
+    // Host is open - check how much buffer time
+    const minutesUntilClose = closeMinutes - dropOffMinutes;
+
+    if (minutesUntilClose <= 30) {
+      return {
+        isOpen: true,
+        warning: `Closes ${minutesUntilClose} min after your drop-off!`,
+        minutesUntilClose,
+        severity: 'high'
+      };
+    }
+    if (minutesUntilClose <= 60) {
+      return {
+        isOpen: true,
+        warning: `Closes ${minutesUntilClose} min after your drop-off`,
+        minutesUntilClose,
+        severity: 'medium'
+      };
+    }
+
+    return { isOpen: true, warning: null, minutesUntilClose };
+  };
+
   // Toggle expanded state for host card
   const toggleHostExpanded = (hostId) => {
     setExpandedHosts(prev => {
@@ -390,47 +449,38 @@ const HostAvailabilityApp = () => {
     loadHosts();
   }, []);
 
-  // Legacy code - keep structure but don't use
-  const getInitialHosts = () => {
-    // This function is no longer used - hosts come from Firestore
-    const defaultHosts = [
-      { id: 1, name: 'Karen C.', area: 'Johns Creek', neighborhood: 'Glenn Abbey', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 2, name: 'Nancy M.', area: 'Johns Creek', neighborhood: 'Chartwell', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 3, name: 'Julie B.', area: 'Buckhead', lat: 33.8543082, lng: -84.3709417, phone: '404.808.2560', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Please pull up driveway in back. Refrigerator in garage.', available: true },
-      { id: 4, name: 'Kate D.', area: 'Chastain Park', lat: 33.8804237, lng: -84.4067199, phone: '404.271.4352', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Please text prior to delivering to make sure host is available to receive sandwiches.', available: true },
-      { id: 5, name: 'Jordan H.', area: 'Chamblee/Brookhaven', neighborhood: 'Sexton Woods near Keswick Park', lat: 33.8981194, lng: -84.31290740000001, phone: '770.789.7329', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Please text when you arrive and /or ring doorbell.', available: true },
-      { id: 6, name: 'Veronica P.', area: 'Dacula', lat: 33.97561, lng: -83.883747, phone: '470.509.5333', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 7, name: 'Lisa H.', area: 'Dunwoody', neighborhood: 'Brooke Farm', lat: 33.952725, lng: -84.290274, phone: '770.826.0457', hours: 'Wed 4-9pm, Thu 8-9:30am', openTime: '16:00', closeTime: '21:00', thursdayOpenTime: '08:00', thursdayCloseTime: '09:30', notes: '', available: true },
-      { id: 8, name: 'Marcy L. & Stephanie', area: 'Dunwoody', neighborhood: 'Near Dunwoody Village', lat: 33.9463163, lng: -84.327786, phone: '678.596.9697', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Sign in sheet and labels on front porch', available: true },
-      { id: 9, name: 'Darren W.', area: 'Dunwoody', neighborhood: 'Dunwoody Club Forest', lat: 33.96450859999999, lng: -84.3151065, phone: '770.490.6206', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 10, name: 'Silke S.', area: 'East Cobb', lat: 34.0159666, lng: -84.44707, phone: '404.375.9541', hours: '9 am to 7 pm', openTime: '09:00', closeTime: '19:00', notes: 'Text once delivered', available: true },
-      { id: 12, name: 'Vicki T.', area: 'East Cobb', neighborhood: 'East Hampton by The Avenues', lat: 34.0003401, lng: -84.417205, phone: '404.202.9108', hours: '9 am to 6:30 pm', openTime: '09:00', closeTime: '18:30', notes: 'Drop off in garage (fridge & sign in there).  Text Vicki once delivered', available: true },
-      { id: 13, name: 'Rebecca H.', area: 'East Atlanta', neighborhood: 'Near Burgess Elementary School', lat: 33.753746, lng: -84.386330, phone: '847.687.9143', hours: '10 am to 6 pm', openTime: '10:00', closeTime: '18:00', notes: 'Text Rebecca once delivered', available: true },
-      { id: 14, name: 'Sarah P.', area: 'Milton', neighborhood: 'Woodwinds at New Providence', lat: 34.116782, lng: -84.354432, phone: '816.308.2273', hours: '9 am to 8 pm', openTime: '09:00', closeTime: '20:00', notes: 'Text Sarah after drop-off', available: true },
-      { id: 15, name: 'Laura B.', area: 'Oak Grove/Druid Hills', neighborhood: 'Sagamore Hills/Oak Grove', lat: 33.84245629999999, lng: -84.3039661, phone: '404.931.8774', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 16, name: 'Tracie N.', area: 'Peachtree Corners', neighborhood: 'Peachtree Station', lat: 33.9784128, lng: -84.23600920000001, phone: '770.315.9177', hours: '2 pm to 8 pm', openTime: '14:00', closeTime: '20:00', notes: '', available: true },
-      { id: 17, name: 'Suzanna T.', area: 'Peachtree Corners', neighborhood: 'Amberfield', lat: 33.9815238, lng: -84.2278384, phone: '770.403.4821', hours: '2:30 pm to 8 pm', openTime: '14:30', closeTime: '20:00', notes: '', available: true },
-      { id: 18, name: 'Renee V.', area: 'Peachtree Corners', neighborhood: 'Neely Farm', lat: 33.9837379, lng: -84.2589718, phone: '770.265.3563', hours: '2 pm to 8 pm', openTime: '14:00', closeTime: '20:00', notes: '', available: true },
-      { id: 19, name: 'Carrey H.', area: 'Roswell', neighborhood: 'Willow Springs/Country Club of Roswell', lat: 34.0320203, lng: -84.2835501, phone: '314.363.2982', hours: '9 am to 7 pm', openTime: '09:00', closeTime: '19:00', notes: '', available: false },
-      { id: 20, name: 'Jenny V.W.', area: 'Roswell', neighborhood: 'Lakeside at Ansley', lat: 34.0864211, lng: -84.4086078, phone: '703.403.0711', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: 'Tell the gatehouse guard you are going to Walter\'s home. Text Jenny when you arrive.', available: false },
-      { id: 21, name: 'Jen C.', area: 'Sandy Springs', neighborhood: 'Riverside (off River Valley)', lat: 33.9311095, lng: -84.4050578, phone: '404.918.9933', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: true },
-      { id: 22, name: 'Sarah K.', area: 'Sandy Springs', neighborhood: 'North Springs', lat: 33.9529678, lng: -84.3758284, phone: '404.455.6743', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: '', available: true },
-      { id: 23, name: 'Allison T.', area: 'Sandy Springs', neighborhood: 'Declaire (just a smidge outside Perimeter)', lat: 33.91549, lng: -84.3968077, phone: '770.355.8876', hours: '9:30 am to 7 pm', openTime: '09:30', closeTime: '19:00', notes: '', available: false },
-      { id: 24, name: 'Cynthia C.', area: 'Southwest Atlanta', neighborhood: 'Cascade Hills Subdivision ', lat: 33.7286854, lng: -84.5622846, phone: '678.860.6442', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 25, name: 'Jason S.', area: 'Suwanee/Johns Creek', neighborhood: 'Superior Play Systems', lat: 34.065908, lng: -84.160894, phone: '678.245.2110', hours: '7 am to 6 pm', openTime: '07:00', closeTime: '18:00', notes: '', available: true },
-      { id: 26, name: 'Stacey & Jack G.', area: 'Virginia Highland', neighborhood: 'Virginia Highland/Morningside/Midtown HS', lat: 33.77723595, lng: -84.362274174978, phone: '404.451.7648', hours: '6pm-8pm', openTime: '18:00', closeTime: '20:00', notes: '', available: false },
-      { id: 27, name: 'Della F.', area: 'Westminster/Milmar Neighborhood', lat: 33.83844, lng: -84.42356, phone: '404.556.0277', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.', available: false },
-      { id: 28, name: 'Rayna N.', area: 'College Park', lat: 33.63388, lng: -84.53605, phone: '404.376.8028 ', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Please text when you arrive. ', available: true },
-      { id: 29, name: 'Ashley R.', area: 'Decatur', neighborhood: 'Diamond Head', lat: 33.82314, lng: -84.27547, phone: '678.480.8786', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Deliver to fridge in carport', available: true },
-      { id: 30, name: 'Judy T.', area: 'East Cobb', neighborhood: 'Indian Hills', lat: 33.967939, lng: -84.43849, phone: '404-683-5823', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: 'Ring doorbell', available: true },
-      { id: 31, name: 'Kristina M.', area: 'Flowery Branch', neighborhood: 'Sterling on the Lake', lat: 34.1490957945782, lng: -83.8990866162653, phone: '678.372.7959', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Drop off in clubhouse', available: true },
-      { id: 32, name: 'Angie B.', area: 'Intown (Candler Park)', neighborhood: 'Candler Park', lat: 33.7633147, lng: -84.3440672755145, phone: '404.668.6886', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: false },
-      { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: false },
-      { id: 34, name: 'Natalia W.', area: 'TBD', neighborhood: 'Bentley Farms', lat: 33.8, lng: -84.4, phone: '864.520.9058', hours: '10 am to 2 pm', openTime: '10:00', closeTime: '14:00', notes: 'Please text prior to delivering to make sure host is available to receive the sandwiches.', available: true }
-    ];
-    
-    // Return all hosts (including inactive) so admin management is possible after a version update
-    return defaultHosts;
+  // Corrected coordinates for one-time sync to Firestore
+  // After running sync, this can be removed
+  const CORRECTED_COORDINATES = {
+    6: { lat: 33.97714839472864, lng: -83.87451752591748 },    // Veronica P.
+    8: { lat: 33.94631773639219, lng: -84.32785029486064 },    // Marcy L. & Stephanie
+    13: { lat: 33.73731642561438, lng: -84.33097917273453 },   // Rebecca H.
+    26: { lat: 33.777486111888095, lng: -84.36233139965479 },  // Stacey & Jack G.
+    28: { lat: 33.63368864946583, lng: -84.53582165315241 },   // Rayna N.
+    30: { lat: 33.96871661644047, lng: -84.43953833583247 },   // Judy T.
+    31: { lat: 34.14914844153542, lng: -83.89972546763543 },   // Kristina M.
+    34: { lat: 34.19104972968844, lng: -84.23280486762955 }    // Natalia W.
+  };
+
+  // One-time function to sync corrected coordinates to Firestore
+  const syncCoordinatesToFirestore = async () => {
+    if (!confirm('This will update coordinates for 8 hosts in Firestore. Continue?')) return;
+
+    try {
+      const batch = db.batch();
+
+      for (const [hostId, coords] of Object.entries(CORRECTED_COORDINATES)) {
+        const docRef = db.collection('hosts').doc(String(hostId));
+        batch.update(docRef, { lat: coords.lat, lng: coords.lng });
+      }
+
+      await batch.commit();
+      alert('Coordinates synced successfully! Refreshing...');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error syncing coordinates:', error);
+      alert('Error syncing coordinates: ' + error.message);
+    }
   };
 
   // Admin functions - now save to Firestore
@@ -836,6 +886,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
       filtered = filtered.filter(h => h.available);
     }
 
+    // Apply drop-off time filter
+    if (dropOffTime) {
+      filtered = filtered.filter(h => {
+        const availability = checkHostTimeAvailability(h, dropOffTime);
+        return availability.isOpen;
+      });
+    }
+
     // Apply area filter in area view mode
     if (viewMode === 'area' && filterArea !== 'all') {
       filtered = filtered.filter(h => h.area === filterArea);
@@ -852,7 +910,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
 
     return filtered;
-  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch, includeUnavailableHosts]);
+  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch, includeUnavailableHosts, dropOffTime]);
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
@@ -966,10 +1024,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
       return;
     }
 
+    // Note: Map styling is configured via Cloud-based styling in Google Cloud Console
+    // using the mapId. Client-side styles are not compatible with mapId.
     const mapInstance = new window.google.maps.Map(mapElement, {
       center: mapCenter,
       zoom: mapZoom,
-      mapId: 'SANDWICH_DROP_OFF_MAP'
+      mapId: 'SANDWICH_DROP_OFF_MAP',
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false
     });
 
     // Store initial values in closure for reset functionality
@@ -1013,6 +1076,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     // Prepare host data: sort by distance if user coords available, otherwise show all
     let hostsToShowOnMap;
     let hostsWithDistance;
+    const MAX_INITIAL_MARKERS = 15; // Limit markers for cleaner map view
 
     if (userCoords) {
       // Filter by availability if checkbox is not checked
@@ -1021,12 +1085,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
         ...host,
         distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
       })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-      // Show all hosts in proximity search (including unavailable) for planning purposes
-      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
+      // Show top 3 by default, or up to MAX_INITIAL_MARKERS when "show all" is clicked
+      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance.slice(0, MAX_INITIAL_MARKERS) : hostsWithDistance.slice(0, 3);
     } else {
-      // No user location - filter by availability if checkbox is not checked
+      // No user location - filter by availability and limit to MAX_INITIAL_MARKERS
       const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
-      hostsToShowOnMap = hostsForMap;
+      hostsToShowOnMap = hostsForMap.slice(0, MAX_INITIAL_MARKERS);
       hostsWithDistance = hostsForMap;
     }
 
@@ -1038,124 +1102,43 @@ This is safe because your API key is already restricted to only the Geocoding AP
       // Map will be empty - this is handled in the UI message above
     }
     
+    // Create markers array for clustering
+    const markers = [];
+
     hostsToShowOnMap.forEach((host, index) => {
       const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
 
-      // Determine marker styling based on availability and user location
-      let markerColor = '#007E8C'; // Default teal
-      let badgeColor = '#007E8C';
-      let badgeTextColor = '#FFFFFF';
+      // Simple marker styling: teal for available, muted gray for unavailable
+      const markerColor = host.available ? '#007E8C' : '#B0B0B0';
 
-      // If host is not available, use red/gray colors
-      if (!host.available) {
-        markerColor = '#dc2626'; // Red
-        badgeColor = '#dc2626';
-        badgeTextColor = '#FFFFFF';
-      } else if (userCoords) {
-        // With user location, use ranking colors for available hosts
-        markerColor = '#A31C41'; // Default red
-        badgeColor = '#FFFFFF';
-        badgeTextColor = '#236383';
-
-        if (rank === 1) {
-          markerColor = '#FBBF24'; // Gold
-          badgeColor = '#FBBF24';
-          badgeTextColor = '#000000';
-        } else if (rank === 2) {
-          markerColor = '#9CA3AF'; // Silver
-          badgeColor = '#9CA3AF';
-          badgeTextColor = '#000000';
-        } else if (rank === 3) {
-          markerColor = '#F59E0B'; // Bronze
-          badgeColor = '#F59E0B';
-          badgeTextColor = '#000000';
-        }
-      }
-
-      // Create host marker content
+      // Create host marker content - clean, uniform markers
       const hostMarkerContent = document.createElement('div');
+      hostMarkerContent.innerHTML = `
+        <div style="
+          width: 28px;
+          height: 28px;
+          background: ${markerColor};
+          border: 2px solid white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          cursor: pointer;
+          opacity: ${host.available ? '1' : '0.6'};
+        ">
+          <div style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+          "></div>
+        </div>
+      `;
 
-      if (userCoords) {
-        // Show numbered markers with distance when user location is known
-        hostMarkerContent.innerHTML = `
-          <div class="marker-wrapper" style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-          ">
-            <!-- Numbered badge -->
-            <div class="marker-badge" style="
-              width: 32px;
-              height: 32px;
-              background: ${badgeColor};
-              border: 3px solid white;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 700;
-              font-size: 14px;
-              color: ${badgeTextColor};
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              margin-bottom: 4px;
-              transition: transform 0.2s ease, box-shadow 0.2s ease;
-            ">
-              ${rank}
-            </div>
-            <!-- Info label -->
-            <div class="marker-label" style="
-              background: ${host.available ? 'white' : '#fee2e2'};
-              border: 2px solid ${host.available ? markerColor : '#dc2626'};
-              border-radius: 8px;
-              padding: 4px 8px;
-              font-size: 11px;
-              font-weight: bold;
-              color: ${host.available ? '#236383' : '#dc2626'};
-              white-space: nowrap;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-              transition: transform 0.2s ease, box-shadow 0.2s ease;
-            ">
-              ${host.distance}mi${!showAllHostsOnMap ? (host.available ? ' ✓' : ' ✗') : ''}
-            </div>
-          </div>
-        `;
-      } else {
-        // Show simple markers without distance when no user location
-        hostMarkerContent.innerHTML = `
-          <div class="marker-wrapper" style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-          ">
-            <div style="
-              width: 32px;
-              height: 32px;
-              background: ${badgeColor};
-              border: 3px solid white;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              margin-bottom: 4px;
-            ">
-              <div style="
-                width: 12px;
-                height: 12px;
-                background: white;
-                border-radius: 50%;
-            "></div>
-            </div>
-          </div>
-        `;
-      }
-
+      // Simple tooltip with name and distance
       const markerTitle = userCoords
-        ? `#${rank}: ${host.name} - ${host.distance} miles away${!showAllHostsOnMap ? (host.available ? ' (Collecting This Week)' : ' (NOT Collecting This Week)') : ''}`
+        ? `${host.name} - ${host.distance} mi`
         : host.name;
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
@@ -1167,6 +1150,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
       // Store marker reference
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
+      markers.push(marker);
 
       // Add click listener to show tooltip
       marker.addListener('click', (e) => {
@@ -1174,7 +1158,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         if (!host.available) {
           alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
         }
-        
+
         setMapTooltip(host);
         setHighlightedHostId(host.id);
 
@@ -1191,6 +1175,40 @@ This is safe because your API key is already restricted to only the Geocoding AP
         });
       });
     });
+
+    // Add marker clustering for cleaner map when zoomed out
+    if (markers.length > 5 && window.markerClusterer) {
+      new window.markerClusterer.MarkerClusterer({
+        map: mapInstance,
+        markers: markers,
+        renderer: {
+          render: ({ count, position }) => {
+            // Custom cluster marker
+            const clusterContent = document.createElement('div');
+            clusterContent.innerHTML = `
+              <div style="
+                width: 40px;
+                height: 40px;
+                background: #007E8C;
+                border: 3px solid white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                color: white;
+                font-weight: 600;
+                font-size: 14px;
+              ">${count}</div>
+            `;
+            return new google.maps.marker.AdvancedMarkerElement({
+              position,
+              content: clusterContent
+            });
+          }
+        }
+      });
+    }
 
     // Fit map bounds appropriately
     if (userCoords && hostsToShowOnMap.length > 0) {
@@ -1710,12 +1728,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-sm sm:text-base font-medium mb-1 sm:mb-2" style={{color: '#236383'}}>
                   Drop-off options for THIS Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
                 </p>
-                <p className="text-xs sm:text-sm">
+                <p className="text-sm">
                   <button
                     onClick={() => {
                       document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className="text-blue-600 underline hover:no-underline font-medium"
+                    className="underline hover:no-underline font-semibold"
+                    style={{color: '#007E8C'}}
                   >
                     Need sandwich-making guides?
                   </button>
@@ -1726,6 +1745,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               onClick={() => {
                 const password = prompt('Enter admin password:');
                 if (password === 'sandwich2024') {
+                  setUserRole('admin');
                   setShowAdmin(true);
                 } else if (password !== null) {
                   alert('Incorrect password');
@@ -1755,6 +1775,41 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>3</div>
               <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Click "Get Directions" to see route options</span>
             </div>
+          </div>
+
+          {/* Hosts Not Collecting This Week Banner */}
+          <div className="mx-3 sm:mx-4 mb-4 p-4 rounded-xl" style={{backgroundColor: '#F0F9FA', border: '2px solid #47B3CB'}}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl flex-shrink-0">📅</span>
+              <div>
+                <p className="font-semibold text-sm sm:text-base" style={{color: '#236383'}}>
+                  <span className="font-bold">Heads up:</span> Julie B., Carrey H., and Silke S. are not collecting this week.
+                </p>
+                <p className="text-xs sm:text-sm mt-1" style={{color: '#666'}}>
+                  Please choose from the other available hosts below.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Simple View Toggle - Prominent */}
+          <div className="flex flex-col items-center gap-3 mb-6 px-3">
+            <button
+              onClick={() => setSimpleView(!simpleView)}
+              className="px-6 py-3 rounded-xl font-bold text-lg transition-all hover:shadow-lg"
+              style={{
+                backgroundColor: simpleView ? '#007E8C' : '#FBAD3F',
+                color: 'white',
+                minWidth: '280px'
+              }}
+            >
+              {simpleView ? '← Back to Interactive Map View' : '📋 Switch to Simple List View'}
+            </button>
+            {!simpleView && (
+              <p className="text-sm text-center" style={{color: '#666'}}>
+                Prefer a simple list? Click above. Or use the search bar below to find a host.
+              </p>
+            )}
           </div>
 
           {/* Favorite Host Banner */}
@@ -1794,8 +1849,107 @@ This is safe because your API key is already restricted to only the Geocoding AP
             );
           })()}
 
+          {/* Simple View - Plain list grouped by area */}
+          {simpleView && (
+            <div className="p-4">
+              <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center" style={{color: '#236383'}}>All Hosts by Area</h2>
+                <p className="text-base mb-6 text-center" style={{color: '#666'}}>
+                  Showing hosts collecting this week. Tap phone to call, or tap Directions.
+                </p>
+
+                {/* Search bar for simple view */}
+                <div className="mb-6">
+                  <input
+                    type="text"
+                    placeholder="🔍 Search by host name or area..."
+                    value={nameSearch}
+                    onChange={(e) => setNameSearch(e.target.value)}
+                    className="w-full px-5 py-4 rounded-xl border-2 text-lg"
+                    style={{borderColor: '#007E8C'}}
+                  />
+                </div>
+
+                {(() => {
+                  let availableHosts = allHosts.filter(h => h.available);
+                  // Apply search filter
+                  if (nameSearch.trim()) {
+                    const searchLower = nameSearch.toLowerCase();
+                    availableHosts = availableHosts.filter(h =>
+                      h.name.toLowerCase().includes(searchLower) ||
+                      h.area.toLowerCase().includes(searchLower) ||
+                      (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
+                    );
+                  }
+                  const areas = [...new Set(availableHosts.map(h => h.area))].sort();
+
+                  if (availableHosts.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <p className="text-lg" style={{color: '#666'}}>No hosts found matching "{nameSearch}"</p>
+                      </div>
+                    );
+                  }
+
+                  return areas.map(area => (
+                    <div key={area} className="mb-8">
+                      <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
+                      <div className="space-y-4">
+                        {availableHosts.filter(h => h.area === area).map(host => {
+                          const timeAvail = checkHostTimeAvailability(host, dropOffTime);
+                          return (
+                          <div key={host.id} className="flex flex-col gap-3 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+                              <div className="flex-1">
+                                <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
+                                {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
+                                <div className="text-base mt-1" style={{color: '#555'}}>
+                                  {formatCondensedHours(host)}
+                                  {timeAvail.warning && (
+                                    <span className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${timeAvail.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                      ⚠️ {timeAvail.warning}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <a
+                                href={`tel:${host.phone}`}
+                                className="font-bold text-lg px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                                style={{color: '#007E8C'}}
+                              >
+                                📞 {host.phone}
+                              </a>
+                              <button
+                                onClick={() => openGoogleMapsDirections(host)}
+                                className="px-5 py-3 rounded-lg font-bold text-base text-white hover:shadow-md transition-all"
+                                style={{backgroundColor: '#007E8C'}}
+                              >
+                                📍 Directions
+                              </button>
+                            </div>
+                            {host.notes && (
+                              <div className="p-3 rounded-lg" style={{backgroundColor: 'rgba(163, 28, 65, 0.08)'}}>
+                                <div className="flex items-start gap-2">
+                                  <span className="text-base">⚠️</span>
+                                  <div>
+                                    <span className="font-bold text-sm" style={{color: '#A31C41'}}>Special Instructions: </span>
+                                    <span className="text-sm" style={{color: '#236383'}}>{host.notes}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );})}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* Smart Search Section */}
-          <div className="p-3 sm:p-4">
+          <div className="p-3 sm:p-4" style={{display: simpleView ? 'none' : 'block'}}>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
               <div className="relative flex-1">
                 <input
@@ -1836,11 +1990,45 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <button
               onClick={getCurrentLocation}
               className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
-              style={{backgroundColor: '#FBAD3F', color: 'white', minHeight: '52px'}}
+              style={{backgroundColor: '#236383', color: 'white', minHeight: '52px'}}
             >
               <i className="lucide-locate w-4 h-4 sm:w-5 sm:h-5"></i>
               Use My Current Location
             </button>
+
+            {/* Drop-off Time Filter */}
+            <div className="w-full mt-4 p-4 rounded-xl" style={{backgroundColor: 'rgba(251, 173, 63, 0.1)', border: '1px solid rgba(251, 173, 63, 0.3)'}}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label className="font-semibold text-sm sm:text-base flex items-center gap-2" style={{color: '#236383'}}>
+                  <span>⏰</span>
+                  <span>I need to drop off at:</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="time"
+                    value={dropOffTime}
+                    onChange={(e) => setDropOffTime(e.target.value)}
+                    className="px-4 py-2 rounded-lg border-2 text-base font-medium"
+                    style={{borderColor: '#FBAD3F', color: '#236383'}}
+                  />
+                  {dropOffTime && (
+                    <button
+                      onClick={() => setDropOffTime('')}
+                      className="text-sm px-3 py-1 rounded-lg hover:bg-orange-100 transition-colors"
+                      style={{color: '#A31C41'}}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {dropOffTime && (
+                  <span className="text-sm" style={{color: '#666'}}>
+                    Showing only hosts open at {formatTime(dropOffTime)}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {userAddress && userCoords && (
               <div className="mt-4 p-4 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
                 <p className="text-base font-medium" style={{color: '#236383'}}>
@@ -2442,19 +2630,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
               </div>
             </div>
-            {userCoords && viewMode === 'proximity' && (
-              <div className="distance-banner p-4 mb-2">
-                <div className="flex items-center">
-                  <i className="lucide-map-pin w-5 h-5 mr-2.5" style={{color: '#007E8C'}}></i>
-                  <span className="text-base font-semibold" style={{color: '#236383'}}>
-                    Hosts sorted by distance from your location
-                  </span>
-                </div>
-              </div>
-            )}
             {filteredHosts.length === 0 ? (
               <div className="bg-white rounded-2xl premium-card p-12 text-center">
-                <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
+                <p className="text-lg font-medium text-gray-500">
+                  {dropOffTime
+                    ? `No hosts are open at ${formatTime(dropOffTime)}. Try a different time or clear the filter.`
+                    : 'No hosts found in this area.'}
+                </p>
+                {dropOffTime && (
+                  <button
+                    onClick={() => setDropOffTime('')}
+                    className="mt-4 px-4 py-2 rounded-lg font-medium text-white"
+                    style={{backgroundColor: '#007E8C'}}
+                  >
+                    Clear Time Filter
+                  </button>
+                )}
               </div>
             ) : (
               filteredHosts.map((host, index) => {
@@ -2463,13 +2654,45 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   ? sortedHosts.findIndex(h => h.id === host.id) + 1
                   : null;
                 const isTopThree = actualRank !== null && actualRank <= 3 && host.available;
+
+                // Count how many available hosts are in the top 3 to know when to show divider
+                const availableTopThreeCount = userCoords && viewMode === 'proximity' && sortedHosts.length > 0
+                  ? sortedHosts.slice(0, 3).filter(h => h.available).length
+                  : 0;
+
+                // Show section headers based on position
+                const showTopThreeHeader = userCoords && viewMode === 'proximity' && index === 0 && availableTopThreeCount > 0;
+                const showOtherHostsHeader = userCoords && viewMode === 'proximity' && actualRank === availableTopThreeCount + 1;
+
                 const isExpanded = expandedHosts.has(host.id);
+
+                // Check time availability for warning
+                const timeAvail = checkHostTimeAvailability(host, dropOffTime);
                 const availability = getHostAvailability(host);
                 const isOpenNow = availability && availability.status === 'open';
-                
+
                 return (
+                <React.Fragment key={host.id}>
+                  {/* Section header: Your 3 Closest Hosts */}
+                  {showTopThreeHeader && (
+                    <div className="mb-3">
+                      <h2 className="text-lg font-bold" style={{color: '#236383'}}>
+                        Your {availableTopThreeCount} Closest Host{availableTopThreeCount !== 1 ? 's' : ''}
+                      </h2>
+                      <p className="text-sm" style={{color: '#666'}}>
+                        Based on {userAddress || 'your location'}
+                      </p>
+                    </div>
+                  )}
+                  {/* Section header: All Other Hosts */}
+                  {showOtherHostsHeader && (
+                    <div className="mt-6 mb-3 pt-4 border-t-2" style={{borderColor: '#e5e7eb'}}>
+                      <h2 className="text-base font-semibold" style={{color: '#666'}}>
+                        All Other Hosts Collecting This Week
+                      </h2>
+                    </div>
+                  )}
                 <div
-                  key={host.id}
                   data-host-id={host.id}
                   className={`bg-white rounded-2xl premium-card transition-all border-2 ${
                     host.available 
@@ -2485,75 +2708,122 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 >
                   {/* Collapsed View (Default) */}
                   {!isExpanded ? (
-                    <div className="p-4 md:p-6">
-                      {/* Header: Name — Area (Neighborhood) */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            {isTopThree && (
-                              <span className={`w-6 h-6 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                                actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
-                              }`}>
-                                {actualRank}
-                              </span>
-                            )}
-                            <h3 className={`font-bold text-lg md:text-xl ${!host.available ? 'opacity-60' : ''}`}>
-                              {host.name} — {host.area}{host.neighborhood ? ` (${host.neighborhood})` : ''}
-                            </h3>
-                          </div>
-                          
-                          {/* Status Line: OPEN NOW · distance · drive time */}
-                          {userCoords && host.distance && (
-                            <div className="flex items-center gap-2 flex-wrap text-sm mb-2">
-                              {isOpenNow && (
-                                <>
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
-                                    🟢 OPEN NOW
-                                  </span>
-                                  <span className="text-gray-500">·</span>
-                                </>
-                              )}
-                              <span style={{color: '#007E8C'}}>{host.distance} miles</span>
-                              {hostDriveTimes[host.id] && (
-                                <>
-                                  <span className="text-gray-500">·</span>
-                                  <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]} drive</span>
-                                </>
-                              )}
-                            </div>
+                    <div className="p-4 md:p-5">
+                      {/* Header Row: Rank Badge, Name, Favorite */}
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {isTopThree && (
+                            <span className={`w-9 h-9 rank-badge rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0 ${
+                              actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
+                            }`}>
+                              {actualRank}
+                            </span>
                           )}
-                          
-                          {/* Condensed Hours */}
-                          <div className="text-sm font-medium" style={{color: '#007E8C'}}>
-                            {formatCondensedHours(host)}
-                          </div>
+                          <h3 className={`font-bold text-lg ${!host.available ? 'opacity-60' : ''}`}>
+                            {host.name}
+                          </h3>
                         </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavoriteHost(host.id);
                           }}
-                          className="flex-shrink-0 p-1.5 rounded-lg transition-all hover:bg-gray-100 ml-2"
+                          className="flex-shrink-0 p-1 rounded-lg transition-all hover:bg-gray-100 ml-2"
                           title={favoriteHostId === host.id ? 'Remove from favorites' : 'Save as my host'}
                         >
                           {favoriteHostId === host.id ? (
-                            <span className="text-xl">⭐</span>
+                            <span className="text-lg">⭐</span>
                           ) : (
-                            <span className="text-xl opacity-30 hover:opacity-60">⭐</span>
+                            <span className="text-lg opacity-30 hover:opacity-60">⭐</span>
                           )}
                         </button>
                       </div>
-                      
-                      {/* Show Details Button */}
+
+                      {/* Location Badges: Area and Neighborhood */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{backgroundColor: '#236383', color: '#fff'}}>
+                          {host.area}
+                        </span>
+                        {host.neighborhood && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{backgroundColor: '#007e8c', color: '#fff'}}>
+                            {host.neighborhood}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Info Line: Hours • Status • Distance/Drive Time */}
+                      <div className="flex items-center flex-wrap gap-x-1 text-sm mb-3">
+                        <span className="font-medium" style={{color: '#555'}}>{formatCondensedHours(host)}</span>
+                        <span className="text-gray-400">•</span>
+                        {host.available ? (
+                          <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
+                        ) : (
+                          <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
+                        )}
+                        {userCoords && host.distance && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span style={{color: '#007E8C'}}>{host.distance} mi</span>
+                            {hostDriveTimes[host.id] && (
+                              <>
+                                <span className="text-gray-400">•</span>
+                                <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]}</span>
+                              </>
+                            )}
+                          </>
+                        )}
+                        {isOpenNow && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
+                          </>
+                        )}
+                        {timeAvail.warning && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className={`font-bold ${timeAvail.severity === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
+                              ⚠️ {timeAvail.warning}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Phone Number */}
+                      <a
+                        href={`tel:${host.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-sm mb-2 hover:underline"
+                        style={{color: '#236383'}}
+                      >
+                        <i className="lucide-phone w-4 h-4"></i>
+                        {host.phone}
+                      </a>
+
+                      {/* Notes */}
+                      {host.notes && (
+                        <p className="text-sm text-gray-600 mb-3 italic">
+                          {host.notes}
+                        </p>
+                      )}
+
+                      {/* Get Directions Button - Direct to Google Maps */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleHostExpanded(host.id);
+                          if (!host.available) {
+                            alert('⚠️ This host is NOT collecting this week.');
+                            return;
+                          }
+                          openGoogleMapsDirections(host);
                         }}
-                        className="w-full mt-3 px-4 py-2 rounded-lg font-medium text-sm transition-all hover:bg-gray-50 border-2"
-                        style={{borderColor: '#007E8C', color: '#007E8C'}}
+                        disabled={!host.available}
+                        className={`w-full px-4 py-3 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all ${
+                          host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        style={{backgroundColor: '#007E8C'}}
                       >
-                        Show Details
+                        <i className="lucide-navigation w-5 h-5"></i>
+                        Get Directions
                       </button>
                     </div>
                   ) : (
@@ -2595,7 +2865,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex flex-col gap-3 mb-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               {isTopThree && (
-                                <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                <span className={`w-11 h-11 rank-badge rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0 ${
                                   actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                                 }`}>
                                   {actualRank}
@@ -2924,6 +3194,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                   )}
                 </div>
+                </React.Fragment>
                 );
               })
             )}
@@ -3051,12 +3322,30 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </p>
                 </div>
 
+                {/* One-time Coordinate Fix Button */}
+                {userRole === 'admin' && (
+                  <div className="bg-yellow-50 rounded-xl p-4 mb-6 border-2 border-yellow-300">
+                    <h3 className="font-semibold mb-2" style={{color: '#A31C41'}}>🔧 One-Time Fix: Sync Corrected Coordinates</h3>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>
+                      This will fix the coordinates for 8 hosts that have incorrect locations in the database.
+                    </p>
+                    <button
+                      onClick={syncCoordinatesToFirestore}
+                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      style={{backgroundColor: '#A31C41'}}
+                    >
+                      🗺️ Fix Coordinates Now
+                    </button>
+                  </div>
+                )}
+
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
+                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
-                    style={{backgroundColor: '#007E8C'}}
+                    style={{backgroundColor: '#007E8C', opacity: userRole === 'viewer' ? 0.7 : 1}}
+                    title={userRole === 'viewer' ? 'Available to full admins. This reviewer account is read-only.' : 'Add a new host'}
                   >
                     ➕ Add New Host
                   </button>
@@ -3138,21 +3427,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 
                 <form onSubmit={(e) => {
                   e.preventDefault();
+                  if (userRole === 'viewer') {
+                    setShowReadOnlyModal(true);
+                    return;
+                  }
                   const formData = new FormData(e.target);
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
-                    neighborhood: formData.get('neighborhood'),
+                    neighborhood: formData.get('neighborhood') || '',
                     lat: formData.get('lat'),
                     lng: formData.get('lng'),
                     phone: formData.get('phone'),
                     hours: formData.get('hours'),
                     openTime: formData.get('openTime'),
                     closeTime: formData.get('closeTime'),
-                    notes: formData.get('notes'),
+                    thursdayOpenTime: formData.get('thursdayOpenTime') || '',
+                    thursdayCloseTime: formData.get('thursdayCloseTime') || '',
+                    notes: formData.get('notes') || '',
                     available: formData.get('available') === 'on'
                   };
-                  
+
                   if (editingHost.id === 'new') {
                     addHost(hostData);
                   } else {

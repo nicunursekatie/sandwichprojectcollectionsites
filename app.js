@@ -28,6 +28,7 @@ const HostAvailabilityApp = () => {
   const [feedbackRating, setFeedbackRating] = React.useState(0);
   const [feedbackText, setFeedbackText] = React.useState('');
   const [feedbackEmail, setFeedbackEmail] = React.useState('');
+  const [simpleView, setSimpleView] = React.useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
@@ -1640,12 +1641,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-sm sm:text-base font-medium mb-1 sm:mb-2" style={{color: '#236383'}}>
                   Drop-off options for THIS Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
                 </p>
-                <p className="text-xs sm:text-sm">
+                <p className="text-sm">
                   <button
                     onClick={() => {
                       document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className="text-blue-600 underline hover:no-underline font-medium"
+                    className="underline hover:no-underline font-semibold"
+                    style={{color: '#007E8C'}}
                   >
                     Need sandwich-making guides?
                   </button>
@@ -1687,6 +1689,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
           </div>
 
+          {/* Simple View Toggle - Prominent */}
+          <div className="flex flex-col items-center gap-3 mb-6 px-3">
+            <button
+              onClick={() => setSimpleView(!simpleView)}
+              className="px-6 py-3 rounded-xl font-bold text-lg transition-all hover:shadow-lg"
+              style={{
+                backgroundColor: simpleView ? '#007E8C' : '#FBAD3F',
+                color: 'white',
+                minWidth: '280px'
+              }}
+            >
+              {simpleView ? '← Back to Interactive Map View' : '📋 Switch to Simple List View'}
+            </button>
+            {!simpleView && (
+              <p className="text-sm text-center" style={{color: '#666'}}>
+                Prefer a simple list? Click above. Or use the search bar below to find a host.
+              </p>
+            )}
+          </div>
+
           {/* Favorite Host Banner */}
           {favoriteHostId && (() => {
             const favoriteHost = allHosts.find(h => h.id === favoriteHostId);
@@ -1726,8 +1748,98 @@ This is safe because your API key is already restricted to only the Geocoding AP
             );
           })()}
 
+          {/* Simple View - Plain list grouped by area */}
+          {simpleView && (
+            <div className="p-4">
+              <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center" style={{color: '#236383'}}>All Hosts by Area</h2>
+                <p className="text-base mb-6 text-center" style={{color: '#666'}}>
+                  Showing hosts collecting this week. Tap phone to call, or tap Directions.
+                </p>
+
+                {/* Search bar for simple view */}
+                <div className="mb-6">
+                  <input
+                    type="text"
+                    placeholder="🔍 Search by host name or area..."
+                    value={nameSearch}
+                    onChange={(e) => setNameSearch(e.target.value)}
+                    className="w-full px-5 py-4 rounded-xl border-2 text-lg"
+                    style={{borderColor: '#007E8C'}}
+                  />
+                </div>
+
+                {(() => {
+                  let availableHosts = allHosts.filter(h => h.available);
+                  // Apply search filter
+                  if (nameSearch.trim()) {
+                    const searchLower = nameSearch.toLowerCase();
+                    availableHosts = availableHosts.filter(h =>
+                      h.name.toLowerCase().includes(searchLower) ||
+                      h.area.toLowerCase().includes(searchLower) ||
+                      (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
+                    );
+                  }
+                  const areas = [...new Set(availableHosts.map(h => h.area))].sort();
+
+                  if (availableHosts.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <p className="text-lg" style={{color: '#666'}}>No hosts found matching "{nameSearch}"</p>
+                      </div>
+                    );
+                  }
+
+                  return areas.map(area => (
+                    <div key={area} className="mb-8">
+                      <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
+                      <div className="space-y-4">
+                        {availableHosts.filter(h => h.area === area).map(host => (
+                          <div key={host.id} className="flex flex-col gap-3 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+                              <div className="flex-1">
+                                <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
+                                {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
+                                <div className="text-base mt-1" style={{color: '#555'}}>{formatCondensedHours(host)}</div>
+                              </div>
+                              <a
+                                href={`tel:${host.phone}`}
+                                className="font-bold text-lg px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                                style={{color: '#007E8C'}}
+                              >
+                                📞 {host.phone}
+                              </a>
+                              <button
+                                onClick={() => openGoogleMapsDirections(host)}
+                                className="px-5 py-3 rounded-lg font-bold text-base text-white hover:shadow-md transition-all"
+                                style={{backgroundColor: '#007E8C'}}
+                              >
+                                📍 Directions
+                              </button>
+                            </div>
+                            {host.notes && (
+                              <div className="p-3 rounded-lg" style={{backgroundColor: 'rgba(163, 28, 65, 0.08)'}}>
+                                <div className="flex items-start gap-2">
+                                  <span className="text-base">⚠️</span>
+                                  <div>
+                                    <span className="font-bold text-sm" style={{color: '#A31C41'}}>Special Instructions: </span>
+                                    <span className="text-sm" style={{color: '#236383'}}>{host.notes}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* Smart Search Section */}
-          <div className="p-3 sm:p-4">
+          <div className="p-3 sm:p-4" style={{display: simpleView ? 'none' : 'block'}}>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
               <div className="relative flex-1">
                 <input
@@ -1768,7 +1880,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <button
               onClick={getCurrentLocation}
               className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
-              style={{backgroundColor: '#FBAD3F', color: 'white', minHeight: '52px'}}
+              style={{backgroundColor: '#236383', color: 'white', minHeight: '52px'}}
             >
               <i className="lucide-locate w-4 h-4 sm:w-5 sm:h-5"></i>
               Use My Current Location
@@ -2372,16 +2484,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
               </div>
             </div>
-            {userCoords && viewMode === 'proximity' && (
-              <div className="distance-banner p-4 mb-2">
-                <div className="flex items-center">
-                  <i className="lucide-map-pin w-5 h-5 mr-2.5" style={{color: '#007E8C'}}></i>
-                  <span className="text-base font-semibold" style={{color: '#236383'}}>
-                    Hosts sorted by distance from your location
-                  </span>
-                </div>
-              </div>
-            )}
             {filteredHosts.length === 0 ? (
               <div className="bg-white rounded-2xl premium-card p-12 text-center">
                 <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
@@ -2393,14 +2495,42 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   ? sortedHosts.findIndex(h => h.id === host.id) + 1
                   : null;
                 const isTopThree = actualRank !== null && actualRank <= 3 && host.available;
+
+                // Count how many available hosts are in the top 3 to know when to show divider
+                const availableTopThreeCount = userCoords && viewMode === 'proximity' && sortedHosts.length > 0
+                  ? sortedHosts.slice(0, 3).filter(h => h.available).length
+                  : 0;
+
+                // Show section headers based on position
+                const showTopThreeHeader = userCoords && viewMode === 'proximity' && index === 0 && availableTopThreeCount > 0;
+                const showOtherHostsHeader = userCoords && viewMode === 'proximity' && actualRank === availableTopThreeCount + 1;
                 
                 const isExpanded = expandedHosts.has(host.id);
                 const availability = getHostAvailability(host);
                 const isOpenNow = availability && availability.status === 'open';
                 
                 return (
+                <React.Fragment key={host.id}>
+                  {/* Section header: Your 3 Closest Hosts */}
+                  {showTopThreeHeader && (
+                    <div className="mb-3">
+                      <h2 className="text-lg font-bold" style={{color: '#236383'}}>
+                        Your {availableTopThreeCount} Closest Host{availableTopThreeCount !== 1 ? 's' : ''}
+                      </h2>
+                      <p className="text-sm" style={{color: '#666'}}>
+                        Based on {userAddress || 'your location'}
+                      </p>
+                    </div>
+                  )}
+                  {/* Section header: All Other Hosts */}
+                  {showOtherHostsHeader && (
+                    <div className="mt-6 mb-3 pt-4 border-t-2" style={{borderColor: '#e5e7eb'}}>
+                      <h2 className="text-base font-semibold" style={{color: '#666'}}>
+                        All Other Hosts Collecting This Week
+                      </h2>
+                    </div>
+                  )}
                 <div
-                  key={host.id}
                   data-host-id={host.id}
                   className={`bg-white rounded-2xl premium-card transition-all border-2 ${
                     host.available 
@@ -2416,75 +2546,114 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 >
                   {/* Collapsed View (Default) */}
                   {!isExpanded ? (
-                    <div className="p-4 md:p-6">
-                      {/* Header: Name — Area (Neighborhood) */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            {isTopThree && (
-                              <span className={`w-6 h-6 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                                actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
-                              }`}>
-                                {actualRank}
-                              </span>
-                            )}
-                            <h3 className={`font-bold text-lg md:text-xl ${!host.available ? 'opacity-60' : ''}`}>
-                              {host.name} — {host.area}{host.neighborhood ? ` (${host.neighborhood})` : ''}
-                            </h3>
-                          </div>
-                          
-                          {/* Status Line: OPEN NOW · distance · drive time */}
-                          {userCoords && host.distance && (
-                            <div className="flex items-center gap-2 flex-wrap text-sm mb-2">
-                              {isOpenNow && (
-                                <>
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
-                                    🟢 OPEN NOW
-                                  </span>
-                                  <span className="text-gray-500">·</span>
-                                </>
-                              )}
-                              <span style={{color: '#007E8C'}}>{host.distance} miles</span>
-                              {hostDriveTimes[host.id] && (
-                                <>
-                                  <span className="text-gray-500">·</span>
-                                  <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]} drive</span>
-                                </>
-                              )}
-                            </div>
+                    <div className="p-4 md:p-5">
+                      {/* Header Row: Rank Badge, Name, Favorite */}
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {isTopThree && (
+                            <span className={`w-7 h-7 rank-badge rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${
+                              actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
+                            }`}>
+                              {actualRank}
+                            </span>
                           )}
-                          
-                          {/* Condensed Hours */}
-                          <div className="text-sm font-medium" style={{color: '#007E8C'}}>
-                            {formatCondensedHours(host)}
-                          </div>
+                          <h3 className={`font-bold text-lg ${!host.available ? 'opacity-60' : ''}`}>
+                            {host.name}
+                          </h3>
                         </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavoriteHost(host.id);
                           }}
-                          className="flex-shrink-0 p-1.5 rounded-lg transition-all hover:bg-gray-100 ml-2"
+                          className="flex-shrink-0 p-1 rounded-lg transition-all hover:bg-gray-100 ml-2"
                           title={favoriteHostId === host.id ? 'Remove from favorites' : 'Save as my host'}
                         >
                           {favoriteHostId === host.id ? (
-                            <span className="text-xl">⭐</span>
+                            <span className="text-lg">⭐</span>
                           ) : (
-                            <span className="text-xl opacity-30 hover:opacity-60">⭐</span>
+                            <span className="text-lg opacity-30 hover:opacity-60">⭐</span>
                           )}
                         </button>
                       </div>
-                      
-                      {/* Show Details Button */}
+
+                      {/* Location Badges: Area and Neighborhood */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{backgroundColor: '#236383', color: '#fff'}}>
+                          {host.area}
+                        </span>
+                        {host.neighborhood && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{backgroundColor: '#007e8c', color: '#fff'}}>
+                            {host.neighborhood}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Info Line: Hours • Status • Distance/Drive Time */}
+                      <div className="flex items-center flex-wrap gap-x-1 text-sm mb-3">
+                        <span className="font-medium" style={{color: '#555'}}>{formatCondensedHours(host)}</span>
+                        <span className="text-gray-400">•</span>
+                        {host.available ? (
+                          <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
+                        ) : (
+                          <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
+                        )}
+                        {userCoords && host.distance && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span style={{color: '#007E8C'}}>{host.distance} mi</span>
+                            {hostDriveTimes[host.id] && (
+                              <>
+                                <span className="text-gray-400">•</span>
+                                <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]}</span>
+                              </>
+                            )}
+                          </>
+                        )}
+                        {isOpenNow && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Phone Number */}
+                      <a
+                        href={`tel:${host.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-sm mb-2 hover:underline"
+                        style={{color: '#236383'}}
+                      >
+                        <i className="lucide-phone w-4 h-4"></i>
+                        {host.phone}
+                      </a>
+
+                      {/* Notes */}
+                      {host.notes && (
+                        <p className="text-sm text-gray-600 mb-3 italic">
+                          {host.notes}
+                        </p>
+                      )}
+
+                      {/* Get Directions Button - Direct to Google Maps */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleHostExpanded(host.id);
+                          if (!host.available) {
+                            alert('⚠️ This host is NOT collecting this week.');
+                            return;
+                          }
+                          openGoogleMapsDirections(host);
                         }}
-                        className="w-full mt-3 px-4 py-2 rounded-lg font-medium text-sm transition-all hover:bg-gray-50 border-2"
-                        style={{borderColor: '#007E8C', color: '#007E8C'}}
+                        disabled={!host.available}
+                        className={`w-full px-4 py-3 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all ${
+                          host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        style={{backgroundColor: '#007E8C'}}
                       >
-                        Show Details
+                        <i className="lucide-navigation w-5 h-5"></i>
+                        Get Directions
                       </button>
                     </div>
                   ) : (
@@ -2526,7 +2695,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex flex-col gap-3 mb-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               {isTopThree && (
-                                <span className={`w-8 h-8 rank-badge rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                <span className={`w-9 h-9 rank-badge rounded-full flex items-center justify-center text-base font-bold text-white flex-shrink-0 ${
                                   actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                                 }`}>
                                   {actualRank}
@@ -2851,6 +3020,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                   )}
                 </div>
+                </React.Fragment>
                 );
               })
             )}
