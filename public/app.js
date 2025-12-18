@@ -391,47 +391,38 @@ const HostAvailabilityApp = () => {
     loadHosts();
   }, []);
 
-  // Legacy code - keep structure but don't use
-  const getInitialHosts = () => {
-    // This function is no longer used - hosts come from Firestore
-    const defaultHosts = [
-      { id: 1, name: 'Karen C.', area: 'Johns Creek', neighborhood: 'Glenn Abbey', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 2, name: 'Nancy M.', area: 'Johns Creek', neighborhood: 'Chartwell', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 3, name: 'Julie B.', area: 'Buckhead', lat: 33.8543082, lng: -84.3709417, phone: '404.808.2560', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Please pull up driveway in back. Refrigerator in garage.', available: true },
-      { id: 4, name: 'Kate D.', area: 'Chastain Park', lat: 33.8804237, lng: -84.4067199, phone: '404.271.4352', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Please text prior to delivering to make sure host is available to receive sandwiches.', available: true },
-      { id: 5, name: 'Jordan H.', area: 'Chamblee/Brookhaven', neighborhood: 'Sexton Woods near Keswick Park', lat: 33.8981194, lng: -84.31290740000001, phone: '770.789.7329', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Please text when you arrive and /or ring doorbell.', available: true },
-      { id: 6, name: 'Veronica P.', area: 'Dacula', lat: 33.97714839472864, lng: -83.87451752591748, phone: '470.509.5333', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 7, name: 'Lisa H.', area: 'Dunwoody', neighborhood: 'Brooke Farm', lat: 33.952725, lng: -84.290274, phone: '770.826.0457', hours: 'Wed 4-9pm, Thu 8-9:30am', openTime: '16:00', closeTime: '21:00', thursdayOpenTime: '08:00', thursdayCloseTime: '09:30', notes: '', available: true },
-      { id: 8, name: 'Marcy L. & Stephanie', area: 'Dunwoody', neighborhood: 'Near Dunwoody Village', lat: 33.94631773639219, lng: -84.32785029486064, phone: '678.596.9697', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Sign in sheet and labels on front porch', available: true },
-      { id: 9, name: 'Darren W.', area: 'Dunwoody', neighborhood: 'Dunwoody Club Forest', lat: 33.96450859999999, lng: -84.3151065, phone: '770.490.6206', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 10, name: 'Silke S.', area: 'East Cobb', lat: 34.0159666, lng: -84.44707, phone: '404.375.9541', hours: '9 am to 7 pm', openTime: '09:00', closeTime: '19:00', notes: 'Text once delivered', available: true },
-      { id: 12, name: 'Vicki T.', area: 'East Cobb', neighborhood: 'East Hampton by The Avenues', lat: 34.0003401, lng: -84.417205, phone: '404.202.9108', hours: '9 am to 6:30 pm', openTime: '09:00', closeTime: '18:30', notes: 'Drop off in garage (fridge & sign in there).  Text Vicki once delivered', available: true },
-      { id: 13, name: 'Rebecca H.', area: 'East Atlanta', neighborhood: 'Near Burgess Elementary School', lat: 33.73731642561438, lng: -84.33097917273453, phone: '847.687.9143', hours: '10 am to 6 pm', openTime: '10:00', closeTime: '18:00', notes: 'Text Rebecca once delivered', available: true },
-      { id: 14, name: 'Sarah P.', area: 'Milton', neighborhood: 'Woodwinds at New Providence', lat: 34.116782, lng: -84.354432, phone: '816.308.2273', hours: '9 am to 8 pm', openTime: '09:00', closeTime: '20:00', notes: 'Text Sarah after drop-off', available: true },
-      { id: 15, name: 'Laura B.', area: 'Oak Grove/Druid Hills', neighborhood: 'Sagamore Hills/Oak Grove', lat: 33.84245629999999, lng: -84.3039661, phone: '404.931.8774', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 16, name: 'Tracie N.', area: 'Peachtree Corners', neighborhood: 'Peachtree Station', lat: 33.9784128, lng: -84.23600920000001, phone: '770.315.9177', hours: '2 pm to 8 pm', openTime: '14:00', closeTime: '20:00', notes: '', available: true },
-      { id: 17, name: 'Suzanna T.', area: 'Peachtree Corners', neighborhood: 'Amberfield', lat: 33.9815238, lng: -84.2278384, phone: '770.403.4821', hours: '2:30 pm to 8 pm', openTime: '14:30', closeTime: '20:00', notes: '', available: true },
-      { id: 18, name: 'Renee V.', area: 'Peachtree Corners', neighborhood: 'Neely Farm', lat: 33.9837379, lng: -84.2589718, phone: '770.265.3563', hours: '2 pm to 8 pm', openTime: '14:00', closeTime: '20:00', notes: '', available: true },
-      { id: 19, name: 'Carrey H.', area: 'Roswell', neighborhood: 'Willow Springs/Country Club of Roswell', lat: 34.0320203, lng: -84.2835501, phone: '314.363.2982', hours: '9 am to 7 pm', openTime: '09:00', closeTime: '19:00', notes: '', available: false },
-      { id: 20, name: 'Jenny V.W.', area: 'Roswell', neighborhood: 'Lakeside at Ansley', lat: 34.0864211, lng: -84.4086078, phone: '703.403.0711', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: 'Tell the gatehouse guard you are going to Walter\'s home. Text Jenny when you arrive.', available: false },
-      { id: 21, name: 'Jen C.', area: 'Sandy Springs', neighborhood: 'Riverside (off River Valley)', lat: 33.9311095, lng: -84.4050578, phone: '404.918.9933', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: true },
-      { id: 22, name: 'Sarah K.', area: 'Sandy Springs', neighborhood: 'North Springs', lat: 33.9529678, lng: -84.3758284, phone: '404.455.6743', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: '', available: true },
-      { id: 23, name: 'Allison T.', area: 'Sandy Springs', neighborhood: 'Declaire (just a smidge outside Perimeter)', lat: 33.91549, lng: -84.3968077, phone: '770.355.8876', hours: '9:30 am to 7 pm', openTime: '09:30', closeTime: '19:00', notes: '', available: false },
-      { id: 24, name: 'Cynthia C.', area: 'Southwest Atlanta', neighborhood: 'Cascade Hills Subdivision ', lat: 33.7286854, lng: -84.5622846, phone: '678.860.6442', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 25, name: 'Jason S.', area: 'Suwanee/Johns Creek', neighborhood: 'Superior Play Systems', lat: 34.065908, lng: -84.160894, phone: '678.245.2110', hours: '7 am to 6 pm', openTime: '07:00', closeTime: '18:00', notes: '', available: true },
-      { id: 26, name: 'Stacey & Jack G.', area: 'Virginia Highland', neighborhood: 'Virginia Highland/Morningside/Midtown HS', lat: 33.777486111888095, lng: -84.36233139965479, phone: '404.451.7648', hours: '6pm-8pm', openTime: '18:00', closeTime: '20:00', notes: '', available: false },
-      { id: 27, name: 'Della F.', area: 'Westminster/Milmar Neighborhood', lat: 33.83844, lng: -84.42356, phone: '404.556.0277', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.', available: false },
-      { id: 28, name: 'Rayna N.', area: 'College Park', lat: 33.63368864946583, lng: -84.53582165315241, phone: '404.376.8028 ', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Please text when you arrive. ', available: true },
-      { id: 29, name: 'Ashley R.', area: 'Decatur', neighborhood: 'Diamond Head', lat: 33.82314, lng: -84.27547, phone: '678.480.8786', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Deliver to fridge in carport', available: true },
-      { id: 30, name: 'Judy T.', area: 'East Cobb', neighborhood: 'Indian Hills', lat: 33.96871661644047, lng: -84.43953833583247, phone: '404-683-5823', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: 'Ring doorbell', available: true },
-      { id: 31, name: 'Kristina M.', area: 'Flowery Branch', neighborhood: 'Sterling on the Lake', lat: 34.14914844153542, lng: -83.89972546763543, phone: '678.372.7959', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Drop off in clubhouse', available: true },
-      { id: 32, name: 'Angie B.', area: 'Intown (Candler Park)', neighborhood: 'Candler Park', lat: 33.7633147, lng: -84.3440672755145, phone: '404.668.6886', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: false },
-      { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: false },
-      { id: 34, name: 'Natalia W.', area: 'Cumming', neighborhood: 'Bentley Farms', lat: 34.191155554069546, lng: -84.2327945817321, phone: '864.520.9058', hours: '10 am to 2 pm', openTime: '10:00', closeTime: '14:00', notes: 'Please text prior to delivering to make sure host is available to receive the sandwiches.', available: true }
-    ];
-    
-    // Return all hosts (including inactive) so admin management is possible after a version update
-    return defaultHosts;
+  // Corrected coordinates for one-time sync to Firestore
+  // After running sync, this can be removed
+  const CORRECTED_COORDINATES = {
+    6: { lat: 33.97714839472864, lng: -83.87451752591748 },    // Veronica P.
+    8: { lat: 33.94631773639219, lng: -84.32785029486064 },    // Marcy L. & Stephanie
+    13: { lat: 33.73731642561438, lng: -84.33097917273453 },   // Rebecca H.
+    26: { lat: 33.777486111888095, lng: -84.36233139965479 },  // Stacey & Jack G.
+    28: { lat: 33.63368864946583, lng: -84.53582165315241 },   // Rayna N.
+    30: { lat: 33.96871661644047, lng: -84.43953833583247 },   // Judy T.
+    31: { lat: 34.14914844153542, lng: -83.89972546763543 },   // Kristina M.
+    34: { lat: 34.19104972968844, lng: -84.23280486762955 }    // Natalia W.
+  };
+
+  // One-time function to sync corrected coordinates to Firestore
+  const syncCoordinatesToFirestore = async () => {
+    if (!confirm('This will update coordinates for 8 hosts in Firestore. Continue?')) return;
+
+    try {
+      const batch = db.batch();
+
+      for (const [hostId, coords] of Object.entries(CORRECTED_COORDINATES)) {
+        const docRef = db.collection('hosts').doc(String(hostId));
+        batch.update(docRef, { lat: coords.lat, lng: coords.lng });
+      }
+
+      await batch.commit();
+      alert('Coordinates synced successfully! Refreshing...');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error syncing coordinates:', error);
+      alert('Error syncing coordinates: ' + error.message);
+    }
   };
 
   // Admin functions - now save to Firestore
@@ -3238,12 +3229,30 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </p>
                 </div>
 
+                {/* One-time Coordinate Fix Button */}
+                {userRole === 'admin' && (
+                  <div className="bg-yellow-50 rounded-xl p-4 mb-6 border-2 border-yellow-300">
+                    <h3 className="font-semibold mb-2" style={{color: '#A31C41'}}>🔧 One-Time Fix: Sync Corrected Coordinates</h3>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>
+                      This will fix the coordinates for 8 hosts that have incorrect locations in the database.
+                    </p>
+                    <button
+                      onClick={syncCoordinatesToFirestore}
+                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      style={{backgroundColor: '#A31C41'}}
+                    >
+                      🗺️ Fix Coordinates Now
+                    </button>
+                  </div>
+                )}
+
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
+                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
-                    style={{backgroundColor: '#007E8C'}}
+                    style={{backgroundColor: '#007E8C', opacity: userRole === 'viewer' ? 0.7 : 1}}
+                    title={userRole === 'viewer' ? 'Available to full admins. This reviewer account is read-only.' : 'Add a new host'}
                   >
                     ➕ Add New Host
                   </button>
@@ -3325,21 +3334,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 
                 <form onSubmit={(e) => {
                   e.preventDefault();
+                  if (userRole === 'viewer') {
+                    setShowReadOnlyModal(true);
+                    return;
+                  }
                   const formData = new FormData(e.target);
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
-                    neighborhood: formData.get('neighborhood'),
+                    neighborhood: formData.get('neighborhood') || '',
                     lat: formData.get('lat'),
                     lng: formData.get('lng'),
                     phone: formData.get('phone'),
                     hours: formData.get('hours'),
                     openTime: formData.get('openTime'),
                     closeTime: formData.get('closeTime'),
-                    notes: formData.get('notes'),
+                    thursdayOpenTime: formData.get('thursdayOpenTime') || '',
+                    thursdayCloseTime: formData.get('thursdayCloseTime') || '',
+                    notes: formData.get('notes') || '',
                     available: formData.get('available') === 'on'
                   };
-                  
+
                   if (editingHost.id === 'new') {
                     addHost(hostData);
                   } else {
