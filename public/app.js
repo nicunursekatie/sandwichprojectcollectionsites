@@ -60,6 +60,7 @@ const HostAvailabilityApp = () => {
   const [initialMapCenter, setInitialMapCenter] = React.useState(null);
   const [initialMapZoom, setInitialMapZoom] = React.useState(null);
   const [hostDriveTimes, setHostDriveTimes] = React.useState({});
+  const [dropOffTime, setDropOffTime] = React.useState(''); // User's intended drop-off time (HH:MM format)
   const [showFeedback, setShowFeedback] = React.useState(false);
   const [feedbackRating, setFeedbackRating] = React.useState(0);
   const [feedbackText, setFeedbackText] = React.useState('');
@@ -301,6 +302,61 @@ const HostAvailabilityApp = () => {
   const formatCondensedHours = (host) => {
     if (!host.openTime || !host.closeTime) return host.hours || 'Hours not available';
     return `${formatTime(host.openTime)}–${formatTime(host.closeTime)}`;
+  };
+
+  // Helper to check if host is open at a specific time and how much buffer there is
+  const checkHostTimeAvailability = (host, timeStr) => {
+    if (!timeStr || !host.openTime || !host.closeTime) {
+      return { isOpen: true, warning: null, minutesUntilClose: null };
+    }
+
+    // Convert time strings to minutes since midnight for comparison
+    const timeToMinutes = (t) => {
+      const [hours, minutes] = t.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const dropOffMinutes = timeToMinutes(timeStr);
+    const openMinutes = timeToMinutes(host.openTime);
+    const closeMinutes = timeToMinutes(host.closeTime);
+
+    // Check if drop-off time is within host's hours
+    if (dropOffMinutes < openMinutes) {
+      return {
+        isOpen: false,
+        warning: `Opens at ${formatTime(host.openTime)}`,
+        minutesUntilClose: null
+      };
+    }
+    if (dropOffMinutes >= closeMinutes) {
+      return {
+        isOpen: false,
+        warning: `Closes at ${formatTime(host.closeTime)}`,
+        minutesUntilClose: null
+      };
+    }
+
+    // Host is open - check how much buffer time
+    const minutesUntilClose = closeMinutes - dropOffMinutes;
+
+    if (minutesUntilClose <= 30) {
+      return {
+        isOpen: true,
+        warning: `Closes ${minutesUntilClose} min after your drop-off!`,
+        minutesUntilClose,
+        severity: 'high'
+      };
+    }
+    if (minutesUntilClose <= 60) {
+      return {
+        isOpen: true,
+        warning: `Closes ${minutesUntilClose} min after your drop-off`,
+        minutesUntilClose,
+        severity: 'medium'
+      };
+    }
+
+    return { isOpen: true, warning: null, minutesUntilClose };
   };
 
   // Toggle expanded state for host card
@@ -830,6 +886,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
       filtered = filtered.filter(h => h.available);
     }
 
+    // Apply drop-off time filter
+    if (dropOffTime) {
+      filtered = filtered.filter(h => {
+        const availability = checkHostTimeAvailability(h, dropOffTime);
+        return availability.isOpen;
+      });
+    }
+
     // Apply area filter in area view mode
     if (viewMode === 'area' && filterArea !== 'all') {
       filtered = filtered.filter(h => h.area === filterArea);
@@ -846,7 +910,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
 
     return filtered;
-  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch, includeUnavailableHosts]);
+  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch, includeUnavailableHosts, dropOffTime]);
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
@@ -1871,13 +1935,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <div key={area} className="mb-8">
                       <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
                       <div className="space-y-4">
-                        {availableHosts.filter(h => h.area === area).map(host => (
+                        {availableHosts.filter(h => h.area === area).map(host => {
+                          const timeAvail = checkHostTimeAvailability(host, dropOffTime);
+                          return (
                           <div key={host.id} className="flex flex-col gap-3 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
                               <div className="flex-1">
                                 <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
                                 {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
-                                <div className="text-base mt-1" style={{color: '#555'}}>{formatCondensedHours(host)}</div>
+                                <div className="text-base mt-1" style={{color: '#555'}}>
+                                  {formatCondensedHours(host)}
+                                  {timeAvail.warning && (
+                                    <span className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${timeAvail.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                      ⚠️ {timeAvail.warning}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <a
                                 href={`tel:${host.phone}`}
@@ -1906,7 +1979,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               </div>
                             )}
                           </div>
-                        ))}
+                        );})}
                       </div>
                     </div>
                   ));
@@ -1962,6 +2035,40 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <i className="lucide-locate w-4 h-4 sm:w-5 sm:h-5"></i>
               Use My Current Location
             </button>
+
+            {/* Drop-off Time Filter */}
+            <div className="w-full mt-4 p-4 rounded-xl" style={{backgroundColor: 'rgba(251, 173, 63, 0.1)', border: '1px solid rgba(251, 173, 63, 0.3)'}}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label className="font-semibold text-sm sm:text-base flex items-center gap-2" style={{color: '#236383'}}>
+                  <span>⏰</span>
+                  <span>I need to drop off at:</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="time"
+                    value={dropOffTime}
+                    onChange={(e) => setDropOffTime(e.target.value)}
+                    className="px-4 py-2 rounded-lg border-2 text-base font-medium"
+                    style={{borderColor: '#FBAD3F', color: '#236383'}}
+                  />
+                  {dropOffTime && (
+                    <button
+                      onClick={() => setDropOffTime('')}
+                      className="text-sm px-3 py-1 rounded-lg hover:bg-orange-100 transition-colors"
+                      style={{color: '#A31C41'}}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {dropOffTime && (
+                  <span className="text-sm" style={{color: '#666'}}>
+                    Showing only hosts open at {formatTime(dropOffTime)}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {userAddress && userCoords && (
               <div className="mt-4 p-4 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
                 <p className="text-base font-medium" style={{color: '#236383'}}>
@@ -2565,7 +2672,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
             {filteredHosts.length === 0 ? (
               <div className="bg-white rounded-2xl premium-card p-12 text-center">
-                <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
+                <p className="text-lg font-medium text-gray-500">
+                  {dropOffTime
+                    ? `No hosts are open at ${formatTime(dropOffTime)}. Try a different time or clear the filter.`
+                    : 'No hosts found in this area.'}
+                </p>
+                {dropOffTime && (
+                  <button
+                    onClick={() => setDropOffTime('')}
+                    className="mt-4 px-4 py-2 rounded-lg font-medium text-white"
+                    style={{backgroundColor: '#007E8C'}}
+                  >
+                    Clear Time Filter
+                  </button>
+                )}
               </div>
             ) : (
               filteredHosts.map((host, index) => {
@@ -2585,6 +2705,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 const showOtherHostsHeader = userCoords && viewMode === 'proximity' && actualRank === availableTopThreeCount + 1;
 
                 const isExpanded = expandedHosts.has(host.id);
+
+                // Check time availability for warning
+                const timeAvail = checkHostTimeAvailability(host, dropOffTime);
                 const availability = getHostAvailability(host);
                 const isOpenNow = availability && availability.status === 'open';
 
@@ -2693,6 +2816,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <>
                             <span className="text-gray-400">•</span>
                             <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
+                          </>
+                        )}
+                        {timeAvail.warning && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className={`font-bold ${timeAvail.severity === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
+                              ⚠️ {timeAvail.warning}
+                            </span>
                           </>
                         )}
                       </div>
