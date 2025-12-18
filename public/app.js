@@ -1024,25 +1024,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
       return;
     }
 
-    // Muted map style for better marker visibility
-    const mutedMapStyles = [
-      { elementType: 'geometry', stylers: [{ saturation: -50 }, { lightness: 10 }] },
-      { elementType: 'labels.text.fill', stylers: [{ color: '#666666' }] },
-      { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { lightness: 50 }] },
-      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-      { featureType: 'poi.park', stylers: [{ visibility: 'simplified' }, { saturation: -50 }] },
-      { featureType: 'road', elementType: 'geometry', stylers: [{ lightness: 30 }, { saturation: -30 }] },
-      { featureType: 'road', elementType: 'labels', stylers: [{ saturation: -50 }] },
-      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-      { featureType: 'water', stylers: [{ saturation: -30 }, { lightness: 20 }] },
-      { featureType: 'administrative', elementType: 'labels', stylers: [{ saturation: -50 }] }
-    ];
-
+    // Note: Map styling is configured via Cloud-based styling in Google Cloud Console
+    // using the mapId. Client-side styles are not compatible with mapId.
     const mapInstance = new window.google.maps.Map(mapElement, {
       center: mapCenter,
       zoom: mapZoom,
       mapId: 'SANDWICH_DROP_OFF_MAP',
-      styles: mutedMapStyles,
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false
@@ -1089,6 +1076,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     // Prepare host data: sort by distance if user coords available, otherwise show all
     let hostsToShowOnMap;
     let hostsWithDistance;
+    const MAX_INITIAL_MARKERS = 15; // Limit markers for cleaner map view
 
     if (userCoords) {
       // Filter by availability if checkbox is not checked
@@ -1097,12 +1085,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
         ...host,
         distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
       })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-      // Show all hosts in proximity search (including unavailable) for planning purposes
-      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
+      // Show top 3 by default, or up to MAX_INITIAL_MARKERS when "show all" is clicked
+      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance.slice(0, MAX_INITIAL_MARKERS) : hostsWithDistance.slice(0, 3);
     } else {
-      // No user location - filter by availability if checkbox is not checked
+      // No user location - filter by availability and limit to MAX_INITIAL_MARKERS
       const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
-      hostsToShowOnMap = hostsForMap;
+      hostsToShowOnMap = hostsForMap.slice(0, MAX_INITIAL_MARKERS);
       hostsWithDistance = hostsForMap;
     }
 
@@ -1114,52 +1102,44 @@ This is safe because your API key is already restricted to only the Geocoding AP
       // Map will be empty - this is handled in the UI message above
     }
     
+    // Create markers array for clustering
+    const markers = [];
+
     hostsToShowOnMap.forEach((host, index) => {
       const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
-      const isTopThree = userCoords && rank <= 3;
 
-      // Simplified marker styling: size indicates proximity, color indicates availability
-      const markerSize = isTopThree ? 36 : 28;
-      const innerDotSize = isTopThree ? 14 : 10;
-      const markerColor = host.available ? '#007E8C' : '#9CA3AF'; // Teal for available, gray for unavailable
-      const borderStyle = host.available ? '3px solid white' : '3px dashed white'; // Dashed border for unavailable
+      // Simple marker styling: teal for available, muted gray for unavailable
+      const markerColor = host.available ? '#007E8C' : '#B0B0B0';
 
-      // Create host marker content - clean, simple markers
+      // Create host marker content - clean, uniform markers
       const hostMarkerContent = document.createElement('div');
       hostMarkerContent.innerHTML = `
-        <div class="marker-wrapper" style="
+        <div style="
+          width: 28px;
+          height: 28px;
+          background: ${markerColor};
+          border: 2px solid white;
+          border-radius: 50%;
           display: flex;
-          flex-direction: column;
           align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
           cursor: pointer;
-          transition: transform 0.2s ease;
+          opacity: ${host.available ? '1' : '0.6'};
         ">
           <div style="
-            width: ${markerSize}px;
-            height: ${markerSize}px;
-            background: ${markerColor};
-            border: ${borderStyle};
+            width: 8px;
+            height: 8px;
+            background: white;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-          ">
-            <div style="
-              width: ${innerDotSize}px;
-              height: ${innerDotSize}px;
-              background: white;
-              border-radius: 50%;
-            "></div>
-          </div>
+          "></div>
         </div>
       `;
 
-      // Tooltip shows details on hover
+      // Simple tooltip with name and distance
       const markerTitle = userCoords
-        ? `${host.name} - ${host.distance} mi${host.available ? '' : ' (Not collecting this week)'}`
-        : `${host.name}${host.available ? '' : ' (Not collecting this week)'}`;
+        ? `${host.name} - ${host.distance} mi`
+        : host.name;
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
@@ -1170,6 +1150,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
       // Store marker reference
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
+      markers.push(marker);
 
       // Add click listener to show tooltip
       marker.addListener('click', (e) => {
@@ -1177,7 +1158,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         if (!host.available) {
           alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
         }
-        
+
         setMapTooltip(host);
         setHighlightedHostId(host.id);
 
@@ -1194,6 +1175,40 @@ This is safe because your API key is already restricted to only the Geocoding AP
         });
       });
     });
+
+    // Add marker clustering for cleaner map when zoomed out
+    if (markers.length > 5 && window.markerClusterer) {
+      new window.markerClusterer.MarkerClusterer({
+        map: mapInstance,
+        markers: markers,
+        renderer: {
+          render: ({ count, position }) => {
+            // Custom cluster marker
+            const clusterContent = document.createElement('div');
+            clusterContent.innerHTML = `
+              <div style="
+                width: 40px;
+                height: 40px;
+                background: #007E8C;
+                border: 3px solid white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                color: white;
+                font-weight: 600;
+                font-size: 14px;
+              ">${count}</div>
+            `;
+            return new google.maps.marker.AdvancedMarkerElement({
+              position,
+              content: clusterContent
+            });
+          }
+        }
+      });
+    }
 
     // Fit map bounds appropriately
     if (userCoords && hostsToShowOnMap.length > 0) {
