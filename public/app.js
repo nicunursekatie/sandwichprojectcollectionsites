@@ -1900,7 +1900,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 No collections on <span className="font-bold" style={{color: '#236383'}}>12/24</span> or <span className="font-bold" style={{color: '#236383'}}>12/31</span>
               </p>
               <p className="text-sm sm:text-base mt-1" style={{color: '#007E8C'}}>
-                Next collection: <span className="font-bold text-lg">Tuesday, January 7th</span>
+                Next collection: <span className="font-bold text-lg">Wednesday, January 8th</span>
               </p>
               <p className="text-xs mt-2" style={{color: '#888'}}>
                 Happy Holidays from The Sandwich Project! 🥪❤️
