@@ -9,12 +9,23 @@
 
   const getNextWednesday = (referenceDate = new Date()) => {
     const today = new Date(referenceDate);
-    const dayOfWeek = today.getDay(); // Sunday = 0 ... Wednesday = 3
-    const daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
-    const nextWednesday = new Date(today);
-    nextWednesday.setHours(0, 0, 0, 0);
-    nextWednesday.setDate(today.getDate() + daysUntilWednesday);
-    return nextWednesday;
+    const dayOfWeek = today.getDay(); // Sunday = 0, Tuesday = 2, Wednesday = 3
+    // For emergency collection: allow both Tuesday (2) and Wednesday (3)
+    let daysUntilCollection;
+    if (dayOfWeek === 2 || dayOfWeek === 3) {
+      // Today is Tuesday or Wednesday, return today
+      daysUntilCollection = 0;
+    } else if (dayOfWeek < 2) {
+      // Sunday (0) or Monday (1) - next collection is Tuesday
+      daysUntilCollection = 2 - dayOfWeek;
+    } else {
+      // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
+      daysUntilCollection = (2 - dayOfWeek + 7) % 7 || 7;
+    }
+    const nextCollectionDay = new Date(today);
+    nextCollectionDay.setHours(0, 0, 0, 0);
+    nextCollectionDay.setDate(today.getDate() + daysUntilCollection);
+    return nextCollectionDay;
   };
 
   const formatTime = (time24) => {

@@ -292,11 +292,22 @@ const HostAvailabilityApp = () => {
   const helperRefs = window.AppHelpers || {};
   const getNextWednesday = helperRefs.getNextWednesday || (() => {
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 3 = Wednesday
-    const daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
-    const nextWednesday = new Date(today);
-    nextWednesday.setDate(today.getDate() + daysUntilWednesday);
-    return nextWednesday;
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 2 = Tuesday, 3 = Wednesday
+    // For emergency collection: allow both Tuesday (2) and Wednesday (3)
+    let daysUntilCollection;
+    if (dayOfWeek === 2 || dayOfWeek === 3) {
+      // Today is Tuesday or Wednesday, return today
+      daysUntilCollection = 0;
+    } else if (dayOfWeek < 2) {
+      // Sunday (0) or Monday (1) - next collection is Tuesday
+      daysUntilCollection = 2 - dayOfWeek;
+    } else {
+      // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
+      daysUntilCollection = (2 - dayOfWeek + 7) % 7 || 7;
+    }
+    const nextCollectionDay = new Date(today);
+    nextCollectionDay.setDate(today.getDate() + daysUntilCollection);
+    return nextCollectionDay;
   });
   // Helper to format condensed hours (8am–8pm)
   const formatCondensedHours = (host) => {
@@ -761,23 +772,33 @@ This is safe because your API key is already restricted to only the Geocoding AP
     if (!host.openTime || !host.closeTime) return null;
 
     const now = new Date();
-    const currentDay = now.getDay(); // 0 = Sunday, 3 = Wednesday
+    const currentDay = now.getDay(); // 0 = Sunday, 2 = Tuesday, 3 = Wednesday
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    // Check if today is Wednesday (drop-off day)
-    const isDropOffDay = currentDay === 3;
+    // Check if today is Tuesday or Wednesday (drop-off days for emergency collection)
+    const isDropOffDay = currentDay === 2 || currentDay === 3;
 
     if (!isDropOffDay) {
-      // Calculate days until Wednesday
-      const daysUntilWednesday = (3 - currentDay + 7) % 7 || 7;
+      // Calculate days until next collection day (Tuesday or Wednesday)
+      let daysUntilCollection;
+      let dayName;
+      if (currentDay < 2) {
+        // Sunday (0) or Monday (1) - next collection is Tuesday
+        daysUntilCollection = 2 - currentDay;
+        dayName = 'Tuesday';
+      } else {
+        // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
+        daysUntilCollection = (2 - currentDay + 7) % 7 || 7;
+        dayName = 'Tuesday';
+      }
       return {
         status: 'closed-until-dropoff',
-        message: `Opens ${daysUntilWednesday === 1 ? 'tomorrow' : `in ${daysUntilWednesday} days`} (Wednesday) at ${formatTime(host.openTime)}`,
+        message: `Opens ${daysUntilCollection === 1 ? 'tomorrow' : `in ${daysUntilCollection} days`} (${dayName}) at ${formatTime(host.openTime)}`,
         color: '#FBAD3F'
       };
     }
 
-    // It's Wednesday - check if within operating hours
+    // It's Tuesday or Wednesday - check if within operating hours
     if (currentTime < host.openTime) {
       const openDate = new Date();
       const [openHour, openMin] = host.openTime.split(':');
@@ -1806,7 +1827,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   {dropOffDate}
                 </p>
                 <p className="text-sm sm:text-base font-medium" style={{color: '#236383'}}>
-                  Drop-off options for THIS Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
+                  Drop-off options for THIS Tuesday & Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
                 </p>
               </div>
             </div>
@@ -2353,7 +2374,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <span style={{color: '#007E8C'}}>{mapTooltip.hours}</span>
                       </p>
                       <p className="text-xs" style={{color: '#666'}}>
-                        Opens Wednesday at {formatTime(mapTooltip.openTime)}
+                        Opens Tuesday or Wednesday at {formatTime(mapTooltip.openTime)}
                       </p>
                     </div>
 
@@ -2498,8 +2519,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       const currentMinutes = now.getMinutes();
                       const currentTime = currentHour * 60 + currentMinutes;
 
-                      // Wednesday is day 3
-                      const isWednesday = currentDay === 3;
+                      // Tuesday is day 2, Wednesday is day 3 (both are collection days for emergency)
+                      const isCollectionDay = currentDay === 2 || currentDay === 3;
 
                       // Convert HH:MM format to minutes
                       const timeToMinutes = (timeStr) => {
@@ -2511,7 +2532,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                       const openMinutes = timeToMinutes(routeInfo.openTime);
                       const closeMinutes = timeToMinutes(routeInfo.closeTime);
-                      const isCurrentlyOpen = isWednesday && currentTime >= openMinutes && currentTime < closeMinutes;
+                      const isCurrentlyOpen = isCollectionDay && currentTime >= openMinutes && currentTime < closeMinutes;
 
                       // Format time helper (same as formatTime in the main app)
                       const formatTimeForBanner = (minutes) => {
@@ -2542,7 +2563,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               <p className="text-sm font-bold mb-1" style={{color: '#236383'}}>
                                 {isCurrentlyOpen
                                   ? `Open now · Closes at ${closeTimeStr}`
-                                  : `Opens Wednesday at ${openTimeStr}`
+                                  : `Opens Tuesday or Wednesday at ${openTimeStr}`
                                 }
                               </p>
                               <p className="text-xs" style={{color: '#666'}}>
