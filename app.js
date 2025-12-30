@@ -228,6 +228,32 @@ const HostAvailabilityApp = () => {
     return `${formatTime(host.openTime)}–${formatTime(host.closeTime)}`;
   };
 
+  // Helper to format all collection day hours
+  const formatAllCollectionHours = (host) => {
+    const hours = [];
+    
+    // Tuesday hours
+    if (host.tuesdayOpenTime && host.tuesdayCloseTime) {
+      hours.push(`Tue: ${formatTime(host.tuesdayOpenTime)}–${formatTime(host.tuesdayCloseTime)}`);
+    } else if (host.openTime && host.closeTime) {
+      hours.push(`Tue: ${formatTime(host.openTime)}–${formatTime(host.closeTime)}`);
+    }
+    
+    // Wednesday hours
+    if (host.wednesdayOpenTime && host.wednesdayCloseTime) {
+      hours.push(`Wed: ${formatTime(host.wednesdayOpenTime)}–${formatTime(host.wednesdayCloseTime)}`);
+    } else if (host.openTime && host.closeTime) {
+      hours.push(`Wed: ${formatTime(host.openTime)}–${formatTime(host.closeTime)}`);
+    }
+    
+    // Thursday hours (if available)
+    if (host.thursdayOpenTime && host.thursdayCloseTime) {
+      hours.push(`Thu: ${formatTime(host.thursdayOpenTime)}–${formatTime(host.thursdayCloseTime)}`);
+    }
+    
+    return hours.length > 0 ? hours.join(' • ') : (host.hours || 'Hours not available');
+  };
+
   // Toggle expanded state for host card
   const toggleHostExpanded = (hostId) => {
     setExpandedHosts(prev => {
@@ -2723,32 +2749,34 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
 
                       {/* Info Line: Hours • Status • Distance/Drive Time */}
-                      <div className="flex items-center flex-wrap gap-x-1 text-sm mb-3">
-                        <span className="font-medium" style={{color: '#555'}}>{formatCondensedHours(host)}</span>
-                        <span className="text-gray-400">•</span>
-                        {host.available ? (
-                          <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
-                        ) : (
-                          <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
-                        )}
-                        {userCoords && host.distance && (
-                          <>
-                            <span className="text-gray-400">•</span>
-                            <span style={{color: '#007E8C'}}>{host.distance} mi</span>
-                            {hostDriveTimes[host.id] && (
-                              <>
-                                <span className="text-gray-400">•</span>
-                                <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]}</span>
-                              </>
-                            )}
-                          </>
-                        )}
-                        {isOpenNow && (
-                          <>
-                            <span className="text-gray-400">•</span>
-                            <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
-                          </>
-                        )}
+                      <div className="flex flex-col gap-2 mb-3">
+                        <div className="flex items-center flex-wrap gap-x-1 text-sm">
+                          <span className="font-medium" style={{color: '#555'}}>{formatAllCollectionHours(host)}</span>
+                          <span className="text-gray-400">•</span>
+                          {host.available ? (
+                            <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
+                          ) : (
+                            <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
+                          )}
+                          {userCoords && host.distance && (
+                            <>
+                              <span className="text-gray-400">•</span>
+                              <span style={{color: '#007E8C'}}>{host.distance} mi</span>
+                              {hostDriveTimes[host.id] && (
+                                <>
+                                  <span className="text-gray-400">•</span>
+                                  <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]}</span>
+                                </>
+                              )}
+                            </>
+                          )}
+                          {isOpenNow && (
+                            <>
+                              <span className="text-gray-400">•</span>
+                              <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
+                            </>
+                          )}
+                        </div>
                       </div>
 
                       {/* Phone Number */}
@@ -3025,19 +3053,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <i className="lucide-clock w-5 h-5 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
                             <div className="flex-1">
                               <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours</div>
-                              <div className="font-medium mb-2 flex items-center gap-2 flex-wrap" style={{color: '#007E8C'}}>
-                                <span>{host.hours}</span>
-                                {(() => {
-                                  const availability = getHostAvailability(host);
-                                  if (availability && availability.status === 'open') {
-                                    return (
-                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
-                                        OPEN NOW
-                                      </span>
-                                    );
-                                  }
-                                  return null;
-                                })()}
+                              <div className="font-medium mb-2 flex flex-col gap-1" style={{color: '#007E8C'}}>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span>{formatAllCollectionHours(host)}</span>
+                                  {(() => {
+                                    const availability = getHostAvailability(host);
+                                    if (availability && availability.status === 'open') {
+                                      return (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                                          OPEN NOW
+                                        </span>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                                {host.hours && host.hours !== formatAllCollectionHours(host) && (
+                                  <div className="text-xs italic" style={{color: '#666'}}>
+                                    {host.hours}
+                                  </div>
+                                )}
                                 <div className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 ${
                                   host.available 
                                     ? 'border-2' 
