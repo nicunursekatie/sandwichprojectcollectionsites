@@ -1869,7 +1869,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 Collections happening <span className="font-bold" style={{color: '#236383'}}>today (Tuesday)</span> and <span className="font-bold" style={{color: '#236383'}}>tomorrow (Wednesday)</span>
               </p>
               <p className="text-sm sm:text-base mt-1" style={{color: '#007E8C'}}>
-                <span className="font-bold">Tuesday:</span> Closes at <span className="font-bold text-lg">6:30 PM</span> • <span className="font-bold">Wednesday:</span> Closes at <span className="font-bold text-lg">2:00 PM</span>
+                <span className="font-bold">Tuesday:</span> Collecting until <span className="font-bold text-lg">6:30 PM</span> • <span className="font-bold">Wednesday:</span> Collecting until <span className="font-bold text-lg">2:00 PM</span>
               </p>
               <p className="text-xs sm:text-sm mt-2 px-2" style={{color: '#A31C41', fontWeight: '600'}}>
                 ⚠️ IMPORTANT: This is a limited emergency collection at select hosts only. This is NOT our normal weekly collection schedule.
