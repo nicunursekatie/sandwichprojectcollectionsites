@@ -2038,21 +2038,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
             )}
           </div>
 
-          {/* Holiday Break Banner */}
+          {/* Emergency Collection Banner */}
           <div className="mx-3 sm:mx-4 mb-4 p-5 rounded-xl text-center" style={{backgroundColor: '#FFF9E6', border: '2px solid #FBAD3F'}}>
             <div className="flex flex-col items-center gap-2">
-              <span className="text-3xl">🎄</span>
+              <span className="text-3xl">🚨</span>
               <h2 className="text-xl sm:text-2xl font-bold" style={{color: '#236383'}}>
-                Holiday Break
+                Limited Emergency Collection
               </h2>
               <p className="text-base sm:text-lg font-medium" style={{color: '#555'}}>
-                No collections on <span className="font-bold" style={{color: '#236383'}}>12/24</span> or <span className="font-bold" style={{color: '#236383'}}>12/31</span>
+                Collections happening <span className="font-bold" style={{color: '#236383'}}>today (Tuesday)</span> and <span className="font-bold" style={{color: '#236383'}}>tomorrow (Wednesday)</span>
               </p>
               <p className="text-sm sm:text-base mt-1" style={{color: '#007E8C'}}>
-                Next collection: <span className="font-bold text-lg">Wednesday, January 7th</span>
+                <span className="font-bold">Tuesday:</span> Closes at <span className="font-bold text-lg">6:30 PM</span> • <span className="font-bold">Wednesday:</span> Closes at <span className="font-bold text-lg">2:00 PM</span>
               </p>
-              <p className="text-xs mt-2" style={{color: '#888'}}>
-                Happy Holidays from The Sandwich Project! 🥪❤️
+              <p className="text-xs sm:text-sm mt-2 px-2" style={{color: '#A31C41', fontWeight: '600'}}>
+                ⚠️ IMPORTANT: This is a limited emergency collection at select hosts only. This is NOT our normal weekly collection schedule.
+              </p>
+              <p className="text-xs mt-1" style={{color: '#666'}}>
+                Only hosts displayed below are participating in this emergency collection.
               </p>
             </div>
           </div>
