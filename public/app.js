@@ -553,6 +553,40 @@ const HostAvailabilityApp = () => {
     }
   };
 
+  const updateAllEmergencyHours = async () => {
+    if (!confirm('This will update ALL hosts\' closing times:\n\nTuesday: 6:30 PM\nWednesday: 2:00 PM\n\nContinue?')) {
+      return;
+    }
+
+    try {
+      const batch = db.batch();
+      let updateCount = 0;
+
+      (allHosts || []).forEach(host => {
+        const docRef = db.collection('hosts').doc(String(host.id));
+        batch.update(docRef, {
+          tuesdayCloseTime: '18:30',
+          wednesdayCloseTime: '14:00'
+        });
+        updateCount++;
+      });
+
+      await batch.commit();
+
+      // Update local state
+      setAllHosts((allHosts || []).map(host => ({
+        ...host,
+        tuesdayCloseTime: '18:30',
+        wednesdayCloseTime: '14:00'
+      })));
+
+      alert(`✅ Successfully updated ${updateCount} hosts!\n\nTuesday closing: 6:30 PM\nWednesday closing: 2:00 PM`);
+    } catch (error) {
+      console.error('Error updating emergency hours:', error);
+      alert('Error updating hours: ' + error.message);
+    }
+  };
+
   const exportHosts = () => {
     trackEvent('admin_export_hosts', {
       event_category: 'Admin',
@@ -3434,6 +3468,25 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   <p className="text-xs mt-2" style={{color: '#236383'}}>
                     Use "Copy as Code" to update the default host data in app.js
                   </p>
+                </div>
+
+                {/* Emergency Hours Update */}
+                <div className="bg-orange-50 rounded-xl p-4 mb-6 border-2" style={{borderColor: '#FBAD3F'}}>
+                  <h3 className="font-semibold mb-2" style={{color: '#236383'}}>🚨 Emergency Collection Hours</h3>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>
+                    Set all hosts' closing times for emergency collection:
+                  </p>
+                  <div className="text-sm mb-3" style={{color: '#236383'}}>
+                    <strong>Tuesday:</strong> 6:30 PM (18:30)<br/>
+                    <strong>Wednesday:</strong> 2:00 PM (14:00)
+                  </div>
+                  <button
+                    onClick={updateAllEmergencyHours}
+                    className="px-4 py-2 rounded-lg font-medium text-white"
+                    style={{backgroundColor: '#A31C41'}}
+                  >
+                    ⚡ Update All Hosts' Closing Times
+                  </button>
                 </div>
 
                 {/* One-time Coordinate Fix Button */}
