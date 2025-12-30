@@ -585,28 +585,43 @@ const HostAvailabilityApp = () => {
     }
 
     try {
+      // Reload hosts from Firestore first to ensure we have the latest data
+      const snapshot = await db.collection('hosts').get();
+      const hostsToUpdate = [];
+      snapshot.forEach(doc => {
+        hostsToUpdate.push({ ...doc.data(), id: doc.data().id });
+      });
+
+      if (hostsToUpdate.length === 0) {
+        alert('No hosts found in Firestore.');
+        return;
+      }
+
       const batch = db.batch();
       let updateCount = 0;
 
-      (allHosts || []).forEach(host => {
+      hostsToUpdate.forEach(host => {
         const docRef = db.collection('hosts').doc(String(host.id));
-        batch.update(docRef, {
+        // Use set with merge to ensure fields are added even if they don't exist
+        batch.set(docRef, {
           tuesdayCloseTime: '18:30',
           wednesdayCloseTime: '14:00'
-        });
+        }, { merge: true });
         updateCount++;
       });
 
       await batch.commit();
 
-      // Update local state
-      setAllHosts((allHosts || []).map(host => ({
-        ...host,
-        tuesdayCloseTime: '18:30',
-        wednesdayCloseTime: '14:00'
-      })));
+      // Reload hosts from Firestore to get updated data
+      const updatedSnapshot = await db.collection('hosts').get();
+      const updatedHosts = [];
+      updatedSnapshot.forEach(doc => {
+        updatedHosts.push({ ...doc.data(), id: doc.data().id });
+      });
+      updatedHosts.sort((a, b) => a.id - b.id);
+      setAllHosts(updatedHosts);
 
-      alert(`✅ Successfully updated ${updateCount} hosts!\n\nTuesday closing: 6:30 PM\nWednesday closing: 2:00 PM`);
+      alert(`✅ Successfully updated ${updateCount} hosts!\n\nTuesday closing: 6:30 PM\nWednesday closing: 2:00 PM\n\nRefresh the page to see changes.`);
     } catch (error) {
       console.error('Error updating emergency hours:', error);
       alert('Error updating hours: ' + error.message);
