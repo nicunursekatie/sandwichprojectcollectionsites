@@ -232,18 +232,18 @@ const HostAvailabilityApp = () => {
   const formatAllCollectionHours = (host) => {
     const hours = [];
     
-    // Tuesday hours
-    if (host.tuesdayOpenTime && host.tuesdayCloseTime) {
-      hours.push(`Tue: ${formatTime(host.tuesdayOpenTime)}–${formatTime(host.tuesdayCloseTime)}`);
-    } else if (host.openTime && host.closeTime) {
-      hours.push(`Tue: ${formatTime(host.openTime)}–${formatTime(host.closeTime)}`);
+    // Tuesday hours - use tuesday-specific if available, otherwise fallback to openTime/closeTime
+    const tueOpen = host.tuesdayOpenTime || host.openTime;
+    const tueClose = host.tuesdayCloseTime || host.closeTime;
+    if (tueOpen && tueClose) {
+      hours.push(`Tue: ${formatTime(tueOpen)}–${formatTime(tueClose)}`);
     }
     
-    // Wednesday hours
-    if (host.wednesdayOpenTime && host.wednesdayCloseTime) {
-      hours.push(`Wed: ${formatTime(host.wednesdayOpenTime)}–${formatTime(host.wednesdayCloseTime)}`);
-    } else if (host.openTime && host.closeTime) {
-      hours.push(`Wed: ${formatTime(host.openTime)}–${formatTime(host.closeTime)}`);
+    // Wednesday hours - use wednesday-specific if available, otherwise fallback to openTime/closeTime
+    const wedOpen = host.wednesdayOpenTime || host.openTime;
+    const wedClose = host.wednesdayCloseTime || host.closeTime;
+    if (wedOpen && wedClose) {
+      hours.push(`Wed: ${formatTime(wedOpen)}–${formatTime(wedClose)}`);
     }
     
     // Thursday hours (if available)
@@ -482,10 +482,19 @@ const HostAvailabilityApp = () => {
       hostsToUpdate.forEach(host => {
         const docRef = db.collection('hosts').doc(String(host.id));
         // Use set with merge to ensure fields are added even if they don't exist
-        batch.set(docRef, {
+        // Set both open and close times, using existing openTime as fallback for open times
+        const updateData = {
           tuesdayCloseTime: '18:30',
           wednesdayCloseTime: '14:00'
-        }, { merge: true });
+        };
+        // Only set open times if they don't already exist
+        if (!host.tuesdayOpenTime && host.openTime) {
+          updateData.tuesdayOpenTime = host.openTime;
+        }
+        if (!host.wednesdayOpenTime && host.openTime) {
+          updateData.wednesdayOpenTime = host.openTime;
+        }
+        batch.set(docRef, updateData, { merge: true });
         updateCount++;
       });
 
