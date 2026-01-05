@@ -69,6 +69,7 @@ const HostAvailabilityApp = () => {
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
+  const [tuesdayEnabled, setTuesdayEnabled] = React.useState(false); // Toggle for Tuesday collections
   const [expandedHosts, setExpandedHosts] = React.useState(new Set());
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
@@ -290,25 +291,43 @@ const HostAvailabilityApp = () => {
   }, []);
 
   const helperRefs = window.AppHelpers || {};
-  const getNextWednesday = helperRefs.getNextWednesday || (() => {
+  // getNextCollectionDay now respects tuesdayEnabled toggle
+  const getNextCollectionDay = () => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 2 = Tuesday, 3 = Wednesday
-    // For emergency collection: allow both Tuesday (2) and Wednesday (3)
     let daysUntilCollection;
-    if (dayOfWeek === 2 || dayOfWeek === 3) {
-      // Today is Tuesday or Wednesday, return today
-      daysUntilCollection = 0;
-    } else if (dayOfWeek < 2) {
-      // Sunday (0) or Monday (1) - next collection is Tuesday
-      daysUntilCollection = 2 - dayOfWeek;
+
+    if (tuesdayEnabled) {
+      // Tuesday and Wednesday are both collection days
+      if (dayOfWeek === 2 || dayOfWeek === 3) {
+        // Today is Tuesday or Wednesday, return today
+        daysUntilCollection = 0;
+      } else if (dayOfWeek < 2) {
+        // Sunday (0) or Monday (1) - next collection is Tuesday
+        daysUntilCollection = 2 - dayOfWeek;
+      } else {
+        // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
+        daysUntilCollection = (2 - dayOfWeek + 7) % 7 || 7;
+      }
     } else {
-      // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
-      daysUntilCollection = (2 - dayOfWeek + 7) % 7 || 7;
+      // Only Wednesday is a collection day
+      if (dayOfWeek === 3) {
+        // Today is Wednesday, return today
+        daysUntilCollection = 0;
+      } else if (dayOfWeek < 3) {
+        // Sunday (0), Monday (1), or Tuesday (2) - next collection is Wednesday
+        daysUntilCollection = 3 - dayOfWeek;
+      } else {
+        // Thursday (4), Friday (5), or Saturday (6) - next collection is next Wednesday
+        daysUntilCollection = (3 - dayOfWeek + 7) % 7 || 7;
+      }
     }
     const nextCollectionDay = new Date(today);
     nextCollectionDay.setDate(today.getDate() + daysUntilCollection);
     return nextCollectionDay;
-  });
+  };
+  // Keep legacy name for compatibility
+  const getNextWednesday = helperRefs.getNextWednesday || getNextCollectionDay;
   // Helper to format condensed hours (8am–8pm)
   const formatCondensedHours = (host) => {
     if (!host.openTime || !host.closeTime) return host.hours || 'Hours not available';
@@ -864,17 +883,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
     const currentDay = now.getDay(); // 0 = Sunday, 2 = Tuesday, 3 = Wednesday
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    // Check if today is Tuesday or Wednesday (drop-off days for emergency collection)
-    const isDropOffDay = currentDay === 2 || currentDay === 3;
+    // Check if today is Tuesday or Wednesday (drop-off days)
+    // Tuesday is only a drop-off day if tuesdayEnabled is true
+    const isTuesday = currentDay === 2;
+    const isWednesday = currentDay === 3;
+    const isDropOffDay = (isTuesday && tuesdayEnabled) || isWednesday;
 
     // Get day-specific hours (fallback to openTime/closeTime for backward compatibility)
     let openTime, closeTime, dayName;
-    if (currentDay === 2) {
-      // Tuesday
+    if (isTuesday && tuesdayEnabled) {
+      // Tuesday (only if enabled)
       openTime = host.tuesdayOpenTime || host.openTime;
       closeTime = host.tuesdayCloseTime || host.closeTime;
       dayName = 'Tuesday';
-    } else if (currentDay === 3) {
+    } else if (isWednesday) {
       // Wednesday
       openTime = host.wednesdayOpenTime || host.openTime;
       closeTime = host.wednesdayCloseTime || host.closeTime;
@@ -885,19 +907,40 @@ This is safe because your API key is already restricted to only the Geocoding AP
     if (!openTime || !closeTime) return null;
 
     if (!isDropOffDay) {
-      // Calculate days until next collection day (Tuesday or Wednesday)
+      // Calculate days until next collection day
       let daysUntilCollection;
       let nextDayName;
-      if (currentDay < 2) {
-        // Sunday (0) or Monday (1) - next collection is Tuesday
-        daysUntilCollection = 2 - currentDay;
-        nextDayName = 'Tuesday';
-        openTime = host.tuesdayOpenTime || host.openTime;
+      if (tuesdayEnabled) {
+        // Tuesday collections are enabled
+        if (currentDay < 2) {
+          // Sunday (0) or Monday (1) - next collection is Tuesday
+          daysUntilCollection = 2 - currentDay;
+          nextDayName = 'Tuesday';
+          openTime = host.tuesdayOpenTime || host.openTime;
+        } else if (currentDay === 2) {
+          // It's Tuesday but tuesdayEnabled is false - next is Wednesday
+          daysUntilCollection = 1;
+          nextDayName = 'Wednesday';
+          openTime = host.wednesdayOpenTime || host.openTime;
+        } else {
+          // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
+          daysUntilCollection = (2 - currentDay + 7) % 7 || 7;
+          nextDayName = 'Tuesday';
+          openTime = host.tuesdayOpenTime || host.openTime;
+        }
       } else {
-        // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
-        daysUntilCollection = (2 - currentDay + 7) % 7 || 7;
-        nextDayName = 'Tuesday';
-        openTime = host.tuesdayOpenTime || host.openTime;
+        // Only Wednesday collections
+        if (currentDay < 3) {
+          // Sunday (0), Monday (1), or Tuesday (2) - next collection is Wednesday
+          daysUntilCollection = 3 - currentDay;
+          nextDayName = 'Wednesday';
+          openTime = host.wednesdayOpenTime || host.openTime;
+        } else {
+          // Thursday (4), Friday (5), or Saturday (6) - next collection is next Wednesday
+          daysUntilCollection = (3 - currentDay + 7) % 7 || 7;
+          nextDayName = 'Wednesday';
+          openTime = host.wednesdayOpenTime || host.openTime;
+        }
       }
       if (!openTime) return null;
       return {
@@ -1783,16 +1826,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
         const currentDay = now.getDay();
         // Get day-specific hours
         let openTime, closeTime;
-        if (currentDay === 2) {
+        if (currentDay === 2 && tuesdayEnabled) {
           openTime = host.tuesdayOpenTime || host.openTime;
           closeTime = host.tuesdayCloseTime || host.closeTime;
         } else if (currentDay === 3) {
           openTime = host.wednesdayOpenTime || host.openTime;
           closeTime = host.wednesdayCloseTime || host.closeTime;
         } else {
-          // Default to Tuesday if not a collection day
-          openTime = host.tuesdayOpenTime || host.openTime;
-          closeTime = host.tuesdayCloseTime || host.closeTime;
+          // Default to Wednesday if not a collection day (or Tuesday disabled)
+          openTime = host.wednesdayOpenTime || host.openTime;
+          closeTime = host.wednesdayCloseTime || host.closeTime;
         }
         setRouteInfo({
           hostId: host.id,
@@ -2486,15 +2529,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         const now = new Date();
                         const currentDay = now.getDay();
                         let openTime, dayName;
-                        if (currentDay === 2) {
+                        if (currentDay === 2 && tuesdayEnabled) {
                           openTime = mapTooltip.tuesdayOpenTime || mapTooltip.openTime;
                           dayName = 'Tuesday';
                         } else if (currentDay === 3) {
                           openTime = mapTooltip.wednesdayOpenTime || mapTooltip.openTime;
                           dayName = 'Wednesday';
                         } else {
-                          openTime = mapTooltip.tuesdayOpenTime || mapTooltip.openTime;
-                          dayName = 'Tuesday';
+                          // Default to Wednesday
+                          openTime = mapTooltip.wednesdayOpenTime || mapTooltip.openTime;
+                          dayName = 'Wednesday';
                         }
                         return (
                           <p className="text-xs" style={{color: '#666'}}>
@@ -2645,12 +2689,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       const currentMinutes = now.getMinutes();
                       const currentTime = currentHour * 60 + currentMinutes;
 
-                      // Tuesday is day 2, Wednesday is day 3 (both are collection days for emergency)
-                      const isCollectionDay = currentDay === 2 || currentDay === 3;
+                      // Tuesday is day 2 (only if enabled), Wednesday is day 3 (always)
+                      const isCollectionDay = (currentDay === 2 && tuesdayEnabled) || currentDay === 3;
 
                       // Get day-specific hours
                       let openTime, closeTime, dayName;
-                      if (currentDay === 2) {
+                      if (currentDay === 2 && tuesdayEnabled) {
                         openTime = routeInfo.tuesdayOpenTime || routeInfo.openTime;
                         closeTime = routeInfo.tuesdayCloseTime || routeInfo.closeTime;
                         dayName = 'Tuesday';
@@ -2659,10 +2703,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         closeTime = routeInfo.wednesdayCloseTime || routeInfo.closeTime;
                         dayName = 'Wednesday';
                       } else {
-                        // Default to Tuesday if not a collection day
-                        openTime = routeInfo.tuesdayOpenTime || routeInfo.openTime;
-                        closeTime = routeInfo.tuesdayCloseTime || routeInfo.closeTime;
-                        dayName = 'Tuesday';
+                        // Default to Wednesday if not a collection day
+                        openTime = routeInfo.wednesdayOpenTime || routeInfo.openTime;
+                        closeTime = routeInfo.wednesdayCloseTime || routeInfo.closeTime;
+                        dayName = 'Wednesday';
                       }
 
                       // Convert HH:MM format to minutes
@@ -3510,6 +3554,41 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </p>
                 </div>
 
+                {/* Collection Days Toggle */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6 border-2" style={{borderColor: '#236383'}}>
+                  <h3 className="font-semibold mb-2" style={{color: '#236383'}}>📅 Collection Days</h3>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>
+                    Toggle which days are active for sandwich collection:
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tuesdayEnabled}
+                        onChange={(e) => setTuesdayEnabled(e.target.checked)}
+                        className="w-5 h-5 rounded"
+                      />
+                      <span className="font-medium" style={{color: '#236383'}}>
+                        Tuesday Collections {tuesdayEnabled ? '✅' : '(disabled)'}
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled
+                        className="w-5 h-5 rounded"
+                      />
+                      <span className="font-medium" style={{color: '#236383'}}>
+                        Wednesday Collections ✅ (always on)
+                      </span>
+                    </label>
+                  </div>
+                  <p className="text-xs mt-3" style={{color: '#007E8C'}}>
+                    When Tuesday is disabled, only Wednesday will show as a collection day.
+                  </p>
+                </div>
+
                 {/* Emergency Hours Update */}
                 <div className="bg-orange-50 rounded-xl p-4 mb-6 border-2" style={{borderColor: '#FBAD3F'}}>
                   <h3 className="font-semibold mb-2" style={{color: '#236383'}}>🚨 Emergency Collection Hours</h3>
@@ -3549,7 +3628,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', tuesdayOpenTime: '08:00', tuesdayCloseTime: '20:00', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
+                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
                     style={{backgroundColor: '#007E8C', opacity: userRole === 'viewer' ? 0.7 : 1}}
                     title={userRole === 'viewer' ? 'Available to full admins. This reviewer account is read-only.' : 'Add a new host'}
@@ -3757,28 +3836,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Tuesday Open Time</label>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Tuesday Open Time (optional)</label>
                         <input
                           type="time"
                           name="tuesdayOpenTime"
-                          defaultValue={editingHost.tuesdayOpenTime || editingHost.openTime}
-                          required
+                          defaultValue={editingHost.tuesdayOpenTime || ''}
                           className="w-full px-4 py-3 premium-input rounded-xl"
                           placeholder="08:00"
                         />
-                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>24-hour format</p>
+                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>Only needed if Tuesday collections are enabled</p>
                       </div>
                       <div>
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Tuesday Close Time</label>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Tuesday Close Time (optional)</label>
                         <input
                           type="time"
                           name="tuesdayCloseTime"
-                          defaultValue={editingHost.tuesdayCloseTime || editingHost.closeTime}
-                          required
+                          defaultValue={editingHost.tuesdayCloseTime || ''}
                           className="w-full px-4 py-3 premium-input rounded-xl"
                           placeholder="20:00"
                         />
-                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>24-hour format</p>
+                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>Only needed if Tuesday collections are enabled</p>
                       </div>
                     </div>
 
