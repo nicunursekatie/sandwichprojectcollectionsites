@@ -326,8 +326,8 @@ const HostAvailabilityApp = () => {
     nextCollectionDay.setDate(today.getDate() + daysUntilCollection);
     return nextCollectionDay;
   };
-  // Keep legacy name for compatibility
-  const getNextWednesday = helperRefs.getNextWednesday || getNextCollectionDay;
+  // Always use our getNextCollectionDay which respects tuesdayEnabled
+  const getNextWednesday = getNextCollectionDay;
   // Helper to format condensed hours (8am–8pm)
   const formatCondensedHours = (host) => {
     if (!host.openTime || !host.closeTime) return host.hours || 'Hours not available';
