@@ -337,26 +337,28 @@ const HostAvailabilityApp = () => {
   // Helper to format all collection day hours
   const formatAllCollectionHours = (host) => {
     const hours = [];
-    
-    // Tuesday hours - use tuesday-specific if available, otherwise fallback to openTime/closeTime
-    const tueOpen = host.tuesdayOpenTime || host.openTime;
-    const tueClose = host.tuesdayCloseTime || host.closeTime;
-    if (tueOpen && tueClose) {
-      hours.push(`Tue: ${formatTime(tueOpen)}–${formatTime(tueClose)}`);
+
+    // Tuesday hours - only show if Tuesday collections are enabled
+    if (tuesdayEnabled) {
+      const tueOpen = host.tuesdayOpenTime || host.openTime;
+      const tueClose = host.tuesdayCloseTime || host.closeTime;
+      if (tueOpen && tueClose) {
+        hours.push(`Tue: ${formatTime(tueOpen)}–${formatTime(tueClose)}`);
+      }
     }
-    
+
     // Wednesday hours - use wednesday-specific if available, otherwise fallback to openTime/closeTime
     const wedOpen = host.wednesdayOpenTime || host.openTime;
     const wedClose = host.wednesdayCloseTime || host.closeTime;
     if (wedOpen && wedClose) {
       hours.push(`Wed: ${formatTime(wedOpen)}–${formatTime(wedClose)}`);
     }
-    
+
     // Thursday hours (if available)
     if (host.thursdayOpenTime && host.thursdayCloseTime) {
       hours.push(`Thu: ${formatTime(host.thursdayOpenTime)}–${formatTime(host.thursdayCloseTime)}`);
     }
-    
+
     return hours.length > 0 ? hours.join(' • ') : (host.hours || 'Hours not available');
   };
 
@@ -1998,7 +2000,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   {dropOffDate}
                 </p>
                 <p className="text-sm sm:text-base font-medium" style={{color: '#236383'}}>
-                  Drop-off options for THIS Tuesday & Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
+                  Drop-off options for THIS Wednesday{tuesdayEnabled ? ' & Tuesday' : ''} • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
                 </p>
               </div>
             </div>
@@ -3558,7 +3560,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <div className="bg-blue-50 rounded-xl p-4 mb-6 border-2" style={{borderColor: '#236383'}}>
                   <h3 className="font-semibold mb-2" style={{color: '#236383'}}>📅 Collection Days</h3>
                   <p className="text-sm mb-3" style={{color: '#666'}}>
-                    Toggle which days are active for sandwich collection:
+                    Normal schedule is <strong>Wednesday only</strong>. Enable Tuesday for special collections.
                   </p>
                   <div className="flex flex-col gap-3">
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -3568,25 +3570,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         onChange={(e) => setTuesdayEnabled(e.target.checked)}
                         className="w-5 h-5 rounded"
                       />
-                      <span className="font-medium" style={{color: '#236383'}}>
-                        Tuesday Collections {tuesdayEnabled ? '✅' : '(disabled)'}
+                      <span className="font-medium" style={{color: tuesdayEnabled ? '#007E8C' : '#666'}}>
+                        {tuesdayEnabled ? '✅ Tuesday collections ARE happening this week' : '❌ Tuesday collections are OFF (normal)'}
                       </span>
                     </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        disabled
-                        className="w-5 h-5 rounded"
-                      />
-                      <span className="font-medium" style={{color: '#236383'}}>
-                        Wednesday Collections ✅ (always on)
+                    <div className="flex items-center gap-3 pl-8">
+                      <span className="font-medium" style={{color: '#007E8C'}}>
+                        ✅ Wednesday collections (always on)
                       </span>
-                    </label>
+                    </div>
                   </div>
-                  <p className="text-xs mt-3" style={{color: '#007E8C'}}>
-                    When Tuesday is disabled, only Wednesday will show as a collection day.
-                  </p>
                 </div>
 
                 {/* Emergency Hours Update */}
