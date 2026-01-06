@@ -37,7 +37,7 @@ const HostAvailabilityApp = () => {
   const [searchInput, setSearchInput] = React.useState('');
   const [nameSearch, setNameSearch] = React.useState('');
   const [userCoords, setUserCoords] = React.useState(null);
-  const [viewMode, setViewMode] = React.useState('proximity');
+  const [viewMode, setViewMode] = React.useState('list');
   const [filterArea, setFilterArea] = React.useState('all');
   const [mapTooltip, setMapTooltip] = React.useState(null);
   const [geocoding, setGeocoding] = React.useState(false);
@@ -69,6 +69,7 @@ const HostAvailabilityApp = () => {
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
+  const [tuesdayEnabled, setTuesdayEnabled] = React.useState(false); // Toggle for Tuesday collections
   const [expandedHosts, setExpandedHosts] = React.useState(new Set());
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
@@ -290,18 +291,75 @@ const HostAvailabilityApp = () => {
   }, []);
 
   const helperRefs = window.AppHelpers || {};
-  const getNextWednesday = helperRefs.getNextWednesday || (() => {
+  // getNextCollectionDay now respects tuesdayEnabled toggle
+  const getNextCollectionDay = () => {
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 3 = Wednesday
-    const daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
-    const nextWednesday = new Date(today);
-    nextWednesday.setDate(today.getDate() + daysUntilWednesday);
-    return nextWednesday;
-  });
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 2 = Tuesday, 3 = Wednesday
+    let daysUntilCollection;
+
+    if (tuesdayEnabled) {
+      // Tuesday and Wednesday are both collection days
+      if (dayOfWeek === 2 || dayOfWeek === 3) {
+        // Today is Tuesday or Wednesday, return today
+        daysUntilCollection = 0;
+      } else if (dayOfWeek < 2) {
+        // Sunday (0) or Monday (1) - next collection is Tuesday
+        daysUntilCollection = 2 - dayOfWeek;
+      } else {
+        // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
+        daysUntilCollection = (2 - dayOfWeek + 7) % 7 || 7;
+      }
+    } else {
+      // Only Wednesday is a collection day
+      if (dayOfWeek === 3) {
+        // Today is Wednesday, return today
+        daysUntilCollection = 0;
+      } else if (dayOfWeek < 3) {
+        // Sunday (0), Monday (1), or Tuesday (2) - next collection is Wednesday
+        daysUntilCollection = 3 - dayOfWeek;
+      } else {
+        // Thursday (4), Friday (5), or Saturday (6) - next collection is next Wednesday
+        daysUntilCollection = (3 - dayOfWeek + 7) % 7 || 7;
+      }
+    }
+    const nextCollectionDay = new Date(today);
+    nextCollectionDay.setDate(today.getDate() + daysUntilCollection);
+    return nextCollectionDay;
+  };
+  // Always use our getNextCollectionDay which respects tuesdayEnabled
+  const getNextWednesday = getNextCollectionDay;
   // Helper to format condensed hours (8am–8pm)
   const formatCondensedHours = (host) => {
     if (!host.openTime || !host.closeTime) return host.hours || 'Hours not available';
     return `${formatTime(host.openTime)}–${formatTime(host.closeTime)}`;
+  };
+
+  // Helper to format all collection day hours
+  const formatAllCollectionHours = (host) => {
+    const hours = [];
+
+    // Tuesday hours - only show if Tuesday collections are enabled
+    if (tuesdayEnabled) {
+      const tueOpen = host.tuesdayOpenTime || host.openTime;
+      const tueClose = host.tuesdayCloseTime || host.closeTime;
+      if (tueOpen && tueClose) {
+        hours.push(`Tue: ${formatTime(tueOpen)}–${formatTime(tueClose)}`);
+      }
+    }
+
+    // Wednesday hours - use wednesday-specific if available, otherwise fallback to openTime/closeTime
+    const wedOpen = host.wednesdayOpenTime || host.openTime;
+    const wedClose = host.wednesdayCloseTime || host.closeTime;
+    if (wedOpen && wedClose) {
+      hours.push(`Wed: ${formatTime(wedOpen)}–${formatTime(wedClose)}`);
+    }
+
+    // Thursday hours (if available)
+    if (host.thursdayOpenTime && host.thursdayCloseTime) {
+      hours.push(`Thu: ${formatTime(host.thursdayOpenTime)}–${formatTime(host.thursdayCloseTime)}`);
+    }
+
+    return hours.length > 0 ? hours.join(' • ') : (host.hours || 'Hours not available');
   };
 
   // Helper to check if host is open at a specific time and how much buffer there is
@@ -542,6 +600,64 @@ const HostAvailabilityApp = () => {
     }
   };
 
+  const updateAllEmergencyHours = async () => {
+    if (!confirm('This will update ALL hosts\' closing times:\n\nTuesday: 6:30 PM\nWednesday: 2:00 PM\n\nContinue?')) {
+      return;
+    }
+
+    try {
+      // Reload hosts from Firestore first to ensure we have the latest data
+      const snapshot = await db.collection('hosts').get();
+      const hostsToUpdate = [];
+      snapshot.forEach(doc => {
+        hostsToUpdate.push({ ...doc.data(), id: doc.data().id });
+      });
+
+      if (hostsToUpdate.length === 0) {
+        alert('No hosts found in Firestore.');
+        return;
+      }
+
+      const batch = db.batch();
+      let updateCount = 0;
+
+      hostsToUpdate.forEach(host => {
+        const docRef = db.collection('hosts').doc(String(host.id));
+        // Use set with merge to ensure fields are added even if they don't exist
+        // Set both open and close times, using existing openTime as fallback for open times
+        const updateData = {
+          tuesdayCloseTime: '18:30',
+          wednesdayCloseTime: '14:00'
+        };
+        // Only set open times if they don't already exist
+        if (!host.tuesdayOpenTime && host.openTime) {
+          updateData.tuesdayOpenTime = host.openTime;
+        }
+        if (!host.wednesdayOpenTime && host.openTime) {
+          updateData.wednesdayOpenTime = host.openTime;
+        }
+        batch.set(docRef, updateData, { merge: true });
+        updateCount++;
+      });
+
+      await batch.commit();
+
+      // Reload hosts from Firestore to get updated data
+      const updatedSnapshot = await db.collection('hosts').get();
+      const updatedHosts = [];
+      updatedSnapshot.forEach(doc => {
+        updatedHosts.push({ ...doc.data(), id: doc.data().id });
+      });
+      updatedHosts.sort((a, b) => a.id - b.id);
+      setAllHosts(updatedHosts);
+
+      alert(`✅ Successfully updated ${updateCount} hosts!\n\nTuesday closing: 6:30 PM\nWednesday closing: 2:00 PM\n\nRefresh the page to see changes.`);
+    } catch (error) {
+      console.error('Error updating emergency hours:', error);
+      alert('Error updating hours: ' + error.message);
+    }
+  };
+
   const exportHosts = () => {
     trackEvent('admin_export_hosts', {
       event_category: 'Admin',
@@ -566,9 +682,16 @@ const HostAvailabilityApp = () => {
       host_count: (allHosts || []).length
     });
     
-    const codeStr = `    return [\n${(allHosts || []).map(host =>
-      `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}', openTime: '${host.openTime}', closeTime: '${host.closeTime}'${host.thursdayOpenTime ? `, thursdayOpenTime: '${host.thursdayOpenTime}', thursdayCloseTime: '${host.thursdayCloseTime}'` : ''}${host.customDropoffDays ? `, customDropoffDays: '${host.customDropoffDays}'` : ''}, notes: '${host.notes}', available: ${host.available} }`
-    ).join(',\n')}\n    ];`;
+    const codeStr = `    return [\n${(allHosts || []).map(host => {
+      let fields = `    { id: ${host.id}, name: '${host.name}', area: '${host.area}'${host.neighborhood ? `, neighborhood: '${host.neighborhood}'` : ''}, lat: ${host.lat}, lng: ${host.lng}, phone: '${host.phone}', hours: '${host.hours}'`;
+      if (host.tuesdayOpenTime) fields += `, tuesdayOpenTime: '${host.tuesdayOpenTime}', tuesdayCloseTime: '${host.tuesdayCloseTime}'`;
+      if (host.wednesdayOpenTime) fields += `, wednesdayOpenTime: '${host.wednesdayOpenTime}', wednesdayCloseTime: '${host.wednesdayCloseTime}'`;
+      if (host.openTime) fields += `, openTime: '${host.openTime}', closeTime: '${host.closeTime}'`;
+      if (host.thursdayOpenTime) fields += `, thursdayOpenTime: '${host.thursdayOpenTime}', thursdayCloseTime: '${host.thursdayCloseTime}'`;
+      if (host.customDropoffDays) fields += `, customDropoffDays: '${host.customDropoffDays}'`;
+      fields += `, notes: '${host.notes}', available: ${host.available} }`;
+      return fields;
+    }).join(',\n')}\n    ];`;
 
     navigator.clipboard.writeText(codeStr).then(() => {
       alert('Code copied to clipboard! Paste this into app.js lines 56-85 to replace the default host data.');
@@ -758,29 +881,81 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Calculate host availability status
   const getHostAvailability = (host) => {
-    if (!host.openTime || !host.closeTime) return null;
-
     const now = new Date();
-    const currentDay = now.getDay(); // 0 = Sunday, 3 = Wednesday
+    const currentDay = now.getDay(); // 0 = Sunday, 2 = Tuesday, 3 = Wednesday
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    // Check if today is Wednesday (drop-off day)
-    const isDropOffDay = currentDay === 3;
+    // Check if today is Tuesday or Wednesday (drop-off days)
+    // Tuesday is only a drop-off day if tuesdayEnabled is true
+    const isTuesday = currentDay === 2;
+    const isWednesday = currentDay === 3;
+    const isDropOffDay = (isTuesday && tuesdayEnabled) || isWednesday;
+
+    // Get day-specific hours (fallback to openTime/closeTime for backward compatibility)
+    let openTime, closeTime, dayName;
+    if (isTuesday && tuesdayEnabled) {
+      // Tuesday (only if enabled)
+      openTime = host.tuesdayOpenTime || host.openTime;
+      closeTime = host.tuesdayCloseTime || host.closeTime;
+      dayName = 'Tuesday';
+    } else if (isWednesday) {
+      // Wednesday
+      openTime = host.wednesdayOpenTime || host.openTime;
+      closeTime = host.wednesdayCloseTime || host.closeTime;
+      dayName = 'Wednesday';
+    }
+
+    // If no hours defined for this day, return null
+    if (!openTime || !closeTime) return null;
 
     if (!isDropOffDay) {
-      // Calculate days until Wednesday
-      const daysUntilWednesday = (3 - currentDay + 7) % 7 || 7;
+      // Calculate days until next collection day
+      let daysUntilCollection;
+      let nextDayName;
+      if (tuesdayEnabled) {
+        // Tuesday collections are enabled
+        if (currentDay < 2) {
+          // Sunday (0) or Monday (1) - next collection is Tuesday
+          daysUntilCollection = 2 - currentDay;
+          nextDayName = 'Tuesday';
+          openTime = host.tuesdayOpenTime || host.openTime;
+        } else if (currentDay === 2) {
+          // It's Tuesday but tuesdayEnabled is false - next is Wednesday
+          daysUntilCollection = 1;
+          nextDayName = 'Wednesday';
+          openTime = host.wednesdayOpenTime || host.openTime;
+        } else {
+          // Thursday (4), Friday (5), or Saturday (6) - next collection is next Tuesday
+          daysUntilCollection = (2 - currentDay + 7) % 7 || 7;
+          nextDayName = 'Tuesday';
+          openTime = host.tuesdayOpenTime || host.openTime;
+        }
+      } else {
+        // Only Wednesday collections
+        if (currentDay < 3) {
+          // Sunday (0), Monday (1), or Tuesday (2) - next collection is Wednesday
+          daysUntilCollection = 3 - currentDay;
+          nextDayName = 'Wednesday';
+          openTime = host.wednesdayOpenTime || host.openTime;
+        } else {
+          // Thursday (4), Friday (5), or Saturday (6) - next collection is next Wednesday
+          daysUntilCollection = (3 - currentDay + 7) % 7 || 7;
+          nextDayName = 'Wednesday';
+          openTime = host.wednesdayOpenTime || host.openTime;
+        }
+      }
+      if (!openTime) return null;
       return {
         status: 'closed-until-dropoff',
-        message: `Opens ${daysUntilWednesday === 1 ? 'tomorrow' : `in ${daysUntilWednesday} days`} (Wednesday) at ${formatTime(host.openTime)}`,
+        message: `Opens ${daysUntilCollection === 1 ? 'tomorrow' : `in ${daysUntilCollection} days`} (${nextDayName}) at ${formatTime(openTime)}`,
         color: '#FBAD3F'
       };
     }
 
-    // It's Wednesday - check if within operating hours
-    if (currentTime < host.openTime) {
+    // It's Tuesday or Wednesday - check if within operating hours
+    if (currentTime < openTime) {
       const openDate = new Date();
-      const [openHour, openMin] = host.openTime.split(':');
+      const [openHour, openMin] = openTime.split(':');
       openDate.setHours(parseInt(openHour), parseInt(openMin), 0);
       const hoursUntil = Math.floor((openDate - now) / (1000 * 60 * 60));
       const minutesUntil = Math.floor((openDate - now) / (1000 * 60)) % 60;
@@ -792,9 +967,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
           : `Opens in ${minutesUntil}m`,
         color: '#FBAD3F'
       };
-    } else if (currentTime >= host.openTime && currentTime < host.closeTime) {
+    } else if (currentTime >= openTime && currentTime < closeTime) {
       const closeDate = new Date();
-      const [closeHour, closeMin] = host.closeTime.split(':');
+      const [closeHour, closeMin] = closeTime.split(':');
       closeDate.setHours(parseInt(closeHour), parseInt(closeMin), 0);
       const hoursUntil = Math.floor((closeDate - now) / (1000 * 60 * 60));
       const minutesUntil = Math.floor((closeDate - now) / (1000 * 60)) % 60;
@@ -879,7 +1054,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
   }, [userCoords, viewMode, allHostsForDisplay, userAddress]);
 
   const filteredHosts = React.useMemo(() => {
-    let filtered = viewMode === 'proximity' ? sortedHosts : allHostsForDisplay;
+    let filtered = viewMode === 'proximity' ? sortedHosts : [...allHostsForDisplay].sort((a, b) => a.name.localeCompare(b.name));
 
     // Filter out unavailable hosts by default (unless user opts in for planning)
     if (!includeUnavailableHosts) {
@@ -1649,6 +1824,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
         // Extract route information
         const route = result.routes[0];
         const leg = route.legs[0];
+        const now = new Date();
+        const currentDay = now.getDay();
+        // Get day-specific hours
+        let openTime, closeTime;
+        if (currentDay === 2 && tuesdayEnabled) {
+          openTime = host.tuesdayOpenTime || host.openTime;
+          closeTime = host.tuesdayCloseTime || host.closeTime;
+        } else if (currentDay === 3) {
+          openTime = host.wednesdayOpenTime || host.openTime;
+          closeTime = host.wednesdayCloseTime || host.closeTime;
+        } else {
+          // Default to Wednesday if not a collection day (or Tuesday disabled)
+          openTime = host.wednesdayOpenTime || host.openTime;
+          closeTime = host.wednesdayCloseTime || host.closeTime;
+        }
         setRouteInfo({
           hostId: host.id,
           duration: leg.duration.text,
@@ -1657,8 +1847,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
           hostAddress: `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`,
           hostPhone: host.phone,
           hours: host.hours,
-          openTime: host.openTime,
-          closeTime: host.closeTime
+          openTime: openTime,
+          closeTime: closeTime,
+          tuesdayOpenTime: host.tuesdayOpenTime,
+          tuesdayCloseTime: host.tuesdayCloseTime,
+          wednesdayOpenTime: host.wednesdayOpenTime,
+          wednesdayCloseTime: host.wednesdayCloseTime
         });
 
         // Extract turn-by-turn directions
@@ -1806,7 +2000,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   {dropOffDate}
                 </p>
                 <p className="text-sm sm:text-base font-medium" style={{color: '#236383'}}>
-                  Drop-off options for THIS Wednesday • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
+                  Drop-off options for THIS Wednesday{tuesdayEnabled ? ' & Tuesday' : ''} • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
                 </p>
               </div>
             </div>
@@ -1887,25 +2081,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Holiday Break Banner */}
-          <div className="mx-3 sm:mx-4 mb-4 p-5 rounded-xl text-center" style={{backgroundColor: '#FFF9E6', border: '2px solid #FBAD3F'}}>
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-3xl">🎄</span>
-              <h2 className="text-xl sm:text-2xl font-bold" style={{color: '#236383'}}>
-                Holiday Break
-              </h2>
-              <p className="text-base sm:text-lg font-medium" style={{color: '#555'}}>
-                No collections on <span className="font-bold" style={{color: '#236383'}}>12/24</span> or <span className="font-bold" style={{color: '#236383'}}>12/31</span>
-              </p>
-              <p className="text-sm sm:text-base mt-1" style={{color: '#007E8C'}}>
-                Next collection: <span className="font-bold text-lg">Wednesday, January 7th</span>
-              </p>
-              <p className="text-xs mt-2" style={{color: '#888'}}>
-                Happy Holidays from The Sandwich Project! 🥪❤️
-              </p>
-            </div>
           </div>
 
           {/* Simple View Toggle - Prominent */}
@@ -2352,9 +2527,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <span className="font-semibold" style={{color: '#236383'}}>Hours: </span>
                         <span style={{color: '#007E8C'}}>{mapTooltip.hours}</span>
                       </p>
-                      <p className="text-xs" style={{color: '#666'}}>
-                        Opens Wednesday at {formatTime(mapTooltip.openTime)}
-                      </p>
+                      {(() => {
+                        const now = new Date();
+                        const currentDay = now.getDay();
+                        let openTime, dayName;
+                        if (currentDay === 2 && tuesdayEnabled) {
+                          openTime = mapTooltip.tuesdayOpenTime || mapTooltip.openTime;
+                          dayName = 'Tuesday';
+                        } else if (currentDay === 3) {
+                          openTime = mapTooltip.wednesdayOpenTime || mapTooltip.openTime;
+                          dayName = 'Wednesday';
+                        } else {
+                          // Default to Wednesday
+                          openTime = mapTooltip.wednesdayOpenTime || mapTooltip.openTime;
+                          dayName = 'Wednesday';
+                        }
+                        return (
+                          <p className="text-xs" style={{color: '#666'}}>
+                            Opens {dayName} at {formatTime(openTime)}
+                          </p>
+                        );
+                      })()}
                     </div>
 
                     {/* Special Instructions - Higher contrast */}
@@ -2498,8 +2691,25 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       const currentMinutes = now.getMinutes();
                       const currentTime = currentHour * 60 + currentMinutes;
 
-                      // Wednesday is day 3
-                      const isWednesday = currentDay === 3;
+                      // Tuesday is day 2 (only if enabled), Wednesday is day 3 (always)
+                      const isCollectionDay = (currentDay === 2 && tuesdayEnabled) || currentDay === 3;
+
+                      // Get day-specific hours
+                      let openTime, closeTime, dayName;
+                      if (currentDay === 2 && tuesdayEnabled) {
+                        openTime = routeInfo.tuesdayOpenTime || routeInfo.openTime;
+                        closeTime = routeInfo.tuesdayCloseTime || routeInfo.closeTime;
+                        dayName = 'Tuesday';
+                      } else if (currentDay === 3) {
+                        openTime = routeInfo.wednesdayOpenTime || routeInfo.openTime;
+                        closeTime = routeInfo.wednesdayCloseTime || routeInfo.closeTime;
+                        dayName = 'Wednesday';
+                      } else {
+                        // Default to Wednesday if not a collection day
+                        openTime = routeInfo.wednesdayOpenTime || routeInfo.openTime;
+                        closeTime = routeInfo.wednesdayCloseTime || routeInfo.closeTime;
+                        dayName = 'Wednesday';
+                      }
 
                       // Convert HH:MM format to minutes
                       const timeToMinutes = (timeStr) => {
@@ -2509,9 +2719,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         return hours * 60 + mins;
                       };
 
-                      const openMinutes = timeToMinutes(routeInfo.openTime);
-                      const closeMinutes = timeToMinutes(routeInfo.closeTime);
-                      const isCurrentlyOpen = isWednesday && currentTime >= openMinutes && currentTime < closeMinutes;
+                      const openMinutes = timeToMinutes(openTime);
+                      const closeMinutes = timeToMinutes(closeTime);
+                      const isCurrentlyOpen = isCollectionDay && currentTime >= openMinutes && currentTime < closeMinutes;
 
                       // Format time helper (same as formatTime in the main app)
                       const formatTimeForBanner = (minutes) => {
@@ -2542,7 +2752,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               <p className="text-sm font-bold mb-1" style={{color: '#236383'}}>
                                 {isCurrentlyOpen
                                   ? `Open now · Closes at ${closeTimeStr}`
-                                  : `Opens Wednesday at ${openTimeStr}`
+                                  : `Opens ${dayName} at ${openTimeStr}`
                                 }
                               </p>
                               <p className="text-xs" style={{color: '#666'}}>
@@ -2645,6 +2855,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
               </div>
             </div>
+
+            {/* Feedback prompt */}
+            <div className="mb-4 p-3 rounded-xl text-center" style={{backgroundColor: '#F0F9FA', border: '1px solid #007E8C'}}>
+              <button
+                onClick={() => setShowFeedback(true)}
+                className="font-semibold hover:underline"
+                style={{color: '#236383'}}
+              >
+                Give Feedback
+              </button>
+              <p className="text-xs mt-1" style={{color: '#666'}}>
+                Let us know how we can make this work better for you!
+              </p>
+            </div>
+
             {filteredHosts.length === 0 ? (
               <div className="bg-white rounded-2xl premium-card p-12 text-center">
                 <p className="text-lg font-medium text-gray-500">
@@ -2767,14 +2992,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
 
                       {/* Info Line: Hours • Status • Distance/Drive Time */}
-                      <div className="flex items-center flex-wrap gap-x-1 text-base mb-3">
-                        <span className="font-medium" style={{color: '#555'}}>{formatCondensedHours(host)}</span>
-                        <span className="text-gray-400">•</span>
-                        {host.available ? (
-                          <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
-                        ) : (
-                          <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
-                        )}
+                      <div className="flex flex-col gap-2 mb-3">
+                        <div className="flex items-center flex-wrap gap-x-1 text-base">
+                          <span className="font-medium" style={{color: '#555'}}>{formatAllCollectionHours(host)}</span>
+                          <span className="text-gray-400">•</span>
+                          {host.available ? (
+                            <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
+                          ) : (
+                            <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
+                          )}
                         {userCoords && host.distance && (
                           <>
                             <span className="text-gray-400">•</span>
@@ -2793,6 +3019,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
                           </>
                         )}
+                        </div>
                         {timeAvail.warning && (
                           <>
                             <span className="text-gray-400">•</span>
@@ -3081,19 +3308,26 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <i className="lucide-clock w-5 h-5 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
                             <div className="flex-1">
                               <div className="font-semibold mb-1" style={{color: '#236383'}}>Drop-off Hours</div>
-                              <div className="font-medium mb-2 flex items-center gap-2 flex-wrap" style={{color: '#007E8C'}}>
-                                <span>{host.hours}</span>
-                                {(() => {
-                                  const availability = getHostAvailability(host);
-                                  if (availability && availability.status === 'open') {
-                                    return (
-                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-sm font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
-                                        OPEN NOW
-                                      </span>
-                                    );
-                                  }
-                                  return null;
-                                })()}
+                              <div className="font-medium mb-2 flex flex-col gap-1" style={{color: '#007E8C'}}>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span>{formatAllCollectionHours(host)}</span>
+                                  {(() => {
+                                    const availability = getHostAvailability(host);
+                                    if (availability && availability.status === 'open') {
+                                      return (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-sm font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                                          OPEN NOW
+                                        </span>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                                {host.hours && host.hours !== formatAllCollectionHours(host) && (
+                                  <div className="text-sm italic" style={{color: '#666'}}>
+                                    {host.hours}
+                                  </div>
+                                )}
                                 <div className={`px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-1.5 ${
                                   host.available
                                     ? 'border-2'
@@ -3337,6 +3571,51 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </p>
                 </div>
 
+                {/* Collection Days Toggle */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6 border-2" style={{borderColor: '#236383'}}>
+                  <h3 className="font-semibold mb-2" style={{color: '#236383'}}>📅 Collection Days</h3>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>
+                    Normal schedule is <strong>Wednesday only</strong>. Enable Tuesday for special collections.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tuesdayEnabled}
+                        onChange={(e) => setTuesdayEnabled(e.target.checked)}
+                        className="w-5 h-5 rounded"
+                      />
+                      <span className="font-medium" style={{color: tuesdayEnabled ? '#007E8C' : '#666'}}>
+                        {tuesdayEnabled ? '✅ Tuesday collections ARE happening this week' : '❌ Tuesday collections are OFF (normal)'}
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-3 pl-8">
+                      <span className="font-medium" style={{color: '#007E8C'}}>
+                        ✅ Wednesday collections (always on)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Emergency Hours Update */}
+                <div className="bg-orange-50 rounded-xl p-4 mb-6 border-2" style={{borderColor: '#FBAD3F'}}>
+                  <h3 className="font-semibold mb-2" style={{color: '#236383'}}>🚨 Emergency Collection Hours</h3>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>
+                    Set all hosts' closing times for emergency collection:
+                  </p>
+                  <div className="text-sm mb-3" style={{color: '#236383'}}>
+                    <strong>Tuesday:</strong> 6:30 PM (18:30)<br/>
+                    <strong>Wednesday:</strong> 2:00 PM (14:00)
+                  </div>
+                  <button
+                    onClick={updateAllEmergencyHours}
+                    className="px-4 py-2 rounded-lg font-medium text-white"
+                    style={{backgroundColor: '#A31C41'}}
+                  >
+                    ⚡ Update All Hosts' Closing Times
+                  </button>
+                </div>
+
                 {/* One-time Coordinate Fix Button */}
                 {userRole === 'admin' && (
                   <div className="bg-yellow-50 rounded-xl p-4 mb-6 border-2 border-yellow-300">
@@ -3357,7 +3636,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
+                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
                     style={{backgroundColor: '#007E8C', opacity: userRole === 'viewer' ? 0.7 : 1}}
                     title={userRole === 'viewer' ? 'Available to full admins. This reviewer account is read-only.' : 'Add a new host'}
@@ -3455,8 +3734,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     lng: formData.get('lng'),
                     phone: formData.get('phone'),
                     hours: formData.get('hours'),
-                    openTime: formData.get('openTime'),
-                    closeTime: formData.get('closeTime'),
+                    tuesdayOpenTime: formData.get('tuesdayOpenTime'),
+                    tuesdayCloseTime: formData.get('tuesdayCloseTime'),
+                    wednesdayOpenTime: formData.get('wednesdayOpenTime'),
+                    wednesdayCloseTime: formData.get('wednesdayCloseTime'),
+                    // Keep openTime/closeTime for backward compatibility (default to Wednesday)
+                    openTime: formData.get('wednesdayOpenTime') || formData.get('openTime'),
+                    closeTime: formData.get('wednesdayCloseTime') || formData.get('closeTime'),
                     thursdayOpenTime: formData.get('thursdayOpenTime') || '',
                     thursdayCloseTime: formData.get('thursdayCloseTime') || '',
                     notes: formData.get('notes') || '',
@@ -3560,11 +3844,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Tuesday Open Time (optional)</label>
+                        <input
+                          type="time"
+                          name="tuesdayOpenTime"
+                          defaultValue={editingHost.tuesdayOpenTime || ''}
+                          className="w-full px-4 py-3 premium-input rounded-xl"
+                          placeholder="08:00"
+                        />
+                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>Only needed if Tuesday collections are enabled</p>
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Tuesday Close Time (optional)</label>
+                        <input
+                          type="time"
+                          name="tuesdayCloseTime"
+                          defaultValue={editingHost.tuesdayCloseTime || ''}
+                          className="w-full px-4 py-3 premium-input rounded-xl"
+                          placeholder="20:00"
+                        />
+                        <p className="text-xs mt-1" style={{color: '#007E8C'}}>Only needed if Tuesday collections are enabled</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Wednesday Open Time</label>
                         <input
                           type="time"
-                          name="openTime"
-                          defaultValue={editingHost.openTime}
+                          name="wednesdayOpenTime"
+                          defaultValue={editingHost.wednesdayOpenTime || editingHost.openTime}
                           required
                           className="w-full px-4 py-3 premium-input rounded-xl"
                           placeholder="08:00"
@@ -3575,8 +3884,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Wednesday Close Time</label>
                         <input
                           type="time"
-                          name="closeTime"
-                          defaultValue={editingHost.closeTime}
+                          name="wednesdayCloseTime"
+                          defaultValue={editingHost.wednesdayCloseTime || editingHost.closeTime}
                           required
                           className="w-full px-4 py-3 premium-input rounded-xl"
                           placeholder="20:00"

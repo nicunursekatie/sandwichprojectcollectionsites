@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Emergency Collection Hours</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #236383;
+            margin-bottom: 10px;
+        }
+        .info {
+            background: #E6F7F9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #007E8C;
+        }
+        button {
+            background: #007E8C;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #005a66;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #output {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .warning {
+            background: #FFF9E6;
+            border-left: 4px solid #FBAD3F;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 Emergency Collection Hours Update</h1>
+        <p>This will update ALL hosts' closing times for the emergency collection:</p>
+        
+        <div class="info">
+            <strong>Tuesday (Today):</strong> 6:30 PM (18:30)<br>
+            <strong>Wednesday (Tomorrow):</strong> 2:00 PM (14:00)
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Warning:</strong> This will update closing times for ALL hosts in Firestore. 
+            Make sure this is what you want to do!
+        </div>
+
+        <button id="updateBtn">Update All Hosts' Closing Times</button>
+        <button id="previewBtn">Preview Changes (Don't Update)</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAiv_SfZGBGzyw8dEypQIDXI2iB3WAKjXc",
+            authDomain: "tsp-host-finder-tool.firebaseapp.com",
+            projectId: "tsp-host-finder-tool",
+            storageBucket: "tsp-host-finder-tool.firebasestorage.app",
+            messagingSenderId: "773911012242",
+            appId: "1:773911012242:web:60bc4f1fce3b494fb7974b",
+            measurementId: "G-6P9FHSLS3S"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Emergency collection hours
+        const EMERGENCY_HOURS = {
+            tuesdayCloseTime: '18:30',  // 6:30 PM
+            wednesdayCloseTime: '14:00'  // 2:00 PM
+        };
+
+        async function previewChanges() {
+            const output = document.getElementById('output');
+            const btn = document.getElementById('previewBtn');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            output.textContent = 'Loading hosts from Firestore...\n\n';
+
+            try {
+                const snapshot = await db.collection('hosts').get();
+                const hosts = [];
+                snapshot.forEach(doc => {
+                    hosts.push({ id: doc.id, ...doc.data() });
+                });
+
+                output.textContent += `Found ${hosts.length} hosts.\n\n`;
+                output.textContent += 'Preview of changes:\n';
+                output.textContent += '='.repeat(60) + '\n\n';
+
+                hosts.forEach(host => {
+                    const currentTuesday = host.tuesdayCloseTime || host.closeTime || 'Not set';
+                    const currentWednesday = host.wednesdayCloseTime || host.closeTime || 'Not set';
+                    
+                    output.textContent += `${host.name} (ID: ${host.id})\n`;
+                    output.textContent += `  Tuesday: ${currentTuesday} → ${EMERGENCY_HOURS.tuesdayCloseTime}\n`;
+                    output.textContent += `  Wednesday: ${currentWednesday} → ${EMERGENCY_HOURS.wednesdayCloseTime}\n\n`;
+                });
+
+                output.textContent += '\n' + '='.repeat(60) + '\n';
+                output.textContent += 'This is a preview only. No changes have been made.\n';
+                output.textContent += 'Click "Update All Hosts\' Closing Times" to apply these changes.';
+            } catch (error) {
+                output.textContent += `\n❌ Error: ${error.message}`;
+                console.error('Error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Preview Changes (Don\'t Update)';
+            }
+        }
+
+        async function updateAllHosts() {
+            const output = document.getElementById('output');
+            const btn = document.getElementById('updateBtn');
+            
+            if (!confirm(`This will update closing times for ALL hosts in Firestore.\n\nTuesday: 6:30 PM\nWednesday: 2:00 PM\n\nContinue?`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+            output.textContent = 'Starting batch update...\n\n';
+
+            try {
+                const snapshot = await db.collection('hosts').get();
+                const hosts = [];
+                snapshot.forEach(doc => {
+                    hosts.push({ id: doc.id, ...doc.data() });
+                });
+
+                output.textContent += `Found ${hosts.length} hosts to update.\n\n`;
+
+                // Use batch write for efficiency
+                const batch = db.batch();
+                let updateCount = 0;
+
+                hosts.forEach(host => {
+                    const docRef = db.collection('hosts').doc(String(host.id));
+                    batch.update(docRef, {
+                        tuesdayCloseTime: EMERGENCY_HOURS.tuesdayCloseTime,
+                        wednesdayCloseTime: EMERGENCY_HOURS.wednesdayCloseTime
+                    });
+                    updateCount++;
+                });
+
+                await batch.commit();
+
+                output.textContent += `✅ Successfully updated ${updateCount} hosts!\n\n`;
+                output.textContent += 'Updated closing times:\n';
+                output.textContent += `  Tuesday: ${EMERGENCY_HOURS.tuesdayCloseTime} (6:30 PM)\n`;
+                output.textContent += `  Wednesday: ${EMERGENCY_HOURS.wednesdayCloseTime} (2:00 PM)\n\n`;
+                output.textContent += '🎉 All hosts have been updated!\n';
+                output.textContent += '\nRefresh the host finder website to see the changes.';
+            } catch (error) {
+                output.textContent += `\n❌ Error: ${error.message}`;
+                console.error('Error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Update All Hosts\' Closing Times';
+            }
+        }
+
+        document.getElementById('updateBtn').addEventListener('click', updateAllHosts);
+        document.getElementById('previewBtn').addEventListener('click', previewChanges);
+    </script>
+</body>
+</html>
+
