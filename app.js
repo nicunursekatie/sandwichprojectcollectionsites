@@ -3,7 +3,7 @@ const HostAvailabilityApp = () => {
   const [searchInput, setSearchInput] = React.useState('');
   const [nameSearch, setNameSearch] = React.useState('');
   const [userCoords, setUserCoords] = React.useState(null);
-  const [viewMode, setViewMode] = React.useState('proximity');
+  const [viewMode, setViewMode] = React.useState('list');
   const [filterArea, setFilterArea] = React.useState('all');
   const [mapTooltip, setMapTooltip] = React.useState(null);
   const [geocoding, setGeocoding] = React.useState(false);
@@ -932,7 +932,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
   }, [userCoords, viewMode, allHostsForDisplay, userAddress]);
 
   const filteredHosts = React.useMemo(() => {
-    let filtered = viewMode === 'proximity' ? sortedHosts : allHostsForDisplay;
+    let filtered = viewMode === 'proximity' ? sortedHosts : [...allHostsForDisplay].sort((a, b) => a.name.localeCompare(b.name));
 
     // Filter out unavailable hosts by default (unless user opts in for planning)
     if (!includeUnavailableHosts) {
@@ -2713,6 +2713,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 )}
               </div>
             </div>
+
+            {/* Feedback prompt */}
+            <div className="mb-4 p-3 rounded-xl text-center" style={{backgroundColor: '#F0F9FA', border: '1px solid #007E8C'}}>
+              <button
+                onClick={() => setShowFeedback(true)}
+                className="font-semibold hover:underline"
+                style={{color: '#236383'}}
+              >
+                Give Feedback
+              </button>
+              <p className="text-xs mt-1" style={{color: '#666'}}>
+                Let us know how we can make this work better for you!
+              </p>
+            </div>
+
             {filteredHosts.length === 0 ? (
               <div className="bg-white rounded-2xl premium-card p-12 text-center">
                 <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
