@@ -2756,18 +2756,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                       {/* Location Badges: Area and Neighborhood */}
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{backgroundColor: '#236383', color: '#fff'}}>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium" style={{backgroundColor: '#236383', color: '#fff'}}>
                           {host.area}
                         </span>
                         {host.neighborhood && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{backgroundColor: '#007e8c', color: '#fff'}}>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium" style={{backgroundColor: '#007e8c', color: '#fff'}}>
                             {host.neighborhood}
                           </span>
                         )}
                       </div>
 
                       {/* Info Line: Hours • Status • Distance/Drive Time */}
-                      <div className="flex items-center flex-wrap gap-x-1 text-sm mb-3">
+                      <div className="flex items-center flex-wrap gap-x-1 text-base mb-3">
                         <span className="font-medium" style={{color: '#555'}}>{formatCondensedHours(host)}</span>
                         <span className="text-gray-400">•</span>
                         {host.available ? (
@@ -3087,16 +3087,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                   const availability = getHostAvailability(host);
                                   if (availability && availability.status === 'open') {
                                     return (
-                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-sm font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
                                         OPEN NOW
                                       </span>
                                     );
                                   }
                                   return null;
                                 })()}
-                                <div className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 ${
-                                  host.available 
-                                    ? 'border-2' 
+                                <div className={`px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-1.5 ${
+                                  host.available
+                                    ? 'border-2'
                                     : 'bg-red-100 text-red-800 border-2 border-red-300'
                                 }`}
                                 style={host.available ? {
@@ -3106,12 +3106,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 } : {}}>
                                   {host.available ? (
                                     <>
-                                      <span className="text-sm">✅</span>
+                                      <span className="text-base">✅</span>
                                       <span>Collecting This Week</span>
                                     </>
                                   ) : (
                                     <>
-                                      <span className="text-sm">❌</span>
+                                      <span className="text-base">❌</span>
                                       <span>NOT Collecting This Week</span>
                                     </>
                                   )}
@@ -3130,7 +3130,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 if (!availability) return null;
                                 return (
                                   <div
-                                    className="inline-block px-3 py-1 rounded-lg text-sm font-bold mt-1"
+                                    className="inline-block px-3 py-1.5 rounded-lg text-base font-bold mt-1"
                                     style={{backgroundColor: availability.color, color: 'white'}}
                                   >
                                     {availability.message}
