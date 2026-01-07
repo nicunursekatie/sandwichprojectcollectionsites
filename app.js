@@ -1267,11 +1267,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
       // Add click listener to show tooltip
       marker.addListener('click', (e) => {
+        // Stop the event from propagating to the map click listener
+        if (e && e.domEvent) {
+          e.domEvent.stopPropagation();
+        }
+
         // Alert if host is not available
         if (!host.available) {
           alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
         }
-        
+
         setMapTooltip(host);
         setHighlightedHostId(host.id);
 

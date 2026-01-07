@@ -1357,7 +1357,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
 
-      marker.addListener('click', () => {
+      marker.addListener('click', (e) => {
+        // Stop the event from propagating to the map click listener
+        if (e && e.domEvent) {
+          e.domEvent.stopPropagation();
+        }
         setMapTooltip(host);
         setHighlightedHostId(host.id);
         mapInstance.setZoom(14);
@@ -1410,7 +1414,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
       backgroundMarkers.push(marker);
 
-      marker.addListener('click', () => {
+      marker.addListener('click', (e) => {
+        // Stop the event from propagating to the map click listener
+        if (e && e.domEvent) {
+          e.domEvent.stopPropagation();
+        }
         if (isUnavailable) {
           alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
         }
