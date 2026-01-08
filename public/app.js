@@ -2603,6 +2603,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </p>
           </div>
         </div>
+
+        {/* Admin Modal - rendered here so it works on special collections page */}
+        {showAdminModal && renderAdminModal()}
       </div>
     );
   }
