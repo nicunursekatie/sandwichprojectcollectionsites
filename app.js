@@ -2191,6 +2191,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </div>
 
+              {/* Collection Dates Banner */}
+              <div className="p-4 sm:p-5 border-b" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 text-center">
+                  <span className="text-lg sm:text-xl font-bold" style={{color: '#A31C41'}}>📅 Collection Dates:</span>
+                  <span className="text-base sm:text-lg font-semibold" style={{color: '#333'}}>
+                    {(() => {
+                      const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+                      const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+                      const formatDate = (d) => d.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                      return `${formatDate(startDate)} — ${formatDate(endDate)}`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+
               {/* Map */}
               {specialCollection.hosts?.length > 0 && (
                 <div className="p-5 sm:p-6 bg-white border-b">
