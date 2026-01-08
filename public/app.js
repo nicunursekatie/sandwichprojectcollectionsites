@@ -2491,7 +2491,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     )}
                   </div>
                   {window.specialCollectionSortedHosts && (
-                    <p className="text-sm mt-3 font-medium" style={{color: '#47bc3b'}}>
+                    <p className="text-sm mt-3 font-medium" style={{color: '#007E8C'}}>
                       ✓ Sorted by driving distance from your location
                     </p>
                   )}
@@ -2503,7 +2503,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <h3 className="font-bold text-lg mb-4" style={{color: '#236383'}}>
                   Drop-off Locations ({specialCollection.hosts?.length || 0})
                   {window.specialCollectionSortedHosts && (
-                    <span className="text-sm font-normal ml-2" style={{color: '#47bc3b'}}>- sorted by distance</span>
+                    <span className="text-sm font-normal ml-2" style={{color: '#007E8C'}}>- sorted by distance</span>
                   )}
                 </h3>
                 {specialCollection.hosts?.length > 0 ? (
@@ -2541,7 +2541,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             🕐 {formatTime(host.openTime)} - {formatTime(host.closeTime)}
                           </span>
                           {host.phone && (
-                            <a href={`tel:${host.phone}`} className="text-sm font-medium px-3 py-1 rounded-lg flex items-center gap-1" style={{backgroundColor: '#47bc3b', color: 'white'}}>
+                            <a href={`tel:${host.phone}`} className="text-sm font-medium px-3 py-1 rounded-lg flex items-center gap-1" style={{backgroundColor: '#236383', color: 'white'}}>
                               📞 Call
                             </a>
                           )}
