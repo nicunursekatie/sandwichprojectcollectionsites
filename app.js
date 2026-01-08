@@ -535,12 +535,23 @@ const HostAvailabilityApp = () => {
   // Special Collection functions
   const saveSpecialCollection = async (collectionData) => {
     try {
+      // Helper to safely convert date strings to Date objects
+      const toDate = (val) => {
+        if (!val) return null;
+        if (val instanceof Date) return val;
+        if (val.toDate) return val.toDate();
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+      };
+
       const data = {
         ...collectionData,
         active: true,
         createdAt: new Date(),
-        startDate: new Date(collectionData.startDate),
-        endDate: new Date(collectionData.endDate),
+        startDate: toDate(collectionData.startDate),
+        endDate: toDate(collectionData.endDate),
+        displayStart: toDate(collectionData.displayStart),
+        displayEnd: toDate(collectionData.displayEnd),
         hosts: collectionData.hosts || []
       };
 
@@ -4549,9 +4560,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           value={(() => {
                             const d = editingSpecialCollection.displayStart;
                             if (!d) return '';
-                            if (typeof d === 'string') return d;
-                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
-                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                            if (typeof d === 'string') return d.slice(0, 16);
+                            const date = d.toDate ? d.toDate() : new Date(d);
+                            if (isNaN(date.getTime())) return '';
+                            // Format as local time for datetime-local input
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const mins = String(date.getMinutes()).padStart(2, '0');
+                            return `${year}-${month}-${day}T${hours}:${mins}`;
                           })()}
                           onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, displayStart: e.target.value})}
                           className="w-full px-3 py-2 rounded-lg border-2 text-sm"
@@ -4565,9 +4583,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           value={(() => {
                             const d = editingSpecialCollection.displayEnd;
                             if (!d) return '';
-                            if (typeof d === 'string') return d;
-                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
-                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                            if (typeof d === 'string') return d.slice(0, 16);
+                            const date = d.toDate ? d.toDate() : new Date(d);
+                            if (isNaN(date.getTime())) return '';
+                            // Format as local time for datetime-local input
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const mins = String(date.getMinutes()).padStart(2, '0');
+                            return `${year}-${month}-${day}T${hours}:${mins}`;
                           })()}
                           onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, displayEnd: e.target.value})}
                           className="w-full px-3 py-2 rounded-lg border-2 text-sm"
@@ -4589,9 +4614,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           value={(() => {
                             const d = editingSpecialCollection.startDate;
                             if (!d) return '';
-                            if (typeof d === 'string') return d;
-                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
-                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                            if (typeof d === 'string') return d.slice(0, 16);
+                            const date = d.toDate ? d.toDate() : new Date(d);
+                            if (isNaN(date.getTime())) return '';
+                            // Format as local time for datetime-local input
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const mins = String(date.getMinutes()).padStart(2, '0');
+                            return `${year}-${month}-${day}T${hours}:${mins}`;
                           })()}
                           onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, startDate: e.target.value})}
                           className="w-full px-3 py-2 rounded-lg border-2 text-sm"
@@ -4605,9 +4637,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           value={(() => {
                             const d = editingSpecialCollection.endDate;
                             if (!d) return '';
-                            if (typeof d === 'string') return d;
-                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
-                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                            if (typeof d === 'string') return d.slice(0, 16);
+                            const date = d.toDate ? d.toDate() : new Date(d);
+                            if (isNaN(date.getTime())) return '';
+                            // Format as local time for datetime-local input
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const mins = String(date.getMinutes()).padStart(2, '0');
+                            return `${year}-${month}-${day}T${hours}:${mins}`;
                           })()}
                           onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, endDate: e.target.value})}
                           className="w-full px-3 py-2 rounded-lg border-2 text-sm"
