@@ -4359,6 +4359,57 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 )}
 
+                {/* Copy from Existing Hosts */}
+                <div className="border-t pt-4 mb-4">
+                  <h4 className="font-bold mb-3" style={{color: '#236383'}}>📋 Copy from Existing Hosts</h4>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>Select hosts from your main list to add to this special collection:</p>
+                  <div className="max-h-48 overflow-y-auto border-2 rounded-lg p-2 mb-3" style={{borderColor: '#e0e0e0'}}>
+                    {(allHosts || []).filter(h => h.available).map(host => {
+                      const alreadyAdded = editingSpecialCollection.hosts?.some(sh => sh.sourceId === host.id || sh.name === host.name);
+                      return (
+                        <label key={host.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-gray-50 ${alreadyAdded ? 'opacity-50' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={alreadyAdded}
+                            disabled={alreadyAdded}
+                            onChange={(e) => {
+                              if (e.target.checked && !alreadyAdded) {
+                                const newHost = {
+                                  id: Date.now(),
+                                  sourceId: host.id,
+                                  name: host.name,
+                                  area: host.area,
+                                  neighborhood: host.neighborhood || '',
+                                  lat: host.lat,
+                                  lng: host.lng,
+                                  phone: host.phone || '',
+                                  hours: '08:00 - 18:00',
+                                  openTime: '08:00',
+                                  closeTime: '18:00',
+                                  notes: host.notes || ''
+                                };
+                                setEditingSpecialCollection({
+                                  ...editingSpecialCollection,
+                                  hosts: [...(editingSpecialCollection.hosts || []), newHost]
+                                });
+                              }
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <div className="flex-1">
+                            <span className="font-medium" style={{color: '#236383'}}>{host.name}</span>
+                            <span className="text-sm ml-2" style={{color: '#666'}}>{host.area}</span>
+                          </div>
+                          {alreadyAdded && <span className="text-xs px-2 py-1 rounded" style={{backgroundColor: '#e8f5e9', color: '#2e7d32'}}>Added</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs" style={{color: '#666'}}>
+                    💡 Tip: After adding hosts, use Bulk Time Edit above to set their hours for this special collection.
+                  </p>
+                </div>
+
                 {/* Hosts Section */}
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center mb-3">
@@ -4369,7 +4420,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       className="px-3 py-1 rounded text-sm font-medium text-white"
                       style={{backgroundColor: '#007E8C'}}
                     >
-                      + Add Host
+                      + Add New Host
                     </button>
                   </div>
 
