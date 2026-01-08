@@ -2439,6 +2439,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </div>
                         </div>
 
+                        {/* Collection dates for this location */}
+                        <div className="text-xs font-medium mb-2 px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                          📅 {(() => {
+                            const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+                            const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+                            const formatDay = (d) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                            const sameDay = startDate.toDateString() === endDate.toDateString();
+                            return sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`;
+                          })()}
+                        </div>
+
                         {/* Hours badge */}
                         <div className="mb-3">
                           <span className="inline-block text-sm font-semibold px-3 py-1.5 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
