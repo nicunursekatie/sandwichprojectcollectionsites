@@ -2198,18 +2198,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   Emergency & temporary sandwich collection locations
                 </p>
               </div>
-              <a
-                href="/"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.history.pushState({}, '', '/');
-                  setCurrentPage('main');
-                }}
-                className="text-sm px-4 py-2 rounded-lg font-medium text-center"
-                style={{backgroundColor: '#007E8C', color: 'white'}}
-              >
-                ← Back to Weekly Collections
-              </a>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <a
+                  href="/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', '/');
+                    setCurrentPage('main');
+                  }}
+                  className="text-sm px-4 py-2 rounded-lg font-medium text-center"
+                  style={{backgroundColor: '#007E8C', color: 'white'}}
+                >
+                  ← Back to Weekly Collections
+                </a>
+                <button
+                  onClick={() => setShowAdminModal(true)}
+                  className="text-sm px-4 py-2 rounded-lg font-medium"
+                  style={{backgroundColor: '#666', color: 'white'}}
+                >
+                  ⚙️ Admin
+                </button>
+              </div>
             </div>
           </div>
 
