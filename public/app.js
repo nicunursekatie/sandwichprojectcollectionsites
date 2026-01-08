@@ -2622,7 +2622,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                   {/* Footer */}
                   <div className="px-4 sm:px-5 py-3 text-center text-xs" style={{backgroundColor: '#f0c0c0', color: '#A31C41'}}>
-                    <strong>⏰ This is a temporary collection.</strong> Ends at {endDate.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    <strong>⏰ This is a temporary collection.</strong> Ends at {collectionEnd.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                   </div>
                 </div>
               </div>
