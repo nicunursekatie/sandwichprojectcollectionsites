@@ -4115,6 +4115,57 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 </div>
 
+                {/* Bulk Time Editing */}
+                {editingSpecialCollection.hosts?.length > 0 && (
+                  <div className="border-t pt-4 mb-4">
+                    <h4 className="font-bold mb-3" style={{color: '#236383'}}>⏰ Bulk Time Edit</h4>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection:</p>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Open Time</label>
+                        <input
+                          type="time"
+                          id="bulkOpenTime"
+                          defaultValue="08:00"
+                          className="px-3 py-2 rounded-lg border-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Close Time</label>
+                        <input
+                          type="time"
+                          id="bulkCloseTime"
+                          defaultValue="18:00"
+                          className="px-3 py-2 rounded-lg border-2"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const openTime = document.getElementById('bulkOpenTime').value;
+                          const closeTime = document.getElementById('bulkCloseTime').value;
+                          if (!openTime || !closeTime) {
+                            alert('Please set both open and close times');
+                            return;
+                          }
+                          const updatedHosts = editingSpecialCollection.hosts.map(host => ({
+                            ...host,
+                            openTime,
+                            closeTime,
+                            hours: `${openTime} - ${closeTime}`
+                          }));
+                          setEditingSpecialCollection({...editingSpecialCollection, hosts: updatedHosts});
+                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime}`);
+                        }}
+                        className="px-4 py-2 rounded-lg font-medium text-white"
+                        style={{backgroundColor: '#FBAD3F'}}
+                      >
+                        Apply to All Hosts
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Hosts Section */}
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center mb-3">
@@ -4164,6 +4215,65 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       No hosts added yet. Add hosts for this special collection.
                     </p>
                   )}
+                </div>
+
+                {/* Visual Preview */}
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-bold mb-3" style={{color: '#236383'}}>👁️ Preview</h4>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>This is how the banner will appear to users:</p>
+                  <div className="rounded-2xl overflow-hidden" style={{border: '3px solid #A31C41', boxShadow: '0 4px 20px rgba(163, 28, 65, 0.2)'}}>
+                    {/* Header */}
+                    <div className="p-4" style={{backgroundColor: '#A31C41'}}>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                            <span>🚨</span> {editingSpecialCollection.name || 'Collection Name'}
+                          </h2>
+                          {editingSpecialCollection.description && (
+                            <p className="text-sm text-white opacity-90 mt-1">{editingSpecialCollection.description}</p>
+                          )}
+                        </div>
+                        <div className="text-white text-sm font-semibold px-3 py-1 rounded-lg" style={{backgroundColor: 'rgba(255,255,255,0.2)'}}>
+                          {(() => {
+                            if (!editingSpecialCollection.endDate) return 'Set end time';
+                            const endDate = new Date(editingSpecialCollection.endDate);
+                            const now = new Date();
+                            const hoursRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60 * 60)));
+                            return hoursRemaining > 1 ? `Ends in ${hoursRemaining} hours` : 'Ending soon';
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Hosts */}
+                    <div className="p-4" style={{backgroundColor: '#FFF5F7'}}>
+                      {editingSpecialCollection.hosts?.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {editingSpecialCollection.hosts.slice(0, 4).map((host) => (
+                            <div key={host.id} className="bg-white rounded-xl p-3 shadow-sm" style={{border: '1px solid #f0c0c0'}}>
+                              <h4 className="font-bold text-sm mb-1" style={{color: '#236383'}}>{host.name}</h4>
+                              <p className="text-xs mb-1" style={{color: '#666'}}>{host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}</p>
+                              <span className="text-xs font-semibold" style={{color: '#007E8C'}}>
+                                {formatTime(host.openTime)} - {formatTime(host.closeTime)}
+                              </span>
+                            </div>
+                          ))}
+                          {editingSpecialCollection.hosts.length > 4 && (
+                            <div className="text-sm p-3 text-center" style={{color: '#666'}}>
+                              +{editingSpecialCollection.hosts.length - 4} more hosts...
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-center py-4 text-sm" style={{color: '#666'}}>No hosts added yet</p>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-4 py-2 text-center text-xs" style={{backgroundColor: '#f0c0c0', color: '#A31C41'}}>
+                      <strong>⏰ This is a temporary collection.</strong> Ends at {editingSpecialCollection.endDate ? new Date(editingSpecialCollection.endDate).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '(set end time)'}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Action Buttons */}
