@@ -2213,162 +2213,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
           </div>
 
-          {/* Address Search for Proximity */}
-          {isActive && specialCollection.hosts?.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 mb-6">
-              <h3 className="font-bold mb-3" style={{color: '#236383'}}>📍 Find the Closest Location</h3>
-              <p className="text-sm mb-3" style={{color: '#666'}}>Enter your address to sort drop-off locations by driving distance:</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Enter your address..."
-                  id="special-collection-address"
-                  className="flex-1 px-4 py-3 rounded-xl border-2 text-base"
-                  style={{borderColor: '#A31C41'}}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      document.getElementById('special-collection-search-btn')?.click();
-                    }
-                  }}
-                />
-                <button
-                  id="special-collection-search-btn"
-                  onClick={async () => {
-                    const addressInput = document.getElementById('special-collection-address');
-                    const address = addressInput?.value?.trim();
-                    if (!address) {
-                      alert('Please enter an address');
-                      return;
-                    }
-
-                    const btn = document.getElementById('special-collection-search-btn');
-                    const originalText = btn.innerText;
-                    btn.innerText = 'Searching...';
-                    btn.disabled = true;
-
-                    try {
-                      const geocoder = new window.google.maps.Geocoder();
-                      const result = await new Promise((resolve, reject) => {
-                        geocoder.geocode({ address }, (results, status) => {
-                          if (status === 'OK' && results[0]) {
-                            resolve(results[0].geometry.location);
-                          } else {
-                            reject(new Error('Could not find that address'));
-                          }
-                        });
-                      });
-
-                      const userLat = result.lat();
-                      const userLng = result.lng();
-
-                      // Calculate distances
-                      const hosts = specialCollection.hosts.filter(h => h.lat && h.lng);
-
-                      if (hosts.length === 0) {
-                        alert('No hosts have location coordinates set');
-                        return;
-                      }
-
-                      // Helper to calculate straight-line distance
-                      const haversineDistance = (lat1, lng1, lat2, lng2) => {
-                        const R = 3959; // Earth's radius in miles
-                        const dLat = (lat2 - lat1) * Math.PI / 180;
-                        const dLng = (lng2 - lng1) * Math.PI / 180;
-                        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                                  Math.sin(dLng/2) * Math.sin(dLng/2);
-                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                        return R * c;
-                      };
-
-                      let hostsWithDistance;
-
-                      // Try Distance Matrix API first
-                      try {
-                        const distanceService = new window.google.maps.DistanceMatrixService();
-                        const destinations = hosts.map(h => ({ lat: parseFloat(h.lat), lng: parseFloat(h.lng) }));
-
-                        const distanceResult = await new Promise((resolve, reject) => {
-                          distanceService.getDistanceMatrix({
-                            origins: [{ lat: userLat, lng: userLng }],
-                            destinations,
-                            travelMode: 'DRIVING'
-                          }, (response, status) => {
-                            if (status === 'OK') {
-                              resolve(response);
-                            } else {
-                              reject(new Error(status));
-                            }
-                          });
-                        });
-
-                        hostsWithDistance = hosts.map((host, i) => {
-                          const element = distanceResult.rows[0].elements[i];
-                          return {
-                            ...host,
-                            driveTime: element.status === 'OK' ? element.duration.value : Infinity,
-                            driveTimeText: element.status === 'OK' ? element.duration.text : 'N/A',
-                            distanceText: element.status === 'OK' ? element.distance.text : 'N/A'
-                          };
-                        });
-                      } catch (apiError) {
-                        // Fallback to straight-line distance
-                        console.log('Distance Matrix API failed, using straight-line distance:', apiError);
-                        hostsWithDistance = hosts.map(host => {
-                          const dist = haversineDistance(userLat, userLng, parseFloat(host.lat), parseFloat(host.lng));
-                          return {
-                            ...host,
-                            driveTime: dist * 60, // Rough estimate: 1 mile = 1 minute
-                            driveTimeText: `~${Math.round(dist * 1.5)} min`, // Estimate with traffic factor
-                            distanceText: `${dist.toFixed(1)} mi`
-                          };
-                        });
-                      }
-
-                      hostsWithDistance.sort((a, b) => a.driveTime - b.driveTime);
-
-                      // Store in window for the page to use
-                      window.specialCollectionSortedHosts = hostsWithDistance;
-                      window.specialCollectionUserCoords = { lat: userLat, lng: userLng };
-
-                      // Force re-render by updating state
-                      setSpecialCollection({ ...specialCollection, _sortedByProximity: true, _timestamp: Date.now() });
-
-                    } catch (error) {
-                      alert(error.message || 'Error finding address');
-                    } finally {
-                      btn.innerText = originalText;
-                      btn.disabled = false;
-                    }
-                  }}
-                  className="px-6 py-3 rounded-xl font-semibold text-white whitespace-nowrap"
-                  style={{backgroundColor: '#A31C41'}}
-                >
-                  🔍 Search
-                </button>
-                {window.specialCollectionSortedHosts && (
-                  <button
-                    onClick={() => {
-                      window.specialCollectionSortedHosts = null;
-                      window.specialCollectionUserCoords = null;
-                      document.getElementById('special-collection-address').value = '';
-                      setSpecialCollection({ ...specialCollection, _sortedByProximity: false, _timestamp: Date.now() });
-                    }}
-                    className="px-4 py-3 rounded-xl font-medium"
-                    style={{backgroundColor: '#f0f0f0', color: '#666'}}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              {window.specialCollectionSortedHosts && (
-                <p className="text-sm mt-3 font-medium" style={{color: '#47bc3b'}}>
-                  ✓ Sorted by driving distance from your location
-                </p>
-              )}
-            </div>
-          )}
-
           {/* Active Special Collection */}
           {isActive ? (
             <div className="rounded-2xl overflow-hidden shadow-lg" style={{border: '3px solid #A31C41'}}>
@@ -2467,6 +2311,147 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       }
                     }}
                   />
+                </div>
+              )}
+
+              {/* Address Search for Proximity */}
+              {specialCollection.hosts?.length > 0 && (
+                <div className="p-5 sm:p-6 bg-white border-b">
+                  <h3 className="font-bold mb-3" style={{color: '#236383'}}>📍 Find the Closest Location</h3>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>Enter your address to sort by driving distance:</p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      placeholder="Enter your address..."
+                      id="special-collection-address"
+                      className="flex-1 px-4 py-3 rounded-xl border-2 text-base"
+                      style={{borderColor: '#A31C41'}}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          document.getElementById('special-collection-search-btn')?.click();
+                        }
+                      }}
+                    />
+                    <button
+                      id="special-collection-search-btn"
+                      onClick={async () => {
+                        const addressInput = document.getElementById('special-collection-address');
+                        const address = addressInput?.value?.trim();
+                        if (!address) {
+                          alert('Please enter an address');
+                          return;
+                        }
+
+                        const btn = document.getElementById('special-collection-search-btn');
+                        const originalText = btn.innerText;
+                        btn.innerText = 'Searching...';
+                        btn.disabled = true;
+
+                        try {
+                          const geocoder = new window.google.maps.Geocoder();
+                          const result = await new Promise((resolve, reject) => {
+                            geocoder.geocode({ address }, (results, status) => {
+                              if (status === 'OK' && results[0]) {
+                                resolve(results[0].geometry.location);
+                              } else {
+                                reject(new Error('Could not find that address'));
+                              }
+                            });
+                          });
+
+                          const userLat = result.lat();
+                          const userLng = result.lng();
+
+                          const hosts = specialCollection.hosts.filter(h => h.lat && h.lng);
+                          if (hosts.length === 0) {
+                            alert('No hosts have location coordinates set');
+                            return;
+                          }
+
+                          const haversineDistance = (lat1, lng1, lat2, lng2) => {
+                            const R = 3959;
+                            const dLat = (lat2 - lat1) * Math.PI / 180;
+                            const dLng = (lng2 - lng1) * Math.PI / 180;
+                            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                                      Math.sin(dLng/2) * Math.sin(dLng/2);
+                            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                            return R * c;
+                          };
+
+                          let hostsWithDistance;
+                          try {
+                            const distanceService = new window.google.maps.DistanceMatrixService();
+                            const destinations = hosts.map(h => ({ lat: parseFloat(h.lat), lng: parseFloat(h.lng) }));
+                            const distanceResult = await new Promise((resolve, reject) => {
+                              distanceService.getDistanceMatrix({
+                                origins: [{ lat: userLat, lng: userLng }],
+                                destinations,
+                                travelMode: 'DRIVING'
+                              }, (response, status) => {
+                                if (status === 'OK') resolve(response);
+                                else reject(new Error(status));
+                              });
+                            });
+                            hostsWithDistance = hosts.map((host, i) => {
+                              const element = distanceResult.rows[0].elements[i];
+                              return {
+                                ...host,
+                                driveTime: element.status === 'OK' ? element.duration.value : Infinity,
+                                driveTimeText: element.status === 'OK' ? element.duration.text : 'N/A',
+                                distanceText: element.status === 'OK' ? element.distance.text : 'N/A'
+                              };
+                            });
+                          } catch (apiError) {
+                            console.log('Distance Matrix API failed, using straight-line distance:', apiError);
+                            hostsWithDistance = hosts.map(host => {
+                              const dist = haversineDistance(userLat, userLng, parseFloat(host.lat), parseFloat(host.lng));
+                              return {
+                                ...host,
+                                driveTime: dist * 60,
+                                driveTimeText: `~${Math.round(dist * 1.5)} min`,
+                                distanceText: `${dist.toFixed(1)} mi`
+                              };
+                            });
+                          }
+
+                          hostsWithDistance.sort((a, b) => a.driveTime - b.driveTime);
+                          window.specialCollectionSortedHosts = hostsWithDistance;
+                          window.specialCollectionUserCoords = { lat: userLat, lng: userLng };
+                          setSpecialCollection({ ...specialCollection, _sortedByProximity: true, _timestamp: Date.now() });
+
+                        } catch (error) {
+                          alert(error.message || 'Error finding address');
+                        } finally {
+                          btn.innerText = originalText;
+                          btn.disabled = false;
+                        }
+                      }}
+                      className="px-6 py-3 rounded-xl font-semibold text-white whitespace-nowrap"
+                      style={{backgroundColor: '#A31C41'}}
+                    >
+                      🔍 Search
+                    </button>
+                    {window.specialCollectionSortedHosts && (
+                      <button
+                        onClick={() => {
+                          window.specialCollectionSortedHosts = null;
+                          window.specialCollectionUserCoords = null;
+                          document.getElementById('special-collection-address').value = '';
+                          setSpecialCollection({ ...specialCollection, _sortedByProximity: false, _timestamp: Date.now() });
+                        }}
+                        className="px-4 py-3 rounded-xl font-medium"
+                        style={{backgroundColor: '#f0f0f0', color: '#666'}}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {window.specialCollectionSortedHosts && (
+                    <p className="text-sm mt-3 font-medium" style={{color: '#47bc3b'}}>
+                      ✓ Sorted by driving distance from your location
+                    </p>
+                  )}
                 </div>
               )}
 
