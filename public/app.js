@@ -71,6 +71,10 @@ const HostAvailabilityApp = () => {
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
   const [tuesdayEnabled, setTuesdayEnabled] = React.useState(false); // Toggle for Tuesday collections
   const [expandedHosts, setExpandedHosts] = React.useState(new Set());
+  // Special Collections state
+  const [specialCollection, setSpecialCollection] = React.useState(null);
+  const [editingSpecialCollection, setEditingSpecialCollection] = React.useState(null);
+  const [editingSpecialHost, setEditingSpecialHost] = React.useState(null);
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
@@ -505,7 +509,147 @@ const HostAvailabilityApp = () => {
     };
 
     loadHosts();
+
+    // Load active special collection
+    const loadSpecialCollection = async () => {
+      try {
+        const snapshot = await db.collection('specialCollections')
+          .where('active', '==', true)
+          .limit(1)
+          .get();
+
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0];
+          const data = { id: doc.id, ...doc.data() };
+
+          // Check if it's expired
+          const now = new Date();
+          const endDate = data.endDate?.toDate ? data.endDate.toDate() : new Date(data.endDate);
+
+          if (now > endDate) {
+            // Auto-expire: deactivate in Firestore
+            await db.collection('specialCollections').doc(doc.id).update({ active: false });
+            setSpecialCollection(null);
+          } else {
+            setSpecialCollection(data);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading special collection:', error);
+      }
+    };
+
+    loadSpecialCollection();
+
+    // Check for special collection expiration every minute
+    const expirationInterval = setInterval(async () => {
+      if (specialCollection) {
+        const now = new Date();
+        const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+        if (now > endDate) {
+          try {
+            await db.collection('specialCollections').doc(specialCollection.id).update({ active: false });
+            setSpecialCollection(null);
+          } catch (error) {
+            console.error('Error auto-expiring special collection:', error);
+          }
+        }
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(expirationInterval);
   }, []);
+
+  // Special Collection functions
+  const saveSpecialCollection = async (collectionData) => {
+    try {
+      const data = {
+        ...collectionData,
+        active: true,
+        createdAt: new Date(),
+        startDate: new Date(collectionData.startDate),
+        endDate: new Date(collectionData.endDate),
+        hosts: collectionData.hosts || []
+      };
+
+      if (collectionData.id) {
+        // Update existing
+        await db.collection('specialCollections').doc(collectionData.id).update(data);
+        setSpecialCollection({ ...data, id: collectionData.id });
+      } else {
+        // Create new - first deactivate any existing active ones
+        const activeSnapshot = await db.collection('specialCollections').where('active', '==', true).get();
+        const batch = db.batch();
+        activeSnapshot.forEach(doc => {
+          batch.update(doc.ref, { active: false });
+        });
+
+        // Add new collection
+        const docRef = await db.collection('specialCollections').add(data);
+        await batch.commit();
+        setSpecialCollection({ ...data, id: docRef.id });
+      }
+
+      setEditingSpecialCollection(null);
+      alert('Special collection saved successfully!');
+    } catch (error) {
+      console.error('Error saving special collection:', error);
+      alert('Error saving special collection: ' + error.message);
+    }
+  };
+
+  const deactivateSpecialCollection = async () => {
+    if (!specialCollection) return;
+
+    if (!confirm('Are you sure you want to end this special collection early?')) return;
+
+    try {
+      await db.collection('specialCollections').doc(specialCollection.id).update({ active: false });
+      setSpecialCollection(null);
+      alert('Special collection ended.');
+    } catch (error) {
+      console.error('Error deactivating special collection:', error);
+      alert('Error ending special collection: ' + error.message);
+    }
+  };
+
+  const addSpecialHost = (hostData) => {
+    if (!editingSpecialCollection) return;
+
+    const newHost = {
+      ...hostData,
+      id: Date.now(), // Use timestamp as unique ID
+      lat: parseFloat(hostData.lat),
+      lng: parseFloat(hostData.lng)
+    };
+
+    setEditingSpecialCollection({
+      ...editingSpecialCollection,
+      hosts: [...(editingSpecialCollection.hosts || []), newHost]
+    });
+    setEditingSpecialHost(null);
+  };
+
+  const updateSpecialHost = (hostId, hostData) => {
+    if (!editingSpecialCollection) return;
+
+    setEditingSpecialCollection({
+      ...editingSpecialCollection,
+      hosts: editingSpecialCollection.hosts.map(h =>
+        h.id === hostId ? { ...hostData, id: hostId, lat: parseFloat(hostData.lat), lng: parseFloat(hostData.lng) } : h
+      )
+    });
+    setEditingSpecialHost(null);
+  };
+
+  const removeSpecialHost = (hostId) => {
+    if (!editingSpecialCollection) return;
+
+    setEditingSpecialCollection({
+      ...editingSpecialCollection,
+      hosts: editingSpecialCollection.hosts.filter(h => h.id !== hostId)
+    });
+  };
 
   // Corrected coordinates for one-time sync to Firestore
   // After running sync, this can be removed
@@ -2148,6 +2292,78 @@ This is safe because your API key is already restricted to only the Geocoding AP
             );
           })()}
 
+          {/* Special Collection Banner - Shows when active */}
+          {specialCollection && (() => {
+            const now = new Date();
+            const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+            const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+
+            // Only show if within the active time window
+            if (now < startDate || now > endDate) return null;
+
+            const hoursRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60 * 60)));
+            const minutesRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60)));
+
+            return (
+              <div className="mb-6 mx-3 sm:mx-4">
+                <div className="rounded-2xl overflow-hidden" style={{border: '3px solid #A31C41', boxShadow: '0 4px 20px rgba(163, 28, 65, 0.2)'}}>
+                  {/* Header */}
+                  <div className="p-4 sm:p-5" style={{backgroundColor: '#A31C41'}}>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                          <span>🚨</span> {specialCollection.name}
+                        </h2>
+                        {specialCollection.description && (
+                          <p className="text-sm text-white opacity-90 mt-1">{specialCollection.description}</p>
+                        )}
+                      </div>
+                      <div className="text-white text-sm sm:text-base font-semibold px-3 py-1 rounded-lg" style={{backgroundColor: 'rgba(255,255,255,0.2)'}}>
+                        {hoursRemaining > 1 ? `Ends in ${hoursRemaining} hours` : minutesRemaining > 0 ? `Ends in ${minutesRemaining} min` : 'Ending soon'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hosts */}
+                  <div className="p-4 sm:p-5" style={{backgroundColor: '#FFF5F7'}}>
+                    {specialCollection.hosts?.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {specialCollection.hosts.map((host) => (
+                          <div key={host.id} className="bg-white rounded-xl p-4 shadow-sm" style={{border: '1px solid #f0c0c0'}}>
+                            <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>{host.name}</h4>
+                            <p className="text-sm mb-2" style={{color: '#666'}}>{host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}</p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-semibold" style={{color: '#007E8C'}}>
+                                {formatTime(host.openTime)} - {formatTime(host.closeTime)}
+                              </span>
+                              {host.phone && (
+                                <a href={`tel:${host.phone}`} className="text-sm font-medium px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
+                                  Call
+                                </a>
+                              )}
+                            </div>
+                            {host.notes && (
+                              <p className="text-xs mt-2 p-2 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                                ⚠️ {host.notes}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center py-4" style={{color: '#666'}}>No hosts in this collection yet.</p>
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="px-4 sm:px-5 py-3 text-center text-xs" style={{backgroundColor: '#f0c0c0', color: '#A31C41'}}>
+                    <strong>⏰ This is a temporary collection.</strong> Ends at {endDate.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Simple View - Plain list grouped by area */}
           {simpleView && (
             <div className="p-4">
@@ -3605,6 +3821,66 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 </div>
 
+                {/* Special Collections Section */}
+                <div className="bg-red-50 rounded-xl p-4 mb-6 border-2" style={{borderColor: '#A31C41'}}>
+                  <h3 className="font-semibold mb-2" style={{color: '#A31C41'}}>🚨 Special Collections (Warming Centers, Emergencies)</h3>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>
+                    Create temporary special collections that display separately from regular Wednesday collections. They auto-expire at the set end time.
+                  </p>
+
+                  {specialCollection ? (
+                    <div className="bg-white rounded-lg p-4 mb-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-bold" style={{color: '#236383'}}>{specialCollection.name}</h4>
+                          <p className="text-sm" style={{color: '#666'}}>{specialCollection.description}</p>
+                        </div>
+                        <span className="px-2 py-1 rounded text-xs font-bold text-white" style={{backgroundColor: '#22c55e'}}>ACTIVE</span>
+                      </div>
+                      <p className="text-xs mb-2" style={{color: '#007E8C'}}>
+                        Ends: {new Date(specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : specialCollection.endDate).toLocaleString()}
+                      </p>
+                      <p className="text-xs mb-3" style={{color: '#666'}}>
+                        {specialCollection.hosts?.length || 0} host(s) in this collection
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditingSpecialCollection({...specialCollection})}
+                          className="px-3 py-1 rounded text-sm font-medium text-white"
+                          style={{backgroundColor: '#007E8C'}}
+                        >
+                          Edit Collection
+                        </button>
+                        <button
+                          onClick={deactivateSpecialCollection}
+                          className="px-3 py-1 rounded text-sm font-medium text-white"
+                          style={{backgroundColor: '#A31C41'}}
+                        >
+                          End Early
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm mb-3 p-3 rounded-lg" style={{backgroundColor: '#f0f0f0', color: '#666'}}>
+                      No active special collection. Create one below.
+                    </p>
+                  )}
+
+                  <button
+                    onClick={() => setEditingSpecialCollection({
+                      name: '',
+                      description: '',
+                      startDate: new Date().toISOString().slice(0, 16),
+                      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+                      hosts: []
+                    })}
+                    className="px-4 py-2 rounded-lg font-medium text-white"
+                    style={{backgroundColor: '#A31C41'}}
+                  >
+                    + Create New Special Collection
+                  </button>
+                </div>
+
                 {/* Emergency Hours Update */}
                 <div className="bg-orange-50 rounded-xl p-4 mb-6 border-2" style={{borderColor: '#FBAD3F'}}>
                   <h3 className="font-semibold mb-2" style={{color: '#236383'}}>🚨 Emergency Collection Hours</h3>
@@ -3964,6 +4240,241 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       style={{backgroundColor: 'white', color: '#236383', border: '2px solid rgba(71, 179, 203, 0.3)'}}
                     >
                       Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Special Collection Edit Modal */}
+        {editingSpecialCollection && (
+          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => { setEditingSpecialCollection(null); setEditingSpecialHost(null); }}>
+            <div className="modal-content bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold" style={{color: '#A31C41'}}>
+                    {editingSpecialCollection.id ? '✏️ Edit Special Collection' : '🚨 Create Special Collection'}
+                  </h3>
+                  <button
+                    onClick={() => { setEditingSpecialCollection(null); setEditingSpecialHost(null); }}
+                    className="text-2xl px-3 py-1 rounded-lg hover:bg-gray-100"
+                    style={{color: '#A31C41'}}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Collection Details Form */}
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="block font-semibold mb-1" style={{color: '#236383'}}>Collection Name *</label>
+                    <input
+                      type="text"
+                      value={editingSpecialCollection.name}
+                      onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, name: e.target.value})}
+                      className="w-full px-4 py-2 rounded-lg border-2"
+                      placeholder="e.g., Warming Center Emergency Collection"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1" style={{color: '#236383'}}>Description</label>
+                    <textarea
+                      value={editingSpecialCollection.description}
+                      onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, description: e.target.value})}
+                      className="w-full px-4 py-2 rounded-lg border-2"
+                      placeholder="Brief description shown to users..."
+                      rows={2}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-semibold mb-1" style={{color: '#236383'}}>Start Date/Time *</label>
+                      <input
+                        type="datetime-local"
+                        value={typeof editingSpecialCollection.startDate === 'string' ? editingSpecialCollection.startDate : new Date(editingSpecialCollection.startDate).toISOString().slice(0, 16)}
+                        onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, startDate: e.target.value})}
+                        className="w-full px-4 py-2 rounded-lg border-2"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold mb-1" style={{color: '#236383'}}>End Date/Time *</label>
+                      <input
+                        type="datetime-local"
+                        value={typeof editingSpecialCollection.endDate === 'string' ? editingSpecialCollection.endDate : new Date(editingSpecialCollection.endDate).toISOString().slice(0, 16)}
+                        onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, endDate: e.target.value})}
+                        className="w-full px-4 py-2 rounded-lg border-2"
+                        required
+                      />
+                      <p className="text-xs mt-1" style={{color: '#666'}}>Collection auto-expires at this time</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hosts Section */}
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-bold" style={{color: '#236383'}}>Collection Hosts ({editingSpecialCollection.hosts?.length || 0})</h4>
+                    <button
+                      type="button"
+                      onClick={() => setEditingSpecialHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', openTime: '08:00', closeTime: '18:00', notes: '' })}
+                      className="px-3 py-1 rounded text-sm font-medium text-white"
+                      style={{backgroundColor: '#007E8C'}}
+                    >
+                      + Add Host
+                    </button>
+                  </div>
+
+                  {editingSpecialCollection.hosts?.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                      {editingSpecialCollection.hosts.map((host) => (
+                        <div key={host.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 rounded-lg gap-2" style={{backgroundColor: '#f0f9fa'}}>
+                          <div>
+                            <span className="font-medium" style={{color: '#236383'}}>{host.name}</span>
+                            <span className="text-sm ml-2" style={{color: '#666'}}>{host.area}</span>
+                            <span className="text-sm ml-2" style={{color: '#007E8C'}}>{host.openTime} - {host.closeTime}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditingSpecialHost(host)}
+                              className="text-sm px-2 py-1 rounded"
+                              style={{backgroundColor: '#007E8C', color: 'white'}}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeSpecialHost(host.id)}
+                              className="text-sm px-2 py-1 rounded"
+                              style={{backgroundColor: '#A31C41', color: 'white'}}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm p-3 rounded-lg mb-4" style={{backgroundColor: '#f0f0f0', color: '#666'}}>
+                      No hosts added yet. Add hosts for this special collection.
+                    </p>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => { setEditingSpecialCollection(null); setEditingSpecialHost(null); }}
+                    className="px-6 py-2 rounded-lg font-medium"
+                    style={{backgroundColor: '#f0f0f0'}}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!editingSpecialCollection.name || !editingSpecialCollection.startDate || !editingSpecialCollection.endDate) {
+                        alert('Please fill in all required fields (name, start date, end date)');
+                        return;
+                      }
+                      if (editingSpecialCollection.hosts?.length === 0) {
+                        if (!confirm('This collection has no hosts. Continue anyway?')) return;
+                      }
+                      saveSpecialCollection(editingSpecialCollection);
+                    }}
+                    className="px-6 py-2 rounded-lg font-medium text-white"
+                    style={{backgroundColor: '#A31C41'}}
+                  >
+                    {editingSpecialCollection.id ? 'Update Collection' : 'Create Collection'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Special Host Edit Modal (nested) */}
+        {editingSpecialHost && (
+          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-[60]" onClick={() => setEditingSpecialHost(null)}>
+            <div className="modal-content bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="p-6">
+                <h4 className="text-lg font-bold mb-4" style={{color: '#236383'}}>
+                  {editingSpecialHost.id === 'new' ? '➕ Add Host to Collection' : '✏️ Edit Host'}
+                </h4>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const hostData = {
+                    name: formData.get('name'),
+                    area: formData.get('area'),
+                    neighborhood: formData.get('neighborhood') || '',
+                    lat: formData.get('lat'),
+                    lng: formData.get('lng'),
+                    phone: formData.get('phone') || '',
+                    hours: `${formData.get('openTime')} - ${formData.get('closeTime')}`,
+                    openTime: formData.get('openTime'),
+                    closeTime: formData.get('closeTime'),
+                    notes: formData.get('notes') || ''
+                  };
+                  if (editingSpecialHost.id === 'new') {
+                    addSpecialHost(hostData);
+                  } else {
+                    updateSpecialHost(editingSpecialHost.id, hostData);
+                  }
+                }} className="space-y-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Host Name *</label>
+                    <input type="text" name="name" defaultValue={editingSpecialHost.name} required className="w-full px-3 py-2 rounded-lg border-2" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Area *</label>
+                      <input type="text" name="area" defaultValue={editingSpecialHost.area} required className="w-full px-3 py-2 rounded-lg border-2" placeholder="e.g., Downtown" />
+                    </div>
+                    <div>
+                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Neighborhood</label>
+                      <input type="text" name="neighborhood" defaultValue={editingSpecialHost.neighborhood} className="w-full px-3 py-2 rounded-lg border-2" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Latitude *</label>
+                      <input type="number" step="any" name="lat" defaultValue={editingSpecialHost.lat} required className="w-full px-3 py-2 rounded-lg border-2" />
+                    </div>
+                    <div>
+                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Longitude *</label>
+                      <input type="number" step="any" name="lng" defaultValue={editingSpecialHost.lng} required className="w-full px-3 py-2 rounded-lg border-2" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Phone</label>
+                    <input type="text" name="phone" defaultValue={editingSpecialHost.phone} className="w-full px-3 py-2 rounded-lg border-2" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Open Time *</label>
+                      <input type="time" name="openTime" defaultValue={editingSpecialHost.openTime || '08:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
+                    </div>
+                    <div>
+                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Close Time *</label>
+                      <input type="time" name="closeTime" defaultValue={editingSpecialHost.closeTime || '18:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Special Instructions</label>
+                    <textarea name="notes" defaultValue={editingSpecialHost.notes} className="w-full px-3 py-2 rounded-lg border-2" rows={2} />
+                  </div>
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-3">
+                    <button type="button" onClick={() => setEditingSpecialHost(null)} className="px-4 py-2 rounded-lg font-medium" style={{backgroundColor: '#f0f0f0'}}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="px-4 py-2 rounded-lg font-medium text-white" style={{backgroundColor: '#007E8C'}}>
+                      {editingSpecialHost.id === 'new' ? 'Add Host' : 'Update Host'}
                     </button>
                   </div>
                 </form>
