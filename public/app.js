@@ -2432,6 +2432,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         });
                         mapInstance.fitBounds(bounds, 50);
 
+                        // Track open InfoWindow to close it when another is opened
+                        let currentInfoWindow = null;
+
                         hosts.forEach((host, index) => {
                           const markerDiv = document.createElement('div');
                           markerDiv.innerHTML = `<div style="background-color: #A31C41; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${index + 1}</div>`;
@@ -2444,6 +2447,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           });
 
                           marker.addListener('click', () => {
+                            // Close any previously open InfoWindow
+                            if (currentInfoWindow) {
+                              currentInfoWindow.close();
+                            }
+
                             const infoWindow = new window.google.maps.InfoWindow({
                               content: `<div style="padding: 8px; max-width: 200px;">
                                 <strong style="color: #236383;">${host.name}</strong><br>
@@ -2453,6 +2461,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               </div>`
                             });
                             infoWindow.open(mapInstance, marker);
+                            currentInfoWindow = infoWindow;
                           });
                         });
                       }

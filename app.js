@@ -2291,11 +2291,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </button>
                 )}
               </div>
-              {window.specialCollectionSortedHosts && (
-                <p className="text-sm mt-3 font-medium" style={{color: '#47bc3b'}}>
-                  ✓ Sorted by driving distance from your location
-                </p>
-              )}
+               {window.specialCollectionSortedHosts && (
+                 <p className="text-sm mt-3 font-medium" style={{color: '#47b3cb'}}>
+                   ✓ Sorted by driving distance from your location
+                 </p>
+               )}
             </div>
           )}
 
@@ -2362,6 +2362,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         });
                         mapInstance.fitBounds(bounds, 50);
 
+                        // Track open InfoWindow to close it when another is opened
+                        let currentInfoWindow = null;
+
                         hosts.forEach((host, index) => {
                           const markerDiv = document.createElement('div');
                           markerDiv.innerHTML = `<div style="background-color: #A31C41; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${index + 1}</div>`;
@@ -2374,6 +2377,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           });
 
                           marker.addListener('click', () => {
+                            // Close any previously open InfoWindow
+                            if (currentInfoWindow) {
+                              currentInfoWindow.close();
+                            }
+
                             const infoWindow = new window.google.maps.InfoWindow({
                               content: `<div style="padding: 8px; max-width: 200px;">
                                 <strong style="color: #236383;">${host.name}</strong><br>
@@ -2383,6 +2391,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               </div>`
                             });
                             infoWindow.open(mapInstance, marker);
+                            currentInfoWindow = infoWindow;
                           });
                         });
                       }
@@ -2395,9 +2404,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <div className="p-5 sm:p-6 bg-white">
                 <h3 className="font-bold text-lg mb-4" style={{color: '#236383'}}>
                   Drop-off Locations ({specialCollection.hosts?.length || 0})
-                  {window.specialCollectionSortedHosts && (
-                    <span className="text-sm font-normal ml-2" style={{color: '#47bc3b'}}>- sorted by distance</span>
-                  )}
+                   {window.specialCollectionSortedHosts && (
+                     <span className="text-sm font-normal ml-2" style={{color: '#47b3cb'}}>- sorted by distance</span>
+                   )}
                 </h3>
                 {specialCollection.hosts?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2443,7 +2452,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <a
                               href={`tel:${host.phone}`}
                               className="w-full text-center text-sm font-semibold px-4 py-2.5 rounded-lg transition-all hover:opacity-90 flex items-center justify-center gap-2"
-                              style={{backgroundColor: '#47bc3b', color: 'white'}}
+                              style={{backgroundColor: '#236383', color: 'white'}}
                             >
                               <i className="lucide-phone w-4 h-4"></i>
                               Call {host.phone}
