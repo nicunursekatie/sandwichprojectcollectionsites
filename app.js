@@ -1,3 +1,37 @@
+// Mobile optimization: Throttle utility function (defined outside component to avoid re-creation)
+const createThrottledFunction = (func, limit) => {
+  let inThrottle = false;
+  let lastArgs = null;
+  let lastContext = null;
+  let timeoutId = null;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      timeoutId = setTimeout(() => {
+        inThrottle = false;
+        if (lastArgs) {
+          func.apply(lastContext, lastArgs);
+          lastArgs = null;
+          lastContext = null;
+        }
+      }, limit);
+    } else {
+      lastArgs = args;
+      lastContext = this;
+    }
+  };
+};
+
+// Mobile optimization: Debounce utility function (defined outside component to avoid re-creation)
+const createDebouncedFunction = (func, delay) => {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+};
+
 const HostAvailabilityApp = () => {
   const [userAddress, setUserAddress] = React.useState('');
   const [searchInput, setSearchInput] = React.useState('');
@@ -17,6 +51,8 @@ const HostAvailabilityApp = () => {
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
+  const [userRole, setUserRole] = React.useState(null);
+  const [showReadOnlyModal, setShowReadOnlyModal] = React.useState(false);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
   const [directionsMenuOpen, setDirectionsMenuOpen] = React.useState(null);
   const [directionsMenuPosition, setDirectionsMenuPosition] = React.useState({ top: 0, left: 0 });
@@ -24,6 +60,7 @@ const HostAvailabilityApp = () => {
   const [initialMapCenter, setInitialMapCenter] = React.useState(null);
   const [initialMapZoom, setInitialMapZoom] = React.useState(null);
   const [hostDriveTimes, setHostDriveTimes] = React.useState({});
+  const [dropOffTime, setDropOffTime] = React.useState(''); // User's intended drop-off time (HH:MM format)
   const [showFeedback, setShowFeedback] = React.useState(false);
   const [feedbackRating, setFeedbackRating] = React.useState(0);
   const [feedbackText, setFeedbackText] = React.useState('');
@@ -923,6 +960,61 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   };
 
+  // Check if a host will be open at a specific drop-off time
+  const checkHostTimeAvailability = (host, timeStr) => {
+    if (!timeStr || !host.openTime || !host.closeTime) {
+      return { isOpen: true, warning: null, minutesUntilClose: null };
+    }
+
+    // Convert time strings to minutes since midnight for comparison
+    const timeToMinutes = (t) => {
+      const [hours, minutes] = t.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const dropOffMinutes = timeToMinutes(timeStr);
+    const openMinutes = timeToMinutes(host.openTime);
+    const closeMinutes = timeToMinutes(host.closeTime);
+
+    // Check if drop-off time is within host's hours
+    if (dropOffMinutes < openMinutes) {
+      return {
+        isOpen: false,
+        warning: `Opens at ${formatTime(host.openTime)}`,
+        minutesUntilClose: null
+      };
+    }
+    if (dropOffMinutes >= closeMinutes) {
+      return {
+        isOpen: false,
+        warning: `Closes at ${formatTime(host.closeTime)}`,
+        minutesUntilClose: null
+      };
+    }
+
+    // Host is open - check how much buffer time
+    const minutesUntilClose = closeMinutes - dropOffMinutes;
+
+    if (minutesUntilClose <= 30) {
+      return {
+        isOpen: true,
+        warning: `Closes ${minutesUntilClose} min after your drop-off!`,
+        minutesUntilClose,
+        severity: 'high'
+      };
+    }
+    if (minutesUntilClose <= 60) {
+      return {
+        isOpen: true,
+        warning: `Closes ${minutesUntilClose} min after your drop-off`,
+        minutesUntilClose,
+        severity: 'medium'
+      };
+    }
+
+    return { isOpen: true, warning: null, minutesUntilClose };
+  };
+
   // Calculate host availability status
   const getHostAvailability = (host) => {
     const now = new Date();
@@ -1105,6 +1197,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
       filtered = filtered.filter(h => h.available);
     }
 
+    // Apply drop-off time filter
+    if (dropOffTime) {
+      filtered = filtered.filter(h => {
+        const availability = checkHostTimeAvailability(h, dropOffTime);
+        return availability.isOpen;
+      });
+    }
+
     // Apply area filter in area view mode
     if (viewMode === 'area' && filterArea !== 'all') {
       filtered = filtered.filter(h => h.area === filterArea);
@@ -1121,7 +1221,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
 
     return filtered;
-  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch, includeUnavailableHosts]);
+  }, [filterArea, viewMode, sortedHosts, allHostsForDisplay, nameSearch, includeUnavailableHosts, dropOffTime]);
 
   const handleSearch = async () => {
     if (!searchInput.trim()) return;
@@ -1987,10 +2087,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
   // Special Collections dedicated page
   if (currentPage === 'specialcollections') {
     const now = new Date();
+    // Check if within display window (use displayStart/displayEnd if available, fall back to startDate/endDate)
     const isActive = specialCollection && (() => {
-      const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
-      const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
-      return now >= startDate && now <= endDate;
+      const displayEnd = specialCollection.displayEnd?.toDate ? specialCollection.displayEnd.toDate() :
+                         specialCollection.displayEnd ? new Date(specialCollection.displayEnd) :
+                         specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+      const displayStart = specialCollection.displayStart?.toDate ? specialCollection.displayStart.toDate() :
+                           specialCollection.displayStart ? new Date(specialCollection.displayStart) :
+                           specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+      return now >= displayStart && now <= displayEnd;
     })();
 
     return (
@@ -2347,14 +2452,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
           {/* Special Collection Banner - Shows when active */}
           {specialCollection && (() => {
             const now = new Date();
-            const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
-            const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+            // Use display window if available, fall back to collection dates
+            const displayEnd = specialCollection.displayEnd?.toDate ? specialCollection.displayEnd.toDate() :
+                               specialCollection.displayEnd ? new Date(specialCollection.displayEnd) :
+                               specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+            const displayStart = specialCollection.displayStart?.toDate ? specialCollection.displayStart.toDate() :
+                                 specialCollection.displayStart ? new Date(specialCollection.displayStart) :
+                                 specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+            // Collection end date for countdown display
+            const collectionEnd = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
 
-            // Only show if within the active time window
-            if (now < startDate || now > endDate) return null;
+            // Only show if within the display window
+            if (now < displayStart || now > displayEnd) return null;
 
-            const hoursRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60 * 60)));
-            const minutesRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60)));
+            const hoursRemaining = Math.max(0, Math.ceil((collectionEnd - now) / (1000 * 60 * 60)));
+            const minutesRemaining = Math.max(0, Math.ceil((collectionEnd - now) / (1000 * 60)));
 
             return (
               <div className="mb-6 mx-3 sm:mx-4">
@@ -3204,7 +3316,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
             {filteredHosts.length === 0 ? (
               <div className="bg-white rounded-2xl premium-card p-12 text-center">
-                <p className="text-lg font-medium text-gray-500">No hosts found in this area.</p>
+                <p className="text-lg font-medium text-gray-500">
+                  {dropOffTime
+                    ? `No hosts are open at ${formatTime(dropOffTime)}. Try a different time or clear the filter.`
+                    : 'No hosts found in this area.'}
+                </p>
+                {dropOffTime && (
+                  <button
+                    onClick={() => setDropOffTime('')}
+                    className="mt-4 px-4 py-2 rounded-lg font-medium text-white"
+                    style={{backgroundColor: '#007E8C'}}
+                  >
+                    Clear Time Filter
+                  </button>
+                )}
               </div>
             ) : (
               filteredHosts.map((host, index) => {
@@ -3224,6 +3349,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 const showOtherHostsHeader = userCoords && viewMode === 'proximity' && actualRank === availableTopThreeCount + 1;
                 
                 const isExpanded = expandedHosts.has(host.id);
+                // Check time availability for warning
+                const timeAvail = checkHostTimeAvailability(host, dropOffTime);
                 const availability = getHostAvailability(host);
                 const isOpenNow = availability && availability.status === 'open';
                 
@@ -3311,6 +3438,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <div className="flex flex-col gap-2 mb-3">
                         <div className="flex items-center flex-wrap gap-x-1 text-base">
                           <span className="font-medium" style={{color: '#555'}}>{formatAllCollectionHours(host)}</span>
+                          {timeAvail.warning && (
+                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${timeAvail.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                              ⚠️ {timeAvail.warning}
+                            </span>
+                          )}
                           <span className="text-gray-400">•</span>
                           {host.available ? (
                             <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
@@ -4082,8 +4214,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     onClick={() => setEditingSpecialCollection({
                       name: '',
                       description: '',
-                      startDate: new Date().toISOString().slice(0, 16),
-                      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+                      displayStart: new Date().toISOString().slice(0, 16),
+                      displayEnd: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+                      startDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+                      endDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
                       hosts: []
                     })}
                     className="px-4 py-2 rounded-lg font-medium text-white"
@@ -4115,9 +4249,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
+                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
-                    style={{backgroundColor: '#007E8C'}}
+                    style={{backgroundColor: '#007E8C', opacity: userRole === 'viewer' ? 0.7 : 1}}
+                    title={userRole === 'viewer' ? 'Available to full admins. This reviewer account is read-only.' : 'Add a new host'}
                   >
                     ➕ Add New Host
                   </button>
@@ -4195,6 +4330,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 
                 <form onSubmit={(e) => {
                   e.preventDefault();
+                  if (userRole === 'viewer') {
+                    setShowReadOnlyModal(true);
+                    return;
+                  }
                   const formData = new FormData(e.target);
                   const hostData = {
                     name: formData.get('name'),
@@ -4475,39 +4614,84 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       rows={2}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-semibold mb-1" style={{color: '#236383'}}>Start Date/Time *</label>
-                      <input
-                        type="datetime-local"
-                        value={(() => {
-                          const d = editingSpecialCollection.startDate;
-                          if (!d) return '';
-                          if (typeof d === 'string') return d;
-                          if (d.toDate) return d.toDate().toISOString().slice(0, 16);
-                          try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
-                        })()}
-                        onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, startDate: e.target.value})}
-                        className="w-full px-4 py-2 rounded-lg border-2"
-                        required
-                      />
+
+                  {/* Display Window */}
+                  <div className="p-3 rounded-lg" style={{backgroundColor: '#e8f5e9', border: '1px solid #c8e6c9'}}>
+                    <h4 className="font-semibold mb-2" style={{color: '#2e7d32'}}>📺 Display Window</h4>
+                    <p className="text-xs mb-2" style={{color: '#666'}}>When should this collection be visible on the website?</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Display From *</label>
+                        <input
+                          type="datetime-local"
+                          value={(() => {
+                            const d = editingSpecialCollection.displayStart;
+                            if (!d) return '';
+                            if (typeof d === 'string') return d;
+                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                          })()}
+                          onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, displayStart: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Display Until *</label>
+                        <input
+                          type="datetime-local"
+                          value={(() => {
+                            const d = editingSpecialCollection.displayEnd;
+                            if (!d) return '';
+                            if (typeof d === 'string') return d;
+                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                          })()}
+                          onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, displayEnd: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                          required
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block font-semibold mb-1" style={{color: '#236383'}}>End Date/Time *</label>
-                      <input
-                        type="datetime-local"
-                        value={(() => {
-                          const d = editingSpecialCollection.endDate;
-                          if (!d) return '';
-                          if (typeof d === 'string') return d;
-                          if (d.toDate) return d.toDate().toISOString().slice(0, 16);
-                          try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
-                        })()}
-                        onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, endDate: e.target.value})}
-                        className="w-full px-4 py-2 rounded-lg border-2"
-                        required
-                      />
-                      <p className="text-xs mt-1" style={{color: '#666'}}>Collection auto-expires at this time</p>
+                  </div>
+
+                  {/* Collection Dates */}
+                  <div className="p-3 rounded-lg" style={{backgroundColor: '#fff3e0', border: '1px solid #ffe0b2'}}>
+                    <h4 className="font-semibold mb-2" style={{color: '#e65100'}}>📅 Collection Dates</h4>
+                    <p className="text-xs mb-2" style={{color: '#666'}}>When does the actual collection happen? (shown to users)</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Collection Starts *</label>
+                        <input
+                          type="datetime-local"
+                          value={(() => {
+                            const d = editingSpecialCollection.startDate;
+                            if (!d) return '';
+                            if (typeof d === 'string') return d;
+                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                          })()}
+                          onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, startDate: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Collection Ends *</label>
+                        <input
+                          type="datetime-local"
+                          value={(() => {
+                            const d = editingSpecialCollection.endDate;
+                            if (!d) return '';
+                            if (typeof d === 'string') return d;
+                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                          })()}
+                          onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, endDate: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4989,6 +5173,25 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </div>
         )}
       </div>
+
+      {/* Read-Only Modal */}
+      {showReadOnlyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowReadOnlyModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-2" style={{color: '#236383'}}>Read-Only Account</h3>
+            <p className="text-sm mb-4" style={{color: '#666'}}>
+              This reviewer account is read-only. Editing hosts is available to full admins only.
+            </p>
+            <button
+              onClick={() => setShowReadOnlyModal(false)}
+              className="px-4 py-2 rounded-lg font-medium text-white"
+              style={{backgroundColor: '#007E8C'}}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

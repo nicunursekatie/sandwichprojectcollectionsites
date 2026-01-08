@@ -2157,10 +2157,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
   // Special Collections dedicated page
   if (currentPage === 'specialcollections') {
     const now = new Date();
+    // Check if within display window (use displayStart/displayEnd if available, fall back to startDate/endDate)
     const isActive = specialCollection && (() => {
-      const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
-      const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
-      return now >= startDate && now <= endDate;
+      const displayEnd = specialCollection.displayEnd?.toDate ? specialCollection.displayEnd.toDate() :
+                         specialCollection.displayEnd ? new Date(specialCollection.displayEnd) :
+                         specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+      const displayStart = specialCollection.displayStart?.toDate ? specialCollection.displayStart.toDate() :
+                           specialCollection.displayStart ? new Date(specialCollection.displayStart) :
+                           specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+      return now >= displayStart && now <= displayEnd;
     })();
 
     return (
@@ -2548,14 +2553,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
           {/* Special Collection Banner - Shows when active */}
           {specialCollection && (() => {
             const now = new Date();
-            const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
-            const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+            // Use display window if available, fall back to collection dates
+            const displayEnd = specialCollection.displayEnd?.toDate ? specialCollection.displayEnd.toDate() :
+                               specialCollection.displayEnd ? new Date(specialCollection.displayEnd) :
+                               specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+            const displayStart = specialCollection.displayStart?.toDate ? specialCollection.displayStart.toDate() :
+                                 specialCollection.displayStart ? new Date(specialCollection.displayStart) :
+                                 specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+            // Collection end date for countdown display
+            const collectionEnd = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
 
-            // Only show if within the active time window
-            if (now < startDate || now > endDate) return null;
+            // Only show if within the display window
+            if (now < displayStart || now > displayEnd) return null;
 
-            const hoursRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60 * 60)));
-            const minutesRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60)));
+            const hoursRemaining = Math.max(0, Math.ceil((collectionEnd - now) / (1000 * 60 * 60)));
+            const minutesRemaining = Math.max(0, Math.ceil((collectionEnd - now) / (1000 * 60)));
 
             return (
               <div className="mb-6 mx-3 sm:mx-4">
@@ -4255,8 +4267,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     onClick={() => setEditingSpecialCollection({
                       name: '',
                       description: '',
-                      startDate: new Date().toISOString().slice(0, 16),
-                      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+                      displayStart: new Date().toISOString().slice(0, 16),
+                      displayEnd: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+                      startDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+                      endDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
                       hosts: []
                     })}
                     className="px-4 py-2 rounded-lg font-medium text-white"
@@ -4674,39 +4688,84 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       rows={2}
                     />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-semibold mb-1" style={{color: '#236383'}}>Start Date/Time *</label>
-                      <input
-                        type="datetime-local"
-                        value={(() => {
-                          const d = editingSpecialCollection.startDate;
-                          if (!d) return '';
-                          if (typeof d === 'string') return d;
-                          if (d.toDate) return d.toDate().toISOString().slice(0, 16);
-                          try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
-                        })()}
-                        onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, startDate: e.target.value})}
-                        className="w-full px-4 py-2 rounded-lg border-2"
-                        required
-                      />
+
+                  {/* Display Window */}
+                  <div className="p-3 rounded-lg" style={{backgroundColor: '#e8f5e9', border: '1px solid #c8e6c9'}}>
+                    <h4 className="font-semibold mb-2" style={{color: '#2e7d32'}}>📺 Display Window</h4>
+                    <p className="text-xs mb-2" style={{color: '#666'}}>When should this collection be visible on the website?</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Display From *</label>
+                        <input
+                          type="datetime-local"
+                          value={(() => {
+                            const d = editingSpecialCollection.displayStart;
+                            if (!d) return '';
+                            if (typeof d === 'string') return d;
+                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                          })()}
+                          onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, displayStart: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Display Until *</label>
+                        <input
+                          type="datetime-local"
+                          value={(() => {
+                            const d = editingSpecialCollection.displayEnd;
+                            if (!d) return '';
+                            if (typeof d === 'string') return d;
+                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                          })()}
+                          onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, displayEnd: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                          required
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block font-semibold mb-1" style={{color: '#236383'}}>End Date/Time *</label>
-                      <input
-                        type="datetime-local"
-                        value={(() => {
-                          const d = editingSpecialCollection.endDate;
-                          if (!d) return '';
-                          if (typeof d === 'string') return d;
-                          if (d.toDate) return d.toDate().toISOString().slice(0, 16);
-                          try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
-                        })()}
-                        onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, endDate: e.target.value})}
-                        className="w-full px-4 py-2 rounded-lg border-2"
-                        required
-                      />
-                      <p className="text-xs mt-1" style={{color: '#666'}}>Collection auto-expires at this time</p>
+                  </div>
+
+                  {/* Collection Dates */}
+                  <div className="p-3 rounded-lg" style={{backgroundColor: '#fff3e0', border: '1px solid #ffe0b2'}}>
+                    <h4 className="font-semibold mb-2" style={{color: '#e65100'}}>📅 Collection Dates</h4>
+                    <p className="text-xs mb-2" style={{color: '#666'}}>When does the actual collection happen? (shown to users)</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Collection Starts *</label>
+                        <input
+                          type="datetime-local"
+                          value={(() => {
+                            const d = editingSpecialCollection.startDate;
+                            if (!d) return '';
+                            if (typeof d === 'string') return d;
+                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                          })()}
+                          onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, startDate: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Collection Ends *</label>
+                        <input
+                          type="datetime-local"
+                          value={(() => {
+                            const d = editingSpecialCollection.endDate;
+                            if (!d) return '';
+                            if (typeof d === 'string') return d;
+                            if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                            try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                          })()}
+                          onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, endDate: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
