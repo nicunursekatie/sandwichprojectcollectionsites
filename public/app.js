@@ -2261,35 +2261,69 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       const userLat = result.lat();
                       const userLng = result.lng();
 
-                      // Calculate distances using Distance Matrix API
-                      const distanceService = new window.google.maps.DistanceMatrixService();
+                      // Calculate distances
                       const hosts = specialCollection.hosts.filter(h => h.lat && h.lng);
-                      const destinations = hosts.map(h => ({ lat: parseFloat(h.lat), lng: parseFloat(h.lng) }));
 
-                      const distanceResult = await new Promise((resolve, reject) => {
-                        distanceService.getDistanceMatrix({
-                          origins: [{ lat: userLat, lng: userLng }],
-                          destinations,
-                          travelMode: 'DRIVING'
-                        }, (response, status) => {
-                          if (status === 'OK') {
-                            resolve(response);
-                          } else {
-                            reject(new Error('Could not calculate distances'));
-                          }
+                      if (hosts.length === 0) {
+                        alert('No hosts have location coordinates set');
+                        return;
+                      }
+
+                      // Helper to calculate straight-line distance
+                      const haversineDistance = (lat1, lng1, lat2, lng2) => {
+                        const R = 3959; // Earth's radius in miles
+                        const dLat = (lat2 - lat1) * Math.PI / 180;
+                        const dLng = (lng2 - lng1) * Math.PI / 180;
+                        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                                  Math.sin(dLng/2) * Math.sin(dLng/2);
+                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                        return R * c;
+                      };
+
+                      let hostsWithDistance;
+
+                      // Try Distance Matrix API first
+                      try {
+                        const distanceService = new window.google.maps.DistanceMatrixService();
+                        const destinations = hosts.map(h => ({ lat: parseFloat(h.lat), lng: parseFloat(h.lng) }));
+
+                        const distanceResult = await new Promise((resolve, reject) => {
+                          distanceService.getDistanceMatrix({
+                            origins: [{ lat: userLat, lng: userLng }],
+                            destinations,
+                            travelMode: 'DRIVING'
+                          }, (response, status) => {
+                            if (status === 'OK') {
+                              resolve(response);
+                            } else {
+                              reject(new Error(status));
+                            }
+                          });
                         });
-                      });
 
-                      // Update hosts with distance info and sort
-                      const hostsWithDistance = hosts.map((host, i) => {
-                        const element = distanceResult.rows[0].elements[i];
-                        return {
-                          ...host,
-                          driveTime: element.status === 'OK' ? element.duration.value : Infinity,
-                          driveTimeText: element.status === 'OK' ? element.duration.text : 'N/A',
-                          distanceText: element.status === 'OK' ? element.distance.text : 'N/A'
-                        };
-                      });
+                        hostsWithDistance = hosts.map((host, i) => {
+                          const element = distanceResult.rows[0].elements[i];
+                          return {
+                            ...host,
+                            driveTime: element.status === 'OK' ? element.duration.value : Infinity,
+                            driveTimeText: element.status === 'OK' ? element.duration.text : 'N/A',
+                            distanceText: element.status === 'OK' ? element.distance.text : 'N/A'
+                          };
+                        });
+                      } catch (apiError) {
+                        // Fallback to straight-line distance
+                        console.log('Distance Matrix API failed, using straight-line distance:', apiError);
+                        hostsWithDistance = hosts.map(host => {
+                          const dist = haversineDistance(userLat, userLng, parseFloat(host.lat), parseFloat(host.lng));
+                          return {
+                            ...host,
+                            driveTime: dist * 60, // Rough estimate: 1 mile = 1 minute
+                            driveTimeText: `~${Math.round(dist * 1.5)} min`, // Estimate with traffic factor
+                            distanceText: `${dist.toFixed(1)} mi`
+                          };
+                        });
+                      }
 
                       hostsWithDistance.sort((a, b) => a.driveTime - b.driveTime);
 
