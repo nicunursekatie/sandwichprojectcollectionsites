@@ -2285,53 +2285,72 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     className="w-full rounded-xl overflow-hidden"
                     style={{height: '300px', border: '2px solid #e0e0e0'}}
                     ref={(el) => {
-                      if (el && window.google && !el.dataset.initialized) {
-                        el.dataset.initialized = 'true';
-                        const hosts = [...specialCollection.hosts].sort((a, b) => a.name.localeCompare(b.name)).filter(h => h.lat && h.lng);
-                        if (hosts.length === 0) return;
-
-                        const bounds = new window.google.maps.LatLngBounds();
-                        hosts.forEach(h => bounds.extend({lat: parseFloat(h.lat), lng: parseFloat(h.lng)}));
-
-                        const mapInstance = new window.google.maps.Map(el, {
-                          center: bounds.getCenter(),
-                          zoom: 11,
-                          mapId: 'special_collection_map'
-                        });
-                        mapInstance.fitBounds(bounds, 50);
-
-                        // Track open InfoWindow to close it when another is opened
-                        let currentInfoWindow = null;
-
-                        hosts.forEach((host, index) => {
-                          const markerDiv = document.createElement('div');
-                          markerDiv.innerHTML = `<div style="background-color: #A31C41; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${index + 1}</div>`;
-
-                          const marker = new window.google.maps.marker.AdvancedMarkerElement({
-                            map: mapInstance,
-                            position: {lat: parseFloat(host.lat), lng: parseFloat(host.lng)},
-                            content: markerDiv,
-                            title: host.name
-                          });
-
-                          marker.addListener('click', () => {
-                            // Close any previously open InfoWindow
-                            if (currentInfoWindow) {
-                              currentInfoWindow.close();
+                      if (el && !el.dataset.initialized) {
+                        // Check if Google Maps API is fully loaded
+                        if (!window.google || !window.google.maps || !window.google.maps.LatLngBounds) {
+                          // Maps not ready yet, wait and retry
+                          const checkInterval = setInterval(() => {
+                            if (window.google && window.google.maps && window.google.maps.LatLngBounds) {
+                              clearInterval(checkInterval);
+                              initSpecialCollectionMap(el);
                             }
+                          }, 100);
+                          // Clear interval after 10 seconds to avoid infinite loop
+                          setTimeout(() => clearInterval(checkInterval), 10000);
+                          return;
+                        }
+                        initSpecialCollectionMap(el);
 
-                            const infoWindow = new window.google.maps.InfoWindow({
-                              content: `<div style="padding: 8px; max-width: 200px;">
-                                <strong style="color: #236383;">${host.name}</strong><br>
-                                <span style="color: #666; font-size: 12px;">${host.area}</span><br>
-                                <span style="color: #007E8C; font-weight: bold;">${formatTime(host.openTime)} - ${formatTime(host.closeTime)}</span><br>
-                                <a href="https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}" target="_blank" style="color: #FBAD3F; font-size: 12px;">Get Directions →</a>
-                              </div>`
-                            });
-                            infoWindow.open(mapInstance, marker);
-                            currentInfoWindow = infoWindow;
+                        function initSpecialCollectionMap(mapEl) {
+                          if (mapEl.dataset.initialized === 'true') return;
+                          mapEl.dataset.initialized = 'true';
+
+                          const hosts = [...specialCollection.hosts].sort((a, b) => a.name.localeCompare(b.name)).filter(h => h.lat && h.lng);
+                          if (hosts.length === 0) return;
+
+                          const bounds = new window.google.maps.LatLngBounds();
+                          hosts.forEach(h => bounds.extend({lat: parseFloat(h.lat), lng: parseFloat(h.lng)}));
+
+                          const mapInstance = new window.google.maps.Map(mapEl, {
+                            center: bounds.getCenter(),
+                            zoom: 11,
+                            mapId: 'special_collection_map'
                           });
-                        });
+                          mapInstance.fitBounds(bounds, 50);
+
+                          // Track open InfoWindow to close it when another is opened
+                          let currentInfoWindow = null;
+
+                          hosts.forEach((host, index) => {
+                            const markerDiv = document.createElement('div');
+                            markerDiv.innerHTML = `<div style="background-color: #A31C41; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${index + 1}</div>`;
+
+                            const marker = new window.google.maps.marker.AdvancedMarkerElement({
+                              map: mapInstance,
+                              position: {lat: parseFloat(host.lat), lng: parseFloat(host.lng)},
+                              content: markerDiv,
+                              title: host.name
+                            });
+
+                            marker.addListener('click', () => {
+                              // Close any previously open InfoWindow
+                              if (currentInfoWindow) {
+                                currentInfoWindow.close();
+                              }
+
+                              const infoWindow = new window.google.maps.InfoWindow({
+                                content: `<div style="padding: 8px; max-width: 200px;">
+                                  <strong style="color: #236383;">${host.name}</strong><br>
+                                  <span style="color: #666; font-size: 12px;">${host.area}</span><br>
+                                  <span style="color: #007E8C; font-weight: bold;">${formatTime(host.openTime)} - ${formatTime(host.closeTime)}</span><br>
+                                  <a href="https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}" target="_blank" style="color: #FBAD3F; font-size: 12px;">Get Directions →</a>
+                                </div>`
+                              });
+                              infoWindow.open(mapInstance, marker);
+                              currentInfoWindow = infoWindow;
+                            });
+                          });
+                        }
                       }
                     }}
                   />
