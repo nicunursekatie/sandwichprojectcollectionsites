@@ -22,5 +22,10 @@ service cloud.firestore {
     match /hosts/{hostId} {
       allow read, write: if true;
     }
+
+    // Special Collections - allow full access for now (we can add authentication later)
+    match /specialCollections/{collectionId} {
+      allow read, write: if true;
+    }
   }
 }
