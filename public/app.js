@@ -2213,6 +2213,128 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </div>
           </div>
 
+          {/* Address Search for Proximity */}
+          {isActive && specialCollection.hosts?.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 mb-6">
+              <h3 className="font-bold mb-3" style={{color: '#236383'}}>📍 Find the Closest Location</h3>
+              <p className="text-sm mb-3" style={{color: '#666'}}>Enter your address to sort drop-off locations by driving distance:</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  placeholder="Enter your address..."
+                  id="special-collection-address"
+                  className="flex-1 px-4 py-3 rounded-xl border-2 text-base"
+                  style={{borderColor: '#A31C41'}}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      document.getElementById('special-collection-search-btn')?.click();
+                    }
+                  }}
+                />
+                <button
+                  id="special-collection-search-btn"
+                  onClick={async () => {
+                    const addressInput = document.getElementById('special-collection-address');
+                    const address = addressInput?.value?.trim();
+                    if (!address) {
+                      alert('Please enter an address');
+                      return;
+                    }
+
+                    const btn = document.getElementById('special-collection-search-btn');
+                    const originalText = btn.innerText;
+                    btn.innerText = 'Searching...';
+                    btn.disabled = true;
+
+                    try {
+                      const geocoder = new window.google.maps.Geocoder();
+                      const result = await new Promise((resolve, reject) => {
+                        geocoder.geocode({ address }, (results, status) => {
+                          if (status === 'OK' && results[0]) {
+                            resolve(results[0].geometry.location);
+                          } else {
+                            reject(new Error('Could not find that address'));
+                          }
+                        });
+                      });
+
+                      const userLat = result.lat();
+                      const userLng = result.lng();
+
+                      // Calculate distances using Distance Matrix API
+                      const distanceService = new window.google.maps.DistanceMatrixService();
+                      const hosts = specialCollection.hosts.filter(h => h.lat && h.lng);
+                      const destinations = hosts.map(h => ({ lat: parseFloat(h.lat), lng: parseFloat(h.lng) }));
+
+                      const distanceResult = await new Promise((resolve, reject) => {
+                        distanceService.getDistanceMatrix({
+                          origins: [{ lat: userLat, lng: userLng }],
+                          destinations,
+                          travelMode: 'DRIVING'
+                        }, (response, status) => {
+                          if (status === 'OK') {
+                            resolve(response);
+                          } else {
+                            reject(new Error('Could not calculate distances'));
+                          }
+                        });
+                      });
+
+                      // Update hosts with distance info and sort
+                      const hostsWithDistance = hosts.map((host, i) => {
+                        const element = distanceResult.rows[0].elements[i];
+                        return {
+                          ...host,
+                          driveTime: element.status === 'OK' ? element.duration.value : Infinity,
+                          driveTimeText: element.status === 'OK' ? element.duration.text : 'N/A',
+                          distanceText: element.status === 'OK' ? element.distance.text : 'N/A'
+                        };
+                      });
+
+                      hostsWithDistance.sort((a, b) => a.driveTime - b.driveTime);
+
+                      // Store in window for the page to use
+                      window.specialCollectionSortedHosts = hostsWithDistance;
+                      window.specialCollectionUserCoords = { lat: userLat, lng: userLng };
+
+                      // Force re-render by updating state
+                      setSpecialCollection({ ...specialCollection, _sortedByProximity: true, _timestamp: Date.now() });
+
+                    } catch (error) {
+                      alert(error.message || 'Error finding address');
+                    } finally {
+                      btn.innerText = originalText;
+                      btn.disabled = false;
+                    }
+                  }}
+                  className="px-6 py-3 rounded-xl font-semibold text-white whitespace-nowrap"
+                  style={{backgroundColor: '#A31C41'}}
+                >
+                  🔍 Search
+                </button>
+                {window.specialCollectionSortedHosts && (
+                  <button
+                    onClick={() => {
+                      window.specialCollectionSortedHosts = null;
+                      window.specialCollectionUserCoords = null;
+                      document.getElementById('special-collection-address').value = '';
+                      setSpecialCollection({ ...specialCollection, _sortedByProximity: false, _timestamp: Date.now() });
+                    }}
+                    className="px-4 py-3 rounded-xl font-medium"
+                    style={{backgroundColor: '#f0f0f0', color: '#666'}}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              {window.specialCollectionSortedHosts && (
+                <p className="text-sm mt-3 font-medium" style={{color: '#47bc3b'}}>
+                  ✓ Sorted by driving distance from your location
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Active Special Collection */}
           {isActive ? (
             <div className="rounded-2xl overflow-hidden shadow-lg" style={{border: '3px solid #A31C41'}}>
@@ -2229,7 +2351,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                   <div className="text-white text-base sm:text-lg font-semibold px-4 py-2 rounded-lg" style={{backgroundColor: 'rgba(255,255,255,0.2)'}}>
                     {(() => {
+                      const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
                       const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+
+                      // If collection hasn't started yet, show "Starts in..."
+                      if (now < startDate) {
+                        const hoursUntilStart = Math.max(0, Math.ceil((startDate - now) / (1000 * 60 * 60)));
+                        const minutesUntilStart = Math.max(0, Math.ceil((startDate - now) / (1000 * 60)));
+                        if (hoursUntilStart > 24) {
+                          const days = Math.ceil(hoursUntilStart / 24);
+                          return `Starts in ${days} day${days > 1 ? 's' : ''}`;
+                        }
+                        return hoursUntilStart > 1 ? `Starts in ${hoursUntilStart} hours` : minutesUntilStart > 0 ? `Starts in ${minutesUntilStart} min` : 'Starting soon';
+                      }
+
+                      // Collection has started, show "Ends in..."
                       const hoursRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60 * 60)));
                       const minutesRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60)));
                       return hoursRemaining > 1 ? `Ends in ${hoursRemaining} hours` : minutesRemaining > 0 ? `Ends in ${minutesRemaining} min` : 'Ending soon';
@@ -2295,10 +2431,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
               <div className="p-5 sm:p-6 bg-white">
                 <h3 className="font-bold text-lg mb-4" style={{color: '#236383'}}>
                   Drop-off Locations ({specialCollection.hosts?.length || 0})
+                  {window.specialCollectionSortedHosts && (
+                    <span className="text-sm font-normal ml-2" style={{color: '#47bc3b'}}>- sorted by distance</span>
+                  )}
                 </h3>
                 {specialCollection.hosts?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[...specialCollection.hosts].sort((a, b) => a.name.localeCompare(b.name)).map((host, index) => (
+                    {(window.specialCollectionSortedHosts || [...specialCollection.hosts].sort((a, b) => a.name.localeCompare(b.name))).map((host, index) => (
                       <div key={host.id} className="rounded-xl p-5 shadow-sm" style={{backgroundColor: '#f8f9fa', border: '2px solid #e0e0e0'}}>
                         <div className="flex items-start gap-3">
                           <div style={{backgroundColor: '#A31C41', color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', flexShrink: 0}}>
@@ -2306,9 +2445,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </div>
                           <div className="flex-1">
                             <h4 className="font-bold text-lg mb-1" style={{color: '#236383'}}>{host.name}</h4>
-                            <p className="text-sm mb-3" style={{color: '#666'}}>
+                            <p className="text-sm mb-2" style={{color: '#666'}}>
                               {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
                             </p>
+                            {host.driveTimeText && (
+                              <p className="text-sm font-semibold mb-2" style={{color: '#A31C41'}}>
+                                🚗 {host.driveTimeText} ({host.distanceText})
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -2323,7 +2467,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </div>
                         {host.lat && host.lng && (
                           <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}`}
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}${window.specialCollectionUserCoords ? `&origin=${window.specialCollectionUserCoords.lat},${window.specialCollectionUserCoords.lng}` : ''}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-block text-sm font-medium px-3 py-1 rounded-lg"
