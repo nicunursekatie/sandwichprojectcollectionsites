@@ -2526,20 +2526,88 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             )}
                           </div>
                         </div>
-                        {/* Collection dates for this location */}
-                        <div className="text-xs font-medium mb-2 px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
-                          📅 {(() => {
+                        {/* Daily Hours */}
+                        <div className="mb-3">
+                          {(() => {
                             const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
                             const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
-                            const formatDay = (d) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-                            const sameDay = startDate.toDateString() === endDate.toDateString();
-                            return sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`;
+
+                            // If host has dailyHours, show per-day hours
+                            if (host.dailyHours && Object.keys(host.dailyHours).length > 0) {
+                              const days = [];
+                              const currentDate = new Date(startDate);
+                              currentDate.setHours(0, 0, 0, 0);
+                              const endDateNorm = new Date(endDate);
+                              endDateNorm.setHours(23, 59, 59, 999);
+
+                              while (currentDate <= endDateNorm) {
+                                const dateKey = currentDate.toISOString().split('T')[0];
+                                const dayHours = host.dailyHours[dateKey];
+                                if (dayHours) {
+                                  days.push({
+                                    date: new Date(currentDate),
+                                    dateKey,
+                                    openTime: dayHours.openTime,
+                                    closeTime: dayHours.closeTime
+                                  });
+                                }
+                                currentDate.setDate(currentDate.getDate() + 1);
+                              }
+
+                              // Check if all days have the same hours
+                              const allSameHours = days.length > 0 && days.every(d =>
+                                d.openTime === days[0].openTime && d.closeTime === days[0].closeTime
+                              );
+
+                              if (allSameHours && days.length > 0) {
+                                // All days same - show single hours with date range
+                                const formatDay = (d) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                                const sameDay = startDate.toDateString() === endDate.toDateString();
+                                return (
+                                  <div className="space-y-2">
+                                    <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                                      📅 {sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`}
+                                    </div>
+                                    <span className="inline-block text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
+                                      🕐 {formatTime(days[0].openTime)} - {formatTime(days[0].closeTime)}
+                                    </span>
+                                  </div>
+                                );
+                              } else {
+                                // Different hours per day - show each day
+                                return (
+                                  <div className="space-y-1">
+                                    {days.map(day => (
+                                      <div key={day.dateKey} className="flex flex-wrap items-center gap-2 text-sm px-2 py-1 rounded" style={{backgroundColor: '#f0f9fa'}}>
+                                        <span className="font-medium" style={{color: '#236383', minWidth: '90px'}}>
+                                          {day.date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        </span>
+                                        <span className="font-bold px-2 py-0.5 rounded" style={{backgroundColor: '#007E8C', color: 'white'}}>
+                                          {formatTime(day.openTime)} - {formatTime(day.closeTime)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                            } else {
+                              // No dailyHours - show legacy single hours
+                              const formatDay = (d) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                              const sameDay = startDate.toDateString() === endDate.toDateString();
+                              return (
+                                <div className="space-y-2">
+                                  <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                                    📅 {sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`}
+                                  </div>
+                                  <span className="inline-block text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
+                                    🕐 {formatTime(host.openTime)} - {formatTime(host.closeTime)}
+                                  </span>
+                                </div>
+                              );
+                            }
                           })()}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 mb-3">
-                          <span className="text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
-                            🕐 {formatTime(host.openTime)} - {formatTime(host.closeTime)}
-                          </span>
                           {host.phone && (
                             <a href={`tel:${host.phone}`} className="text-sm font-medium px-3 py-1 rounded-lg flex items-center gap-1" style={{backgroundColor: '#236383', color: 'white'}}>
                               📞 Call
@@ -2856,7 +2924,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {editingSpecialCollection.hosts?.length > 0 && (
                   <div className="border-t pt-4 mb-4">
                     <h4 className="font-bold mb-3" style={{color: '#236383'}}>⏰ Bulk Time Edit</h4>
-                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection:</p>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection (applies to all days):</p>
                     <div className="flex flex-wrap items-end gap-3">
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Open Time</label>
@@ -2872,11 +2940,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           const openTime = document.getElementById('bulkOpenTime2').value;
                           const closeTime = document.getElementById('bulkCloseTime2').value;
                           if (!openTime || !closeTime) { alert('Please set both open and close times'); return; }
+
+                          // Build dailyHours for all days in the collection
+                          const startDate = editingSpecialCollection.startDate ?
+                            (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                             editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                          const endDate = editingSpecialCollection.endDate ?
+                            (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                             editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                          const dailyHours = {};
+                          const currentDate = new Date(startDate);
+                          currentDate.setHours(0, 0, 0, 0);
+                          const endDateNorm = new Date(endDate);
+                          endDateNorm.setHours(23, 59, 59, 999);
+
+                          while (currentDate <= endDateNorm) {
+                            const dateKey = currentDate.toISOString().split('T')[0];
+                            dailyHours[dateKey] = { openTime, closeTime };
+                            currentDate.setDate(currentDate.getDate() + 1);
+                          }
+
                           const updatedHosts = editingSpecialCollection.hosts.map(host => ({
-                            ...host, openTime, closeTime, hours: `${openTime} - ${closeTime}`
+                            ...host, openTime, closeTime, hours: `${openTime} - ${closeTime}`, dailyHours
                           }));
                           setEditingSpecialCollection({...editingSpecialCollection, hosts: updatedHosts});
-                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime}`);
+                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime} for all days`);
                         }}
                         className="px-4 py-2 rounded-lg font-medium text-white"
                         style={{backgroundColor: '#FBAD3F'}}
@@ -3012,6 +3101,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.target);
+
+                  // Collect daily hours
+                  const dailyHours = {};
+                  const startDate = editingSpecialCollection?.startDate ?
+                    (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                     editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                  const endDate = editingSpecialCollection?.endDate ?
+                    (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                     editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                  const currentDate = new Date(startDate);
+                  currentDate.setHours(0, 0, 0, 0);
+                  const endDateNorm = new Date(endDate);
+                  endDateNorm.setHours(23, 59, 59, 999);
+
+                  while (currentDate <= endDateNorm) {
+                    const dateKey = currentDate.toISOString().split('T')[0];
+                    const openTime = formData.get(`openTime_${dateKey}`);
+                    const closeTime = formData.get(`closeTime_${dateKey}`);
+                    if (openTime && closeTime) {
+                      dailyHours[dateKey] = { openTime, closeTime };
+                    }
+                    currentDate.setDate(currentDate.getDate() + 1);
+                  }
+
+                  // Use first day's hours as default openTime/closeTime for backwards compatibility
+                  const firstDayKey = Object.keys(dailyHours)[0];
+                  const defaultOpen = firstDayKey ? dailyHours[firstDayKey].openTime : '08:00';
+                  const defaultClose = firstDayKey ? dailyHours[firstDayKey].closeTime : '18:00';
+
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
@@ -3019,9 +3138,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     lat: formData.get('lat'),
                     lng: formData.get('lng'),
                     phone: formData.get('phone') || '',
-                    hours: `${formData.get('openTime')} - ${formData.get('closeTime')}`,
-                    openTime: formData.get('openTime'),
-                    closeTime: formData.get('closeTime'),
+                    hours: `${defaultOpen} - ${defaultClose}`,
+                    openTime: defaultOpen,
+                    closeTime: defaultClose,
+                    dailyHours: dailyHours,
                     notes: formData.get('notes') || ''
                   };
                   if (editingSpecialHost.id === 'new') {
@@ -3058,16 +3178,65 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Phone</label>
                     <input type="text" name="phone" defaultValue={editingSpecialHost.phone} className="w-full px-3 py-2 rounded-lg border-2" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Open Time *</label>
-                      <input type="time" name="openTime" defaultValue={editingSpecialHost.openTime || '08:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Close Time *</label>
-                      <input type="time" name="closeTime" defaultValue={editingSpecialHost.closeTime || '18:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
+
+                  {/* Daily Hours Section */}
+                  <div className="p-3 rounded-lg" style={{backgroundColor: '#f0f9fa', border: '1px solid #007E8C'}}>
+                    <h5 className="font-semibold mb-2 text-sm" style={{color: '#007E8C'}}>📅 Hours by Day</h5>
+                    <p className="text-xs mb-3" style={{color: '#666'}}>Set different hours for each day of the collection:</p>
+                    {(() => {
+                      const startDate = editingSpecialCollection?.startDate ?
+                        (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                         editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                      const endDate = editingSpecialCollection?.endDate ?
+                        (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                         editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                      const days = [];
+                      const currentDate = new Date(startDate);
+                      currentDate.setHours(0, 0, 0, 0);
+                      const endDateNorm = new Date(endDate);
+                      endDateNorm.setHours(23, 59, 59, 999);
+
+                      while (currentDate <= endDateNorm) {
+                        days.push(new Date(currentDate));
+                        currentDate.setDate(currentDate.getDate() + 1);
+                      }
+
+                      return days.map((day, idx) => {
+                        const dateKey = day.toISOString().split('T')[0];
+                        const dayName = day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                        const existingHours = editingSpecialHost.dailyHours?.[dateKey];
+                        const defaultOpen = existingHours?.openTime || editingSpecialHost.openTime || '08:00';
+                        const defaultClose = existingHours?.closeTime || editingSpecialHost.closeTime || '18:00';
+
+                        return (
+                          <div key={dateKey} className="flex flex-wrap items-center gap-2 mb-2 p-2 bg-white rounded" style={{border: '1px solid #e0e0e0'}}>
+                            <span className="text-sm font-medium w-full sm:w-auto" style={{color: '#236383', minWidth: '120px'}}>{dayName}</span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                name={`openTime_${dateKey}`}
+                                defaultValue={defaultOpen}
+                                required
+                                className="px-2 py-1 rounded border text-sm"
+                                style={{width: '110px'}}
+                              />
+                              <span className="text-sm" style={{color: '#666'}}>to</span>
+                              <input
+                                type="time"
+                                name={`closeTime_${dateKey}`}
+                                defaultValue={defaultClose}
+                                required
+                                className="px-2 py-1 rounded border text-sm"
+                                style={{width: '110px'}}
+                              />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
+
                   <div>
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Special Instructions</label>
                     <textarea name="notes" defaultValue={editingSpecialHost.notes} className="w-full px-3 py-2 rounded-lg border-2" rows={2} />
@@ -5421,7 +5590,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {editingSpecialCollection.hosts?.length > 0 && (
                   <div className="border-t pt-4 mb-4">
                     <h4 className="font-bold mb-3" style={{color: '#236383'}}>⏰ Bulk Time Edit</h4>
-                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection:</p>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection (applies to all days):</p>
                     <div className="flex flex-wrap items-end gap-3">
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Open Time</label>
@@ -5450,14 +5619,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             alert('Please set both open and close times');
                             return;
                           }
+
+                          // Build dailyHours for all days in the collection
+                          const startDate = editingSpecialCollection.startDate ?
+                            (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                             editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                          const endDate = editingSpecialCollection.endDate ?
+                            (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                             editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                          const dailyHours = {};
+                          const currentDate = new Date(startDate);
+                          currentDate.setHours(0, 0, 0, 0);
+                          const endDateNorm = new Date(endDate);
+                          endDateNorm.setHours(23, 59, 59, 999);
+
+                          while (currentDate <= endDateNorm) {
+                            const dateKey = currentDate.toISOString().split('T')[0];
+                            dailyHours[dateKey] = { openTime, closeTime };
+                            currentDate.setDate(currentDate.getDate() + 1);
+                          }
+
                           const updatedHosts = editingSpecialCollection.hosts.map(host => ({
                             ...host,
                             openTime,
                             closeTime,
-                            hours: `${openTime} - ${closeTime}`
+                            hours: `${openTime} - ${closeTime}`,
+                            dailyHours
                           }));
                           setEditingSpecialCollection({...editingSpecialCollection, hosts: updatedHosts});
-                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime}`);
+                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime} for all days`);
                         }}
                         className="px-4 py-2 rounded-lg font-medium text-white"
                         style={{backgroundColor: '#FBAD3F'}}
@@ -5673,6 +5864,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.target);
+
+                  // Collect daily hours
+                  const dailyHours = {};
+                  const startDate = editingSpecialCollection?.startDate ?
+                    (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                     editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                  const endDate = editingSpecialCollection?.endDate ?
+                    (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                     editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                  const currentDate = new Date(startDate);
+                  currentDate.setHours(0, 0, 0, 0);
+                  const endDateNorm = new Date(endDate);
+                  endDateNorm.setHours(23, 59, 59, 999);
+
+                  while (currentDate <= endDateNorm) {
+                    const dateKey = currentDate.toISOString().split('T')[0];
+                    const openTime = formData.get(`openTime_${dateKey}`);
+                    const closeTime = formData.get(`closeTime_${dateKey}`);
+                    if (openTime && closeTime) {
+                      dailyHours[dateKey] = { openTime, closeTime };
+                    }
+                    currentDate.setDate(currentDate.getDate() + 1);
+                  }
+
+                  // Use first day's hours as default openTime/closeTime for backwards compatibility
+                  const firstDayKey = Object.keys(dailyHours)[0];
+                  const defaultOpen = firstDayKey ? dailyHours[firstDayKey].openTime : '08:00';
+                  const defaultClose = firstDayKey ? dailyHours[firstDayKey].closeTime : '18:00';
+
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
@@ -5680,9 +5901,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     lat: formData.get('lat'),
                     lng: formData.get('lng'),
                     phone: formData.get('phone') || '',
-                    hours: `${formData.get('openTime')} - ${formData.get('closeTime')}`,
-                    openTime: formData.get('openTime'),
-                    closeTime: formData.get('closeTime'),
+                    hours: `${defaultOpen} - ${defaultClose}`,
+                    openTime: defaultOpen,
+                    closeTime: defaultClose,
+                    dailyHours: dailyHours,
                     notes: formData.get('notes') || ''
                   };
                   if (editingSpecialHost.id === 'new') {
@@ -5719,16 +5941,65 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Phone</label>
                     <input type="text" name="phone" defaultValue={editingSpecialHost.phone} className="w-full px-3 py-2 rounded-lg border-2" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Open Time *</label>
-                      <input type="time" name="openTime" defaultValue={editingSpecialHost.openTime || '08:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Close Time *</label>
-                      <input type="time" name="closeTime" defaultValue={editingSpecialHost.closeTime || '18:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
+
+                  {/* Daily Hours Section */}
+                  <div className="p-3 rounded-lg" style={{backgroundColor: '#f0f9fa', border: '1px solid #007E8C'}}>
+                    <h5 className="font-semibold mb-2 text-sm" style={{color: '#007E8C'}}>📅 Hours by Day</h5>
+                    <p className="text-xs mb-3" style={{color: '#666'}}>Set different hours for each day of the collection:</p>
+                    {(() => {
+                      const startDate = editingSpecialCollection?.startDate ?
+                        (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                         editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                      const endDate = editingSpecialCollection?.endDate ?
+                        (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                         editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                      const days = [];
+                      const currentDate = new Date(startDate);
+                      currentDate.setHours(0, 0, 0, 0);
+                      const endDateNorm = new Date(endDate);
+                      endDateNorm.setHours(23, 59, 59, 999);
+
+                      while (currentDate <= endDateNorm) {
+                        days.push(new Date(currentDate));
+                        currentDate.setDate(currentDate.getDate() + 1);
+                      }
+
+                      return days.map((day, idx) => {
+                        const dateKey = day.toISOString().split('T')[0];
+                        const dayName = day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                        const existingHours = editingSpecialHost.dailyHours?.[dateKey];
+                        const defaultOpen = existingHours?.openTime || editingSpecialHost.openTime || '08:00';
+                        const defaultClose = existingHours?.closeTime || editingSpecialHost.closeTime || '18:00';
+
+                        return (
+                          <div key={dateKey} className="flex flex-wrap items-center gap-2 mb-2 p-2 bg-white rounded" style={{border: '1px solid #e0e0e0'}}>
+                            <span className="text-sm font-medium w-full sm:w-auto" style={{color: '#236383', minWidth: '120px'}}>{dayName}</span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                name={`openTime_${dateKey}`}
+                                defaultValue={defaultOpen}
+                                required
+                                className="px-2 py-1 rounded border text-sm"
+                                style={{width: '110px'}}
+                              />
+                              <span className="text-sm" style={{color: '#666'}}>to</span>
+                              <input
+                                type="time"
+                                name={`closeTime_${dateKey}`}
+                                defaultValue={defaultClose}
+                                required
+                                className="px-2 py-1 rounded border text-sm"
+                                style={{width: '110px'}}
+                              />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
+
                   <div>
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Special Instructions</label>
                     <textarea name="notes" defaultValue={editingSpecialHost.notes} className="w-full px-3 py-2 rounded-lg border-2" rows={2} />

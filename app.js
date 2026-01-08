@@ -100,6 +100,13 @@ const HostAvailabilityApp = () => {
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
+  // Refs for stable event handler references (prevents memory leaks in event listener cleanup)
+  const menuThrottledScrollRef = React.useRef(null);
+  const menuDebouncedResizeRef = React.useRef(null);
+  const menuClickOutsideRef = React.useRef(null);
+  const menuReadyRef = React.useRef(false);
+  const originalBodyStylesRef = React.useRef({ overflow: '', paddingRight: '' });
+  const scrollThrottledHandlerRef = React.useRef(null);
 
   // Firebase Analytics tracking helper
   const trackEvent = (eventName, eventParams = {}) => {
@@ -145,69 +152,110 @@ const HostAvailabilityApp = () => {
 
   // Close directions menu when clicking outside and update position on scroll/resize
   React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (directionsMenuOpen !== null) {
-        // Check if click is on the button or inside the portal dropdown
-        const menuContainer = event.target.closest('[data-directions-menu]');
-        const portalDropdown = event.target.closest('.fixed.bg-white.rounded-lg.shadow-xl');
-        if (!menuContainer && !portalDropdown) {
-          setDirectionsMenuOpen(null);
-        }
-      }
-      if (mapTooltipMenuOpen) {
-        const menuContainer = event.target.closest('[data-map-tooltip-menu]');
-        if (!menuContainer) {
-          setMapTooltipMenuOpen(false);
-        }
-      }
-    };
-
     const updateMenuPosition = () => {
       if (directionsMenuOpen !== null && directionsButtonRef.current) {
         const buttonRect = directionsButtonRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        const dropdownWidth = 280; // min-width
-        const dropdownHeight = 200; // approximate height
-        
+        // Mobile optimization: Responsive dropdown width based on viewport
+        const dropdownWidth = Math.min(280, viewportWidth * 0.9);
+        const dropdownHeight = Math.min(200, viewportHeight * 0.8);
+        // Mobile optimization: Responsive margins based on viewport
+        const margin = Math.min(16, viewportWidth * 0.05);
+
         let left = buttonRect.left;
         let top = buttonRect.bottom + 4;
-        
+
         // Ensure dropdown doesn't go off right edge
-        if (left + dropdownWidth > viewportWidth - 16) {
-          left = viewportWidth - dropdownWidth - 16;
+        if (left + dropdownWidth > viewportWidth - margin) {
+          left = viewportWidth - dropdownWidth - margin;
         }
         // Ensure dropdown doesn't go off left edge
-        if (left < 16) {
-          left = 16;
+        if (left < margin) {
+          left = margin;
         }
         // If dropdown would go off bottom, show above button instead
-        if (top + dropdownHeight > viewportHeight - 16) {
+        if (top + dropdownHeight > viewportHeight - margin) {
           top = buttonRect.top - dropdownHeight - 4;
         }
         // Ensure dropdown doesn't go off top edge
-        if (top < 16) {
-          top = 16;
+        if (top < margin) {
+          top = margin;
         }
-        
+
         setDirectionsMenuPosition({ top, left });
       }
     };
     
     if (directionsMenuOpen !== null || mapTooltipMenuOpen) {
-      // Use setTimeout to avoid immediate closure when opening
-      setTimeout(() => {
-        document.addEventListener('click', handleClickOutside);
-        document.addEventListener('touchstart', handleClickOutside);
-        // Update position on scroll/resize for mobile
-        window.addEventListener('scroll', updateMenuPosition, true);
-        window.addEventListener('resize', updateMenuPosition);
-      }, 0);
+      // Use flag-based approach to prevent immediate menu closure
+      menuReadyRef.current = false;
+      
+      // Mobile optimization: Store original body styles in ref to prevent stale closure issues
+      // Account for scrollbar width to prevent content jump
+      originalBodyStylesRef.current = {
+        overflow: document.body.style.overflow,
+        paddingRight: document.body.style.paddingRight
+      };
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+
+      // Create click outside handler that uses flag to prevent premature closure
+      const handleClickOutside = (event) => {
+        // Ignore events until menu is ready (prevents immediate closure from opening click)
+        if (!menuReadyRef.current) {
+          return;
+        }
+        if (directionsMenuOpen !== null) {
+          // Check if click is on the button or inside the portal dropdown
+          const menuContainer = event.target.closest('[data-directions-menu]');
+          const portalDropdown = event.target.closest('.fixed.bg-white.rounded-lg.shadow-xl');
+          if (!menuContainer && !portalDropdown) {
+            setDirectionsMenuOpen(null);
+          }
+        }
+        if (mapTooltipMenuOpen) {
+          const menuContainer = event.target.closest('[data-map-tooltip-menu]');
+          if (!menuContainer) {
+            setMapTooltipMenuOpen(false);
+          }
+        }
+      };
+
+      // Store handlers in refs for proper cleanup (maintains stable references)
+      menuClickOutsideRef.current = handleClickOutside;
+      menuThrottledScrollRef.current = createThrottledFunction(updateMenuPosition, 100);
+      menuDebouncedResizeRef.current = createDebouncedFunction(updateMenuPosition, 250);
+
+      // Attach event listeners immediately
+      document.addEventListener('click', menuClickOutsideRef.current);
+      // Mobile optimization: Use touchend instead of touchstart to prevent premature closure
+      document.addEventListener('touchend', menuClickOutsideRef.current, { passive: true });
+      // Mobile optimization: Throttled scroll for better mobile performance
+      window.addEventListener('scroll', menuThrottledScrollRef.current, { passive: true, capture: true });
+      // Mobile optimization: Debounced resize to prevent layout thrashing
+      window.addEventListener('resize', menuDebouncedResizeRef.current);
+      
+      // Enable click handling after current event loop to prevent immediate closure
+      requestAnimationFrame(() => {
+        menuReadyRef.current = true;
+      });
+
       return () => {
-        document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('touchstart', handleClickOutside);
-        window.removeEventListener('scroll', updateMenuPosition, true);
-        window.removeEventListener('resize', updateMenuPosition);
+        // Reset ready flag
+        menuReadyRef.current = false;
+        // Mobile optimization: Restore original body styles from ref
+        document.body.style.overflow = originalBodyStylesRef.current.overflow;
+        document.body.style.paddingRight = originalBodyStylesRef.current.paddingRight;
+        // Remove event listeners using the same references stored in refs
+        // Note: capture option must match for proper removal; passive is not needed for removal
+        document.removeEventListener('click', menuClickOutsideRef.current);
+        document.removeEventListener('touchend', menuClickOutsideRef.current);
+        window.removeEventListener('scroll', menuThrottledScrollRef.current, { capture: true });
+        window.removeEventListener('resize', menuDebouncedResizeRef.current);
       };
     }
   }, [directionsMenuOpen, mapTooltipMenuOpen]);
@@ -259,11 +307,13 @@ const HostAvailabilityApp = () => {
       });
     };
 
-    window.addEventListener('scroll', handleScroll);
+    // Mobile optimization: Store throttled handler in ref for proper cleanup
+    scrollThrottledHandlerRef.current = createThrottledFunction(handleScroll, 100);
+    window.addEventListener('scroll', scrollThrottledHandlerRef.current, { passive: true });
     // Trigger once on mount to catch initial viewport
     handleScroll();
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', scrollThrottledHandlerRef.current);
   }, []);
 
   const helperRefs = window.AppHelpers || {};
@@ -338,6 +388,61 @@ const HostAvailabilityApp = () => {
     return hours.length > 0 ? hours.join(' • ') : (host.hours || 'Hours not available');
   };
 
+  // Helper to check if host is open at a specific time and how much buffer there is
+  const checkHostTimeAvailability = (host, timeStr) => {
+    if (!timeStr || !host.openTime || !host.closeTime) {
+      return { isOpen: true, warning: null, minutesUntilClose: null };
+    }
+
+    // Convert time strings to minutes since midnight for comparison
+    const timeToMinutes = (t) => {
+      const [hours, minutes] = t.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const dropOffMinutes = timeToMinutes(timeStr);
+    const openMinutes = timeToMinutes(host.openTime);
+    const closeMinutes = timeToMinutes(host.closeTime);
+
+    // Check if drop-off time is within host's hours
+    if (dropOffMinutes < openMinutes) {
+      return {
+        isOpen: false,
+        warning: `Opens at ${formatTime(host.openTime)}`,
+        minutesUntilClose: null
+      };
+    }
+    if (dropOffMinutes >= closeMinutes) {
+      return {
+        isOpen: false,
+        warning: `Closes at ${formatTime(host.closeTime)}`,
+        minutesUntilClose: null
+      };
+    }
+
+    // Host is open - check how much buffer time
+    const minutesUntilClose = closeMinutes - dropOffMinutes;
+
+    if (minutesUntilClose <= 30) {
+      return {
+        isOpen: true,
+        warning: `Closes ${minutesUntilClose} min after your drop-off!`,
+        minutesUntilClose,
+        severity: 'high'
+      };
+    }
+    if (minutesUntilClose <= 60) {
+      return {
+        isOpen: true,
+        warning: `Closes ${minutesUntilClose} min after your drop-off`,
+        minutesUntilClose,
+        severity: 'medium'
+      };
+    }
+
+    return { isOpen: true, warning: null, minutesUntilClose };
+  };
+
   // Toggle expanded state for host card
   const toggleHostExpanded = (hostId) => {
     setExpandedHosts(prev => {
@@ -406,49 +511,6 @@ const HostAvailabilityApp = () => {
   const [allHosts, setAllHosts] = React.useState([]);
   const [hostsLoading, setHostsLoading] = React.useState(true);
 
-  // Default hosts function - used as fallback when Firestore is empty or fails
-  const getInitialHosts = () => {
-    // This function is no longer used - hosts come from Firestore
-    const defaultHosts = [
-      { id: 1, name: 'Karen C.', area: 'Johns Creek', neighborhood: 'Glenn Abbey', lat: 34.0562454, lng: -84.2510305, phone: '404.451.7942', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 2, name: 'Nancy M.', area: 'Johns Creek', neighborhood: 'Chartwell', lat: 34.0190365, lng: -84.27345269999999, phone: '678.575.6898', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 3, name: 'Julie B.', area: 'Buckhead', lat: 33.8543082, lng: -84.3709417, phone: '404.808.2560', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Please pull up driveway in back. Refrigerator in garage.', available: true },
-      { id: 4, name: 'Kate D.', area: 'Chastain Park', lat: 33.8804237, lng: -84.4067199, phone: '404.271.4352', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Please text prior to delivering to make sure host is available to receive sandwiches.', available: true },
-      { id: 5, name: 'Jordan H.', area: 'Chamblee/Brookhaven', neighborhood: 'Sexton Woods near Keswick Park', lat: 33.8981194, lng: -84.31290740000001, phone: '770.789.7329', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Please text when you arrive and /or ring doorbell.', available: true },
-      { id: 6, name: 'Veronica P.', area: 'Dacula', lat: 33.97561, lng: -83.883747, phone: '470.509.5333', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 7, name: 'Lisa H.', area: 'Dunwoody', neighborhood: 'Brooke Farm', lat: 33.952725, lng: -84.290274, phone: '770.826.0457', hours: 'Wed 4-9pm, Thu 8-9:30am', openTime: '16:00', closeTime: '21:00', thursdayOpenTime: '08:00', thursdayCloseTime: '09:30', notes: '', available: true },
-      { id: 8, name: 'Marcy L. & Stephanie', area: 'Dunwoody', neighborhood: 'Near Dunwoody Village', lat: 33.9463163, lng: -84.327786, phone: '678.596.9697', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Sign in sheet and labels on front porch', available: true },
-      { id: 9, name: 'Darren W.', area: 'Dunwoody', neighborhood: 'Dunwoody Club Forest', lat: 33.96450859999999, lng: -84.3151065, phone: '770.490.6206', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: '', available: true },
-      { id: 10, name: 'Silke S.', area: 'East Cobb', lat: 34.0159666, lng: -84.44707, phone: '404.375.9541', hours: '9 am to 7 pm', openTime: '09:00', closeTime: '19:00', notes: 'Text once delivered', available: true },
-      { id: 12, name: 'Vicki T.', area: 'East Cobb', neighborhood: 'East Hampton by The Avenues', lat: 34.0003401, lng: -84.417205, phone: '404.202.9108', hours: '9 am to 6:30 pm', openTime: '09:00', closeTime: '18:30', notes: 'Drop off in garage (fridge & sign in there).  Text Vicki once delivered', available: true },
-      { id: 13, name: 'Rebecca H.', area: 'East Atlanta', neighborhood: 'Near Burgess Elementary School', lat: 33.753746, lng: -84.386330, phone: '847.687.9143', hours: '10 am to 6 pm', openTime: '10:00', closeTime: '18:00', notes: 'Text Rebecca once delivered', available: true },
-      { id: 14, name: 'Sarah P.', area: 'Milton', neighborhood: 'Woodwinds at New Providence', lat: 34.116782, lng: -84.354432, phone: '816.308.2273', hours: '9 am to 8 pm', openTime: '09:00', closeTime: '20:00', notes: 'Text Sarah after drop-off', available: true },
-      { id: 15, name: 'Laura B.', area: 'Oak Grove/Druid Hills', neighborhood: 'Sagamore Hills/Oak Grove', lat: 33.84245629999999, lng: -84.3039661, phone: '404.931.8774', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 16, name: 'Tracie N.', area: 'Peachtree Corners', neighborhood: 'Peachtree Station', lat: 33.9784128, lng: -84.23600920000001, phone: '770.315.9177', hours: '2 pm to 8 pm', openTime: '14:00', closeTime: '20:00', notes: '', available: true },
-      { id: 17, name: 'Suzanna T.', area: 'Peachtree Corners', neighborhood: 'Amberfield', lat: 33.9815238, lng: -84.2278384, phone: '770.403.4821', hours: '2:30 pm to 8 pm', openTime: '14:30', closeTime: '20:00', notes: '', available: true },
-      { id: 18, name: 'Renee V.', area: 'Peachtree Corners', neighborhood: 'Neely Farm', lat: 33.9837379, lng: -84.2589718, phone: '770.265.3563', hours: '2 pm to 8 pm', openTime: '14:00', closeTime: '20:00', notes: '', available: true },
-      { id: 19, name: 'Carrey H.', area: 'Roswell', neighborhood: 'Willow Springs/Country Club of Roswell', lat: 34.0320203, lng: -84.2835501, phone: '314.363.2982', hours: '9 am to 7 pm', openTime: '09:00', closeTime: '19:00', notes: '', available: false },
-      { id: 20, name: 'Jenny V.W.', area: 'Roswell', neighborhood: 'Lakeside at Ansley', lat: 34.0864211, lng: -84.4086078, phone: '703.403.0711', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: 'Tell the gatehouse guard you are going to Walter\'s home. Text Jenny when you arrive.', available: false },
-      { id: 21, name: 'Jen C.', area: 'Sandy Springs', neighborhood: 'Riverside (off River Valley)', lat: 33.9311095, lng: -84.4050578, phone: '404.918.9933', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: true },
-      { id: 22, name: 'Sarah K.', area: 'Sandy Springs', neighborhood: 'North Springs', lat: 33.9529678, lng: -84.3758284, phone: '404.455.6743', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: '', available: true },
-      { id: 23, name: 'Allison T.', area: 'Sandy Springs', neighborhood: 'Declaire (just a smidge outside Perimeter)', lat: 33.91549, lng: -84.3968077, phone: '770.355.8876', hours: '9:30 am to 7 pm', openTime: '09:30', closeTime: '19:00', notes: '', available: false },
-      { id: 24, name: 'Cynthia C.', area: 'Southwest Atlanta', neighborhood: 'Cascade Hills Subdivision ', lat: 33.7286854, lng: -84.5622846, phone: '678.860.6442', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: '', available: true },
-      { id: 25, name: 'Jason S.', area: 'Suwanee/Johns Creek', neighborhood: 'Superior Play Systems', lat: 34.065908, lng: -84.160894, phone: '678.245.2110', hours: '7 am to 6 pm', openTime: '07:00', closeTime: '18:00', notes: '', available: true },
-      { id: 26, name: 'Stacey & Jack G.', area: 'Virginia Highland', neighborhood: 'Virginia Highland/Morningside/Midtown HS', lat: 33.77723595, lng: -84.362274174978, phone: '404.451.7648', hours: '6pm-8pm', openTime: '18:00', closeTime: '20:00', notes: '', available: false },
-      { id: 27, name: 'Della F.', area: 'Westminster/Milmar Neighborhood', lat: 33.83844, lng: -84.42356, phone: '404.556.0277', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Text Della when you arrive. Garage door will be open. Leave sandwiches in the refrigerator.', available: false },
-      { id: 28, name: 'Rayna N.', area: 'College Park', lat: 33.63388, lng: -84.53605, phone: '404.376.8028 ', hours: '8 am to 7 pm', openTime: '08:00', closeTime: '19:00', notes: 'Please text when you arrive. ', available: true },
-      { id: 29, name: 'Ashley R.', area: 'Decatur', neighborhood: 'Diamond Head', lat: 33.82314, lng: -84.27547, phone: '678.480.8786', hours: '8 am to 8 pm', openTime: '08:00', closeTime: '20:00', notes: 'Deliver to fridge in carport', available: true },
-      { id: 30, name: 'Judy T.', area: 'East Cobb', neighborhood: 'Indian Hills', lat: 33.967939, lng: -84.43849, phone: '404-683-5823', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: 'Ring doorbell', available: true },
-      { id: 31, name: 'Kristina M.', area: 'Flowery Branch', neighborhood: 'Sterling on the Lake', lat: 34.1490957945782, lng: -83.8990866162653, phone: '678.372.7959', hours: '9 am to 5 pm', openTime: '09:00', closeTime: '17:00', notes: 'Drop off in clubhouse', available: true },
-      { id: 32, name: 'Angie B.', area: 'Intown (Candler Park)', neighborhood: 'Candler Park', lat: 33.7633147, lng: -84.3440672755145, phone: '404.668.6886', hours: '8 am to 6 pm', openTime: '08:00', closeTime: '18:00', notes: '', available: false },
-      { id: 33, name: 'Chet B.', area: 'Roswell', neighborhood: 'Horseshoe Bend', lat: 33.99208265, lng: -84.2910639180384, phone: '386.290.8930‬', hours: '9 am to 6 pm', openTime: '09:00', closeTime: '18:00', notes: '', available: false },
-      { id: 34, name: 'Natalia W.', area: 'TBD', neighborhood: 'Bentley Farms', lat: 33.8, lng: -84.4, phone: '864.520.9058', hours: '10 am to 2 pm', openTime: '10:00', closeTime: '14:00', notes: 'Please text prior to delivering to make sure host is available to receive the sandwiches.', available: true }
-    ];
-    
-    // Return all hosts (including inactive) so admin management is possible after a version update
-    return defaultHosts;
-  };
-
   // Load hosts from Firestore on mount
   React.useEffect(() => {
     const loadHosts = async () => {
@@ -460,22 +522,10 @@ const HostAvailabilityApp = () => {
         });
         // Sort by ID
         hostsData.sort((a, b) => a.id - b.id);
-        
-        // Fallback to default hosts if Firestore is empty
-        if (hostsData.length === 0) {
-          console.warn('Firestore returned no hosts, using default hosts as fallback');
-          const defaultHosts = getInitialHosts();
-          setAllHosts(defaultHosts);
-        } else {
-          setAllHosts(hostsData);
-        }
+        setAllHosts(hostsData);
         setHostsLoading(false);
       } catch (error) {
         console.error('Error loading hosts:', error);
-        // Fallback to default hosts on error
-        console.warn('Using default hosts as fallback due to error');
-        const defaultHosts = getInitialHosts();
-        setAllHosts(defaultHosts);
         setHostsLoading(false);
       }
     };
@@ -632,6 +682,40 @@ const HostAvailabilityApp = () => {
       ...editingSpecialCollection,
       hosts: editingSpecialCollection.hosts.filter(h => h.id !== hostId)
     });
+  };
+
+  // Corrected coordinates for one-time sync to Firestore
+  // After running sync, this can be removed
+  const CORRECTED_COORDINATES = {
+    6: { lat: 33.97714839472864, lng: -83.87451752591748 },    // Veronica P.
+    8: { lat: 33.94631773639219, lng: -84.32785029486064 },    // Marcy L. & Stephanie
+    13: { lat: 33.73731642561438, lng: -84.33097917273453 },   // Rebecca H.
+    26: { lat: 33.777486111888095, lng: -84.36233139965479 },  // Stacey & Jack G.
+    28: { lat: 33.63368864946583, lng: -84.53582165315241 },   // Rayna N.
+    30: { lat: 33.96871661644047, lng: -84.43953833583247 },   // Judy T.
+    31: { lat: 34.14914844153542, lng: -83.89972546763543 },   // Kristina M.
+    34: { lat: 34.19104972968844, lng: -84.23280486762955 }    // Natalia W.
+  };
+
+  // One-time function to sync corrected coordinates to Firestore
+  const syncCoordinatesToFirestore = async () => {
+    if (!confirm('This will update coordinates for 8 hosts in Firestore. Continue?')) return;
+
+    try {
+      const batch = db.batch();
+
+      for (const [hostId, coords] of Object.entries(CORRECTED_COORDINATES)) {
+        const docRef = db.collection('hosts').doc(String(hostId));
+        batch.update(docRef, { lat: coords.lat, lng: coords.lng });
+      }
+
+      await batch.commit();
+      alert('Coordinates synced successfully! Refreshing...');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error syncing coordinates:', error);
+      alert('Error syncing coordinates: ' + error.message);
+    }
   };
 
   // Admin functions - now save to Firestore
@@ -791,8 +875,9 @@ const HostAvailabilityApp = () => {
     }).catch(() => {
       // Fallback: show in a text area
       const modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
-      modal.innerHTML = `<div style="background:white;padding:20px;border-radius:8px;max-width:90%;max-height:80%;overflow:auto;"><h3>Copy this code:</h3><textarea style="width:600px;height:400px;font-family:monospace;font-size:12px;">${codeStr}</textarea><br><button onclick="this.parentElement.parentElement.remove()" style="margin-top:10px;padding:8px 16px;background:#007E8C;color:white;border:none;border-radius:4px;cursor:pointer;">Close</button></div>`;
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;';
+      // Mobile optimization: Responsive textarea dimensions and improved tap targets
+      modal.innerHTML = `<div style="background:white;padding:20px;border-radius:8px;max-width:90%;max-height:80%;overflow:auto;"><h3>Copy this code:</h3><textarea style="width:min(600px, 85vw);height:min(400px, 60vh);font-family:monospace;font-size:12px;">${codeStr}</textarea><br><button onclick="this.parentElement.parentElement.remove()" style="margin-top:10px;padding:12px 20px;min-height:48px;background:#007E8C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:16px;">Close</button></div>`;
       document.body.appendChild(modal);
     });
   };
@@ -969,61 +1054,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
     } finally {
       setGeocoding(false);
     }
-  };
-
-  // Check if a host will be open at a specific drop-off time
-  const checkHostTimeAvailability = (host, timeStr) => {
-    if (!timeStr || !host.openTime || !host.closeTime) {
-      return { isOpen: true, warning: null, minutesUntilClose: null };
-    }
-
-    // Convert time strings to minutes since midnight for comparison
-    const timeToMinutes = (t) => {
-      const [hours, minutes] = t.split(':').map(Number);
-      return hours * 60 + minutes;
-    };
-
-    const dropOffMinutes = timeToMinutes(timeStr);
-    const openMinutes = timeToMinutes(host.openTime);
-    const closeMinutes = timeToMinutes(host.closeTime);
-
-    // Check if drop-off time is within host's hours
-    if (dropOffMinutes < openMinutes) {
-      return {
-        isOpen: false,
-        warning: `Opens at ${formatTime(host.openTime)}`,
-        minutesUntilClose: null
-      };
-    }
-    if (dropOffMinutes >= closeMinutes) {
-      return {
-        isOpen: false,
-        warning: `Closes at ${formatTime(host.closeTime)}`,
-        minutesUntilClose: null
-      };
-    }
-
-    // Host is open - check how much buffer time
-    const minutesUntilClose = closeMinutes - dropOffMinutes;
-
-    if (minutesUntilClose <= 30) {
-      return {
-        isOpen: true,
-        warning: `Closes ${minutesUntilClose} min after your drop-off!`,
-        minutesUntilClose,
-        severity: 'high'
-      };
-    }
-    if (minutesUntilClose <= 60) {
-      return {
-        isOpen: true,
-        warning: `Closes ${minutesUntilClose} min after your drop-off`,
-        minutesUntilClose,
-        severity: 'medium'
-      };
-    }
-
-    return { isOpen: true, warning: null, minutesUntilClose };
   };
 
   // Calculate host availability status
@@ -1346,10 +1376,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
       return;
     }
 
+    // Note: Map styling is configured via Cloud-based styling in Google Cloud Console
+    // using the mapId. Client-side styles are not compatible with mapId.
     const mapInstance = new window.google.maps.Map(mapElement, {
       center: mapCenter,
       zoom: mapZoom,
-      mapId: 'SANDWICH_DROP_OFF_MAP'
+      mapId: 'SANDWICH_DROP_OFF_MAP',
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false
     });
 
     // Store initial values in closure for reset functionality
@@ -1390,180 +1425,127 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     }
 
-    // Prepare host data: sort by distance if user coords available, otherwise show all
-    let hostsToShowOnMap;
+    // Prepare host data: sort by distance if user coords available
     let hostsWithDistance;
+    let topThreeHosts = [];
+    let otherHosts = [];
 
     if (userCoords) {
-      // Filter by availability if checkbox is not checked
-      const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
-      hostsWithDistance = hostsForMap.map(host => ({
+      // Filter to only available hosts for ranking (unavailable shown separately if checkbox checked)
+      const availableHosts = allHostsForDisplay.filter(h => h.available);
+      const unavailableHosts = includeUnavailableHosts ? allHostsForDisplay.filter(h => !h.available) : [];
+
+      hostsWithDistance = availableHosts.map(host => ({
         ...host,
         distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
       })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-      // Show all hosts in proximity search (including unavailable) for planning purposes
-      hostsToShowOnMap = showAllHostsOnMap ? hostsWithDistance : hostsWithDistance.slice(0, 3);
+
+      // Top 3 closest AVAILABLE hosts - these are the "sore thumbs"
+      topThreeHosts = hostsWithDistance.slice(0, 3);
+      // Other hosts only shown when "show all" is clicked
+      otherHosts = showAllHostsOnMap ? [
+        ...hostsWithDistance.slice(3),
+        ...unavailableHosts.map(h => ({
+          ...h,
+          distance: calculateDistance(userCoords.lat, userCoords.lng, h.lat, h.lng)
+        }))
+      ] : [];
     } else {
-      // No user location - filter by availability if checkbox is not checked
+      // No user location - show all available hosts as equal (no Top 3 highlighting)
       const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
-      hostsToShowOnMap = hostsForMap;
       hostsWithDistance = hostsForMap;
+      topThreeHosts = [];
+      otherHosts = hostsForMap;
     }
 
     // Clear previous markers
     markersRef.current = {};
 
-    // Add host markers with numbered labels (only if there are hosts to show)
-    if (hostsToShowOnMap.length === 0) {
-      // Map will be empty - this is handled in the UI message above
-    }
-    
-    hostsToShowOnMap.forEach((host, index) => {
-      const rank = hostsWithDistance.findIndex(h => h.id === host.id) + 1;
+    // ========== TOP 3 MARKERS: HUGE, GOLD, NUMBERED, PULSING ==========
+    // These must be unmistakable - the "sore thumbs"
 
-      // Determine marker styling based on availability and user location
-      let markerColor = '#007E8C'; // Default teal
-      let badgeColor = '#007E8C';
-      let badgeTextColor = '#FFFFFF';
-
-      // If host is not available, use red/gray colors
-      if (!host.available) {
-        markerColor = '#dc2626'; // Red
-        badgeColor = '#dc2626';
-        badgeTextColor = '#FFFFFF';
-      } else if (userCoords) {
-        // With user location, use ranking colors for available hosts
-        markerColor = '#A31C41'; // Default red
-        badgeColor = '#FFFFFF';
-        badgeTextColor = '#236383';
-
-        if (rank === 1) {
-          markerColor = '#FBBF24'; // Gold
-          badgeColor = '#FBBF24';
-          badgeTextColor = '#000000';
-        } else if (rank === 2) {
-          markerColor = '#9CA3AF'; // Silver
-          badgeColor = '#9CA3AF';
-          badgeTextColor = '#000000';
-        } else if (rank === 3) {
-          markerColor = '#F59E0B'; // Bronze
-          badgeColor = '#F59E0B';
-          badgeTextColor = '#000000';
+    // Add CSS animation for pulsing halo (only once)
+    if (!document.getElementById('marker-pulse-style')) {
+      const style = document.createElement('style');
+      style.id = 'marker-pulse-style';
+      style.textContent = `
+        @keyframes markerPulse {
+          0% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.4); opacity: 0; }
+          100% { transform: scale(1); opacity: 0; }
         }
-      }
+        .marker-pulse-ring {
+          animation: markerPulse 2s ease-out infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
-      // Create host marker content
+    topThreeHosts.forEach((host, index) => {
+      const rank = index + 1;
+
+      // Create the "sore thumb" marker - LARGE, GOLD, NUMBERED
       const hostMarkerContent = document.createElement('div');
-
-      if (userCoords) {
-        // Show numbered markers with distance when user location is known
-        hostMarkerContent.innerHTML = `
-          <div class="marker-wrapper" style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-          ">
-            <!-- Numbered badge -->
-            <div class="marker-badge" style="
-              width: 32px;
-              height: 32px;
-              background: ${badgeColor};
-              border: 3px solid white;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 700;
-              font-size: 14px;
-              color: ${badgeTextColor};
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              margin-bottom: 4px;
-              transition: transform 0.2s ease, box-shadow 0.2s ease;
-            ">
-              ${rank}
-            </div>
-            <!-- Info label -->
-            <div class="marker-label" style="
-              background: ${host.available ? 'white' : '#fee2e2'};
-              border: 2px solid ${host.available ? markerColor : '#dc2626'};
-              border-radius: 8px;
-              padding: 4px 8px;
-              font-size: 11px;
-              font-weight: bold;
-              color: ${host.available ? '#236383' : '#dc2626'};
-              white-space: nowrap;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-              transition: transform 0.2s ease, box-shadow 0.2s ease;
-            ">
-              ${host.distance}mi${!showAllHostsOnMap ? (host.available ? ' ✓' : ' ✗') : ''}
-            </div>
-          </div>
-        `;
-      } else {
-        // Show simple markers without distance when no user location
-        hostMarkerContent.innerHTML = `
-          <div class="marker-wrapper" style="
-            width: 32px;
-            height: 32px;
-            background: ${badgeColor};
-            border: 3px solid white;
+      hostMarkerContent.innerHTML = `
+        <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+          <!-- Pulsing halo ring -->
+          <div class="marker-pulse-ring" style="
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            background: #FBAD3F;
+            border-radius: 50%;
+            z-index: 1;
+          "></div>
+          <!-- Main pin -->
+          <div style="
+            position: relative;
+            z-index: 2;
+            width: 44px;
+            height: 44px;
+            background: #FBAD3F;
+            border: 4px solid white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
           ">
-            <div style="
-              width: 12px;
-              height: 12px;
-              background: white;
-              border-radius: 50%;
-            "></div>
-            </div>
+            <span style="
+              color: #1a1a1a;
+              font-weight: 800;
+              font-size: 18px;
+              font-family: 'Plus Jakarta Sans', sans-serif;
+            ">${rank}</span>
           </div>
-        `;
-      }
+        </div>
+      `;
 
-      const markerTitle = userCoords
-        ? `#${rank}: ${host.name} - ${host.distance} miles away${!showAllHostsOnMap ? (host.available ? ' (Collecting This Week)' : ' (NOT Collecting This Week)') : ''}`
-        : host.name;
+      const markerTitle = `#${rank} Closest: ${host.name} - ${host.distance} mi`;
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
         map: mapInstance,
         title: markerTitle,
-        content: hostMarkerContent
+        content: hostMarkerContent,
+        zIndex: 1000 + (3 - rank) // Top 3 always on top, #1 highest
       });
 
-      // Store marker reference
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
 
-      // Add click listener to show tooltip
       marker.addListener('click', (e) => {
         // Stop the event from propagating to the map click listener
         if (e && e.domEvent) {
           e.domEvent.stopPropagation();
         }
-
-        // Alert if host is not available
-        if (!host.available) {
-          alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
-        }
-
         setMapTooltip(host);
         setHighlightedHostId(host.id);
-
-        // Zoom in and center on the clicked marker
         mapInstance.setZoom(14);
         mapInstance.panTo({ lat: host.lat, lng: host.lng });
-
         trackEvent('map_marker_click', {
           event_category: 'Map',
-          event_label: 'Marker Clicked',
+          event_label: 'Top 3 Marker Clicked',
           host_name: host.name,
           host_area: host.area,
           rank: rank
@@ -1571,25 +1553,122 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     });
 
-    // Fit map bounds appropriately
-    if (userCoords && hostsToShowOnMap.length > 0) {
-      // When user location is available, zoom in on the 3 closest hosts + user location
+    // ========== OTHER MARKERS: TINY, MUTED, BACKGROUND NOISE ==========
+    // These should fade into the background - just small dots
+
+    const backgroundMarkers = []; // For clustering
+
+    otherHosts.forEach((host) => {
+      const isUnavailable = !host.available;
+
+      // Tiny muted dot - barely visible
+      const hostMarkerContent = document.createElement('div');
+      hostMarkerContent.innerHTML = `
+        <div style="
+          width: 10px;
+          height: 10px;
+          background: ${isUnavailable ? '#9CA3AF' : '#5BA3A8'};
+          border: 1px solid white;
+          border-radius: 50%;
+          opacity: ${isUnavailable ? '0.3' : '0.5'};
+          cursor: pointer;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        "></div>
+      `;
+
+      const markerTitle = userCoords
+        ? `${host.name} - ${host.distance} mi${isUnavailable ? ' (Not collecting)' : ''}`
+        : `${host.name}${isUnavailable ? ' (Not collecting)' : ''}`;
+
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        position: { lat: host.lat, lng: host.lng },
+        map: mapInstance,
+        title: markerTitle,
+        content: hostMarkerContent,
+        zIndex: isUnavailable ? 1 : 10 // Low z-index, below Top 3
+      });
+
+      markersRef.current[host.id] = { marker, content: hostMarkerContent };
+      backgroundMarkers.push(marker);
+
+      marker.addListener('click', (e) => {
+        // Stop the event from propagating to the map click listener
+        if (e && e.domEvent) {
+          e.domEvent.stopPropagation();
+        }
+        if (isUnavailable) {
+          alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+        }
+        setMapTooltip(host);
+        setHighlightedHostId(host.id);
+        mapInstance.setZoom(14);
+        mapInstance.panTo({ lat: host.lat, lng: host.lng });
+        trackEvent('map_marker_click', {
+          event_category: 'Map',
+          event_label: 'Background Marker Clicked',
+          host_name: host.name,
+          host_area: host.area
+        });
+      });
+    });
+
+    // ========== CLUSTERING: Only for background markers ==========
+    if (backgroundMarkers.length > 5 && window.markerClusterer) {
+      new window.markerClusterer.MarkerClusterer({
+        map: mapInstance,
+        markers: backgroundMarkers,
+        renderer: {
+          render: ({ count, position }) => {
+            const clusterContent = document.createElement('div');
+            clusterContent.innerHTML = `
+              <div style="
+                width: 28px;
+                height: 28px;
+                background: #5BA3A8;
+                border: 2px solid white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                color: white;
+                font-weight: 600;
+                font-size: 11px;
+                opacity: 0.7;
+              ">${count}</div>
+            `;
+            return new google.maps.marker.AdvancedMarkerElement({
+              position,
+              content: clusterContent,
+              zIndex: 5 // Below top 3
+            });
+          }
+        }
+      });
+    }
+
+    // ========== FOCUS MODE: Fit bounds to user + Top 3 ==========
+    if (userCoords && topThreeHosts.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      // Add user location to bounds
       bounds.extend({ lat: userCoords.lat, lng: userCoords.lng });
-      // Add the 3 closest hosts to bounds
-      hostsToShowOnMap.forEach(host => {
+      topThreeHosts.forEach(host => {
         bounds.extend({ lat: host.lat, lng: host.lng });
       });
-      // Fit bounds with padding to show all markers nicely
-      mapInstance.fitBounds(bounds, { padding: 80 });
-    } else if (!userCoords && hostsToShowOnMap.length > 0) {
-      // When no user location, show all available hosts
+      // Fit bounds with generous padding for clear separation
+      mapInstance.fitBounds(bounds, { padding: 60 });
+
+      // Ensure minimum zoom for readability (don't zoom out too far)
+      google.maps.event.addListenerOnce(mapInstance, 'bounds_changed', () => {
+        if (mapInstance.getZoom() > 13) {
+          mapInstance.setZoom(13);
+        }
+      });
+    } else if (otherHosts.length > 0) {
+      // No user location - show all hosts
       const bounds = new google.maps.LatLngBounds();
-      hostsToShowOnMap.forEach(host => {
+      otherHosts.forEach(host => {
         bounds.extend({ lat: host.lat, lng: host.lng });
       });
-      // Fit bounds with padding
       mapInstance.fitBounds(bounds, { padding: 50 });
     }
 
@@ -1722,7 +1801,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
       notification.style.backgroundColor = '#FFF9E6';
       notification.style.borderColor = '#FBAD3F';
       notification.style.maxWidth = '90%';
-      notification.style.width = '450px';
+      // Mobile optimization: Responsive notification width
+      notification.style.width = 'min(450px, 90vw)';
 
       const nearbyHostsList = nearbyHosts.map((h, i) => `
         <div class="flex items-center justify-between py-2 px-3 rounded hover:bg-orange-50 cursor-pointer" data-host-id="${h.id}" style="border: 1px solid #FBAD3F; margin-top: 8px;">
@@ -1747,7 +1827,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               ${nearbyHostsList}
             ` : ''}
           </div>
-          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666;">&times;</button>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-2xl leading-none" style="color: #666; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer;">&times;</button>
         </div>
       `;
       document.body.appendChild(notification);
@@ -1908,12 +1988,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
       return;
     }
 
-    // Alert if host is not available
-    if (!host.available) {
-      alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
-      return;
-    }
-
     trackEvent('show_directions', {
       event_category: 'Directions',
       event_label: 'Show Route on Map',
@@ -2011,10 +2085,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
   // Open Google Maps with directions
   const openGoogleMapsDirections = (host) => {
-    if (!host.available) {
-      alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
-      return;
-    }
     trackEvent('open_google_maps', {
       event_category: 'External Navigation',
       event_label: 'Google Maps',
@@ -2437,79 +2507,129 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   )}
                 </h3>
                 {specialCollection.hosts?.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {(window.specialCollectionSortedHosts || [...specialCollection.hosts].sort((a, b) => a.name.localeCompare(b.name))).map((host, index) => (
-                      <div key={host.id} className="rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow bg-white border-2" style={{borderColor: '#e0e0e0'}}>
-                        {/* Header with number badge and name */}
-                        <div className="flex items-start gap-3 mb-3">
-                          <div style={{backgroundColor: '#A31C41', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '16px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>
+                      <div key={host.id} className="rounded-xl p-5 shadow-sm" style={{backgroundColor: '#f8f9fa', border: '2px solid #e0e0e0'}}>
+                        <div className="flex items-start gap-3">
+                          <div style={{backgroundColor: '#A31C41', color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', flexShrink: 0}}>
                             {index + 1}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-lg mb-1 leading-tight" style={{color: '#236383'}}>{host.name}</h4>
-                            <p className="text-sm leading-tight" style={{color: '#666'}}>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-lg mb-1" style={{color: '#236383'}}>{host.name}</h4>
+                            <p className="text-sm mb-2" style={{color: '#666'}}>
                               {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
                             </p>
                             {host.driveTimeText && (
-                              <p className="text-sm font-semibold mt-1" style={{color: '#A31C41'}}>
+                              <p className="text-sm font-semibold mb-2" style={{color: '#A31C41'}}>
                                 🚗 {host.driveTimeText} ({host.distanceText})
                               </p>
                             )}
                           </div>
                         </div>
-
-                        {/* Collection dates for this location */}
-                        <div className="text-xs font-medium mb-2 px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
-                          📅 {(() => {
+                        {/* Daily Hours */}
+                        <div className="mb-3">
+                          {(() => {
                             const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
                             const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
-                            const formatDay = (d) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-                            const sameDay = startDate.toDateString() === endDate.toDateString();
-                            return sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`;
+
+                            // If host has dailyHours, show per-day hours
+                            if (host.dailyHours && Object.keys(host.dailyHours).length > 0) {
+                              const days = [];
+                              const currentDate = new Date(startDate);
+                              currentDate.setHours(0, 0, 0, 0);
+                              const endDateNorm = new Date(endDate);
+                              endDateNorm.setHours(23, 59, 59, 999);
+
+                              while (currentDate <= endDateNorm) {
+                                const dateKey = currentDate.toISOString().split('T')[0];
+                                const dayHours = host.dailyHours[dateKey];
+                                if (dayHours) {
+                                  days.push({
+                                    date: new Date(currentDate),
+                                    dateKey,
+                                    openTime: dayHours.openTime,
+                                    closeTime: dayHours.closeTime
+                                  });
+                                }
+                                currentDate.setDate(currentDate.getDate() + 1);
+                              }
+
+                              // Check if all days have the same hours
+                              const allSameHours = days.length > 0 && days.every(d =>
+                                d.openTime === days[0].openTime && d.closeTime === days[0].closeTime
+                              );
+
+                              if (allSameHours && days.length > 0) {
+                                // All days same - show single hours with date range
+                                const formatDay = (d) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                                const sameDay = startDate.toDateString() === endDate.toDateString();
+                                return (
+                                  <div className="space-y-2">
+                                    <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                                      📅 {sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`}
+                                    </div>
+                                    <span className="inline-block text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
+                                      🕐 {formatTime(days[0].openTime)} - {formatTime(days[0].closeTime)}
+                                    </span>
+                                  </div>
+                                );
+                              } else {
+                                // Different hours per day - show each day
+                                return (
+                                  <div className="space-y-1">
+                                    {days.map(day => (
+                                      <div key={day.dateKey} className="flex flex-wrap items-center gap-2 text-sm px-2 py-1 rounded" style={{backgroundColor: '#f0f9fa'}}>
+                                        <span className="font-medium" style={{color: '#236383', minWidth: '90px'}}>
+                                          {day.date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        </span>
+                                        <span className="font-bold px-2 py-0.5 rounded" style={{backgroundColor: '#007E8C', color: 'white'}}>
+                                          {formatTime(day.openTime)} - {formatTime(day.closeTime)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                            } else {
+                              // No dailyHours - show legacy single hours
+                              const formatDay = (d) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                              const sameDay = startDate.toDateString() === endDate.toDateString();
+                              return (
+                                <div className="space-y-2">
+                                  <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                                    📅 {sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`}
+                                  </div>
+                                  <span className="inline-block text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
+                                    🕐 {formatTime(host.openTime)} - {formatTime(host.closeTime)}
+                                  </span>
+                                </div>
+                              );
+                            }
                           })()}
                         </div>
-
-                        {/* Hours badge */}
-                        <div className="mb-3">
-                          <span className="inline-block text-sm font-semibold px-3 py-1.5 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
-                            🕐 {formatTime(host.openTime)} - {formatTime(host.closeTime)}
-                          </span>
-                        </div>
-
-                        {/* Special instructions/notes - show first if exists */}
-                        {host.notes && (
-                          <div className="mb-3 p-2.5 rounded-lg border" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
-                            <p className="text-xs font-medium leading-relaxed" style={{color: '#A31C41'}}>
-                              ⚠️ {host.notes}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Action buttons */}
-                        <div className="flex flex-col gap-2 mt-4">
+                        <div className="flex flex-wrap items-center gap-3 mb-3">
                           {host.phone && (
-                            <a
-                              href={`tel:${host.phone}`}
-                              className="w-full text-center text-sm font-semibold px-4 py-2.5 rounded-lg transition-all hover:opacity-90 flex items-center justify-center gap-2"
-                              style={{backgroundColor: '#236383', color: 'white'}}
-                            >
-                              <i className="lucide-phone w-4 h-4"></i>
-                              Call {host.phone}
-                            </a>
-                          )}
-                          {host.lat && host.lng && (
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}${window.specialCollectionUserCoords ? `&origin=${window.specialCollectionUserCoords.lat},${window.specialCollectionUserCoords.lng}` : ''}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full text-center text-sm font-semibold px-4 py-2.5 rounded-lg transition-all hover:opacity-90 flex items-center justify-center gap-2"
-                              style={{backgroundColor: '#FBAD3F', color: 'white'}}
-                            >
-                              <i className="lucide-navigation w-4 h-4"></i>
-                              Get Directions
+                            <a href={`tel:${host.phone}`} className="text-sm font-medium px-3 py-1 rounded-lg flex items-center gap-1" style={{backgroundColor: '#236383', color: 'white'}}>
+                              📞 Call
                             </a>
                           )}
                         </div>
+                        {host.lat && host.lng && (
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}${window.specialCollectionUserCoords ? `&origin=${window.specialCollectionUserCoords.lat},${window.specialCollectionUserCoords.lng}` : ''}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block text-sm font-medium px-3 py-1 rounded-lg"
+                            style={{backgroundColor: '#FBAD3F', color: 'white'}}
+                          >
+                            🗺️ Get Directions
+                          </a>
+                        )}
+                        {host.notes && (
+                          <p className="text-sm mt-3 p-3 rounded-lg" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                            ⚠️ {host.notes}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2554,7 +2674,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             <h3 className="font-bold mb-2" style={{color: '#236383'}}>ℹ️ About Special Collections</h3>
             <p className="text-sm" style={{color: '#666'}}>
               Special collections are temporary drop-off events for emergencies like warming centers or urgent community needs.
-              They operate independently from our regular Wednesday collections. You can also
+              They operate independently from our regular Wednesday collections. Check back here during emergencies or
               <a
                 href="/"
                 onClick={(e) => {
@@ -2804,7 +2924,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {editingSpecialCollection.hosts?.length > 0 && (
                   <div className="border-t pt-4 mb-4">
                     <h4 className="font-bold mb-3" style={{color: '#236383'}}>⏰ Bulk Time Edit</h4>
-                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection:</p>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection (applies to all days):</p>
                     <div className="flex flex-wrap items-end gap-3">
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Open Time</label>
@@ -2820,11 +2940,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           const openTime = document.getElementById('bulkOpenTime2').value;
                           const closeTime = document.getElementById('bulkCloseTime2').value;
                           if (!openTime || !closeTime) { alert('Please set both open and close times'); return; }
+
+                          // Build dailyHours for all days in the collection
+                          const startDate = editingSpecialCollection.startDate ?
+                            (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                             editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                          const endDate = editingSpecialCollection.endDate ?
+                            (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                             editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                          const dailyHours = {};
+                          const currentDate = new Date(startDate);
+                          currentDate.setHours(0, 0, 0, 0);
+                          const endDateNorm = new Date(endDate);
+                          endDateNorm.setHours(23, 59, 59, 999);
+
+                          while (currentDate <= endDateNorm) {
+                            const dateKey = currentDate.toISOString().split('T')[0];
+                            dailyHours[dateKey] = { openTime, closeTime };
+                            currentDate.setDate(currentDate.getDate() + 1);
+                          }
+
                           const updatedHosts = editingSpecialCollection.hosts.map(host => ({
-                            ...host, openTime, closeTime, hours: `${openTime} - ${closeTime}`
+                            ...host, openTime, closeTime, hours: `${openTime} - ${closeTime}`, dailyHours
                           }));
                           setEditingSpecialCollection({...editingSpecialCollection, hosts: updatedHosts});
-                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime}`);
+                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime} for all days`);
                         }}
                         className="px-4 py-2 rounded-lg font-medium text-white"
                         style={{backgroundColor: '#FBAD3F'}}
@@ -2960,6 +3101,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.target);
+
+                  // Collect daily hours
+                  const dailyHours = {};
+                  const startDate = editingSpecialCollection?.startDate ?
+                    (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                     editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                  const endDate = editingSpecialCollection?.endDate ?
+                    (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                     editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                  const currentDate = new Date(startDate);
+                  currentDate.setHours(0, 0, 0, 0);
+                  const endDateNorm = new Date(endDate);
+                  endDateNorm.setHours(23, 59, 59, 999);
+
+                  while (currentDate <= endDateNorm) {
+                    const dateKey = currentDate.toISOString().split('T')[0];
+                    const openTime = formData.get(`openTime_${dateKey}`);
+                    const closeTime = formData.get(`closeTime_${dateKey}`);
+                    if (openTime && closeTime) {
+                      dailyHours[dateKey] = { openTime, closeTime };
+                    }
+                    currentDate.setDate(currentDate.getDate() + 1);
+                  }
+
+                  // Use first day's hours as default openTime/closeTime for backwards compatibility
+                  const firstDayKey = Object.keys(dailyHours)[0];
+                  const defaultOpen = firstDayKey ? dailyHours[firstDayKey].openTime : '08:00';
+                  const defaultClose = firstDayKey ? dailyHours[firstDayKey].closeTime : '18:00';
+
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
@@ -2967,9 +3138,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     lat: formData.get('lat'),
                     lng: formData.get('lng'),
                     phone: formData.get('phone') || '',
-                    hours: `${formData.get('openTime')} - ${formData.get('closeTime')}`,
-                    openTime: formData.get('openTime'),
-                    closeTime: formData.get('closeTime'),
+                    hours: `${defaultOpen} - ${defaultClose}`,
+                    openTime: defaultOpen,
+                    closeTime: defaultClose,
+                    dailyHours: dailyHours,
                     notes: formData.get('notes') || ''
                   };
                   if (editingSpecialHost.id === 'new') {
@@ -3006,16 +3178,65 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Phone</label>
                     <input type="text" name="phone" defaultValue={editingSpecialHost.phone} className="w-full px-3 py-2 rounded-lg border-2" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Open Time *</label>
-                      <input type="time" name="openTime" defaultValue={editingSpecialHost.openTime || '08:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Close Time *</label>
-                      <input type="time" name="closeTime" defaultValue={editingSpecialHost.closeTime || '18:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
+
+                  {/* Daily Hours Section */}
+                  <div className="p-3 rounded-lg" style={{backgroundColor: '#f0f9fa', border: '1px solid #007E8C'}}>
+                    <h5 className="font-semibold mb-2 text-sm" style={{color: '#007E8C'}}>📅 Hours by Day</h5>
+                    <p className="text-xs mb-3" style={{color: '#666'}}>Set different hours for each day of the collection:</p>
+                    {(() => {
+                      const startDate = editingSpecialCollection?.startDate ?
+                        (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                         editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                      const endDate = editingSpecialCollection?.endDate ?
+                        (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                         editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                      const days = [];
+                      const currentDate = new Date(startDate);
+                      currentDate.setHours(0, 0, 0, 0);
+                      const endDateNorm = new Date(endDate);
+                      endDateNorm.setHours(23, 59, 59, 999);
+
+                      while (currentDate <= endDateNorm) {
+                        days.push(new Date(currentDate));
+                        currentDate.setDate(currentDate.getDate() + 1);
+                      }
+
+                      return days.map((day, idx) => {
+                        const dateKey = day.toISOString().split('T')[0];
+                        const dayName = day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                        const existingHours = editingSpecialHost.dailyHours?.[dateKey];
+                        const defaultOpen = existingHours?.openTime || editingSpecialHost.openTime || '08:00';
+                        const defaultClose = existingHours?.closeTime || editingSpecialHost.closeTime || '18:00';
+
+                        return (
+                          <div key={dateKey} className="flex flex-wrap items-center gap-2 mb-2 p-2 bg-white rounded" style={{border: '1px solid #e0e0e0'}}>
+                            <span className="text-sm font-medium w-full sm:w-auto" style={{color: '#236383', minWidth: '120px'}}>{dayName}</span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                name={`openTime_${dateKey}`}
+                                defaultValue={defaultOpen}
+                                required
+                                className="px-2 py-1 rounded border text-sm"
+                                style={{width: '110px'}}
+                              />
+                              <span className="text-sm" style={{color: '#666'}}>to</span>
+                              <input
+                                type="time"
+                                name={`closeTime_${dateKey}`}
+                                defaultValue={defaultClose}
+                                required
+                                className="px-2 py-1 rounded border text-sm"
+                                style={{width: '110px'}}
+                              />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
+
                   <div>
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Special Instructions</label>
                     <textarea name="notes" defaultValue={editingSpecialHost.notes} className="w-full px-3 py-2 rounded-lg border-2" rows={2} />
@@ -3054,19 +3275,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <p className="text-lg sm:text-2xl font-bold mb-1" style={{color: '#007E8C'}}>
                   {dropOffDate}
                 </p>
-                <p className="text-sm sm:text-base font-medium mb-1 sm:mb-2" style={{color: '#236383'}}>
+                <p className="text-sm sm:text-base font-medium" style={{color: '#236383'}}>
                   Drop-off options for THIS Wednesday{tuesdayEnabled ? ' & Tuesday' : ''} • <span className="font-normal" style={{color: '#666'}}>Updated every Monday</span>
-                </p>
-                <p className="text-sm">
-                  <button
-                    onClick={() => {
-                      document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }}
-                    className="underline hover:no-underline font-semibold"
-                    style={{color: '#007E8C'}}
-                  >
-                    Need sandwich-making guides?
-                  </button>
                 </p>
               </div>
             </div>
@@ -3074,6 +3284,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               onClick={() => {
                 const password = prompt('Enter admin password:');
                 if (password === 'sandwich2024') {
+                  setUserRole('admin');
                   setShowAdmin(true);
                 } else if (password !== null) {
                   alert('Incorrect password');
@@ -3087,22 +3298,65 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </button>
           </div>
 
-          {/* Visual How-to Steps */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-center gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-5 px-3 sm:px-4 py-3" style={{background: 'linear-gradient(135deg, #F0F9FA 0%, #E6F7F9 100%)', borderRadius: '12px'}}>
-            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>1</div>
-              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Enter your address</span>
+          {/* Address Search - Primary Action */}
+          <div className="px-3 sm:px-4 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Enter your address (e.g., 123 Peachtree St, Atlanta, GA)"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSmartSearch()}
+                  className="w-full px-4 sm:px-5 py-4 pr-10 rounded-xl text-base sm:text-lg border-2 transition-all"
+                  style={{borderColor: '#007E8C', backgroundColor: 'white'}}
+                  disabled={geocoding}
+                  autoFocus
+                />
+                {searchInput && (
+                  <button
+                    onClick={() => {
+                      setSearchInput('');
+                      setNameSearch('');
+                      setUserCoords(null);
+                      setUserAddress('');
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={handleSmartSearch}
+                disabled={geocoding || !searchInput.trim()}
+                className="btn-primary px-6 sm:px-8 py-4 text-white rounded-xl font-bold text-base sm:text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transition-all touch-manipulation w-full sm:w-auto"
+                style={{backgroundColor: '#007E8C', minHeight: '52px'}}
+              >
+                <i className="lucide-search w-5 h-5 sm:w-6 sm:h-6 mr-2"></i>
+                {geocoding ? 'Searching...' : 'Search'}
+              </button>
             </div>
-            <span className="text-xl sm:text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
-            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>2</div>
-              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>View your 3 nearest hosts</span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3">
+              <button
+                onClick={getCurrentLocation}
+                className="px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
+                style={{backgroundColor: '#236383', color: 'white'}}
+              >
+                <i className="lucide-locate w-4 h-4"></i>
+                Use My Current Location
+              </button>
+              <span className="text-xs text-center sm:text-left" style={{color: '#666'}}>
+                or <button onClick={() => document.getElementById('resources-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="underline hover:no-underline" style={{color: '#007E8C'}}>need sandwich-making guides?</button>
+              </span>
             </div>
-            <span className="text-xl sm:text-2xl font-bold hidden sm:inline" style={{color: '#007E8C'}}>→</span>
-            <div className="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-lg shadow-md flex-shrink-0" style={{backgroundColor: '#007E8C'}}>3</div>
-              <span className="text-sm sm:text-base md:text-lg font-bold" style={{color: '#236383'}}>Click "Get Directions" to see route options</span>
-            </div>
+            {userAddress && userCoords && (
+              <div className="mt-3 p-3 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
+                <p className="text-sm font-medium" style={{color: '#236383'}}>
+                  📍 Showing hosts near: <span className="font-semibold">{userAddress}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Simple View Toggle - Prominent */}
@@ -3149,9 +3403,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => {
-                          setDirectionsMenuOpen(favoriteHostId);
-                        }}
+                        onClick={() => setDirectionsMenuOpen(favoriteHostId)}
                         className="px-3 py-2 rounded-lg text-sm font-semibold hover:bg-orange-100 transition-all"
                         style={{color: '#007E8C', border: '2px solid #007E8C'}}
                       >
@@ -3211,13 +3463,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <div key={area} className="mb-8">
                       <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
                       <div className="space-y-4">
-                        {availableHosts.filter(h => h.area === area).map(host => (
+                        {availableHosts.filter(h => h.area === area).map(host => {
+                          const timeAvail = checkHostTimeAvailability(host, dropOffTime);
+                          return (
                           <div key={host.id} className="flex flex-col gap-3 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
                               <div className="flex-1">
                                 <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
                                 {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
-                                <div className="text-base mt-1" style={{color: '#555'}}>{formatCondensedHours(host)}</div>
+                                <div className="text-base mt-1" style={{color: '#555'}}>
+                                  {formatCondensedHours(host)}
+                                  {timeAvail.warning && (
+                                    <span className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${timeAvail.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                      ⚠️ {timeAvail.warning}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <a
                                 href={`tel:${host.phone}`}
@@ -3246,7 +3507,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               </div>
                             )}
                           </div>
-                        ))}
+                        );})}
                       </div>
                     </div>
                   ));
@@ -3254,77 +3515,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
             </div>
           )}
-
-          {/* Smart Search Section */}
-          <div className="p-3 sm:p-4" style={{display: simpleView ? 'none' : 'block'}}>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="e.g., 123 Peachtree St, Atlanta, GA or 30308"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSmartSearch()}
-                  className="w-full px-4 sm:px-5 py-4 sm:py-5 pr-10 sm:pr-12 premium-input rounded-xl text-base sm:text-lg border-2 transition-all"
-                  style={{borderColor: '#007E8C'}}
-                  disabled={geocoding}
-                  autoFocus
-                />
-                {searchInput && (
-                  <button
-                    onClick={() => {
-                      setSearchInput('');
-                      setNameSearch('');
-                      setUserCoords(null);
-                      setUserAddress('');
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={handleSmartSearch}
-                disabled={geocoding || !searchInput.trim()}
-                className="btn-primary px-6 sm:px-8 py-4 sm:py-5 text-white rounded-xl font-bold text-base sm:text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transition-all touch-manipulation w-full sm:w-auto"
-                style={{backgroundColor: '#007E8C', minHeight: '52px'}}
-              >
-                <i className="lucide-search w-5 h-5 sm:w-6 sm:h-6 mr-2"></i>
-                {geocoding ? 'Searching...' : 'Search'}
-              </button>
-            </div>
-            <button
-              onClick={getCurrentLocation}
-              className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all hover:shadow-md touch-manipulation"
-              style={{backgroundColor: '#236383', color: 'white', minHeight: '52px'}}
-            >
-              <i className="lucide-locate w-4 h-4 sm:w-5 sm:h-5"></i>
-              Use My Current Location
-            </button>
-            {userAddress && userCoords && (
-              <div className="mt-4 p-4 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
-                <p className="text-base font-medium" style={{color: '#236383'}}>
-                  📍 Showing hosts near: <span className="font-semibold">{userAddress}</span>
-                </p>
-              </div>
-            )}
-            {nameSearch && !userCoords && (
-              <div className="mt-4 p-4 rounded-lg" style={{backgroundColor: 'rgba(71, 179, 203, 0.1)'}}>
-                <p className="text-base font-medium" style={{color: '#236383'}}>
-                  🔍 Filtering by: <span className="font-semibold">{nameSearch}</span>
-                  <button
-                    onClick={() => { setNameSearch(''); setSearchInput(''); }}
-                    className="ml-2 text-sm underline hover:no-underline"
-                    style={{color: '#007E8C'}}
-                  >
-                    Clear
-                  </button>
-                </p>
-              </div>
-            )}
-
-          </div>
 
           {/* View Toggle */}
           <div className="flex flex-wrap justify-center gap-3">
@@ -3532,7 +3722,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 })()}
               </div>
               <div className="relative">
-                <div id="map" className="h-96 lg:h-[calc(100vh-400px)]"></div>
+                {/* Mobile optimization: Responsive map height for small screens */}
+                <div id="map" className="h-64 sm:h-80 md:h-96 lg:h-[calc(100vh-400px)]"></div>
 
                 {/* Map Tooltip */}
                 {mapTooltip && (
@@ -3542,8 +3733,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       top: '20px',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      minWidth: '300px',
-                      maxWidth: '340px',
+                      // Mobile optimization: Responsive tooltip width
+                      minWidth: 'min(300px, 85vw)',
+                      maxWidth: 'min(340px, calc(100vw - 40px))',
                       borderColor: '#007E8C',
                       boxShadow: '0 10px 40px rgba(0, 126, 140, 0.3)'
                     }}
@@ -3569,7 +3761,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             map.setZoom(initialMapZoom);
                           }
                         }}
-                        className="text-gray-400 hover:text-gray-600 ml-2 text-2xl leading-none"
+                        className="text-gray-400 hover:text-gray-600 ml-2 text-2xl leading-none flex items-center justify-center"
+                        style={{minWidth: '44px', minHeight: '44px', padding: '8px'}}
                         title="Close"
                       >
                         ×
@@ -3662,7 +3855,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <i className={`lucide-chevron-down w-3 h-3 transition-transform ${mapTooltipMenuOpen ? 'rotate-180' : ''}`}></i>
                         </button>
                         {mapTooltipMenuOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden" style={{borderColor: '#007E8C', minWidth: 'min(300px, 100%)', maxWidth: '100%'}}>
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border-2 z-[100] overflow-hidden" style={{borderColor: '#007E8C', width: '100%', maxWidth: '100%'}}>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -3877,33 +4070,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
             {/* Host List */}
             {viewMode !== 'map' && (
               <div className="space-y-4 lg:max-h-[1400px] lg:overflow-y-auto">
-            {/* Option to Include Unavailable Hosts for Planning */}
-            <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-1">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={includeUnavailableHosts}
-                      onChange={(e) => setIncludeUnavailableHosts(e.target.checked)}
-                      className="mt-1 w-5 h-5 rounded border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                      style={{accentColor: '#007E8C'}}
-                    />
-                    <div>
-                      <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>
-                        I'm planning a future dropoff (not this week)—include hosts that are closed this week
-                      </h4>
-                      <p className="text-sm mb-2" style={{color: '#555'}}>
-                        By default, we only show hosts that are collecting this week. Check this box to see all host homes for planning future drop-offs. Hosts marked as "NOT Collecting This Week" are shown for reference but are not accepting drop-offs this week.
-                      </p>
-                      <p className="text-xs p-2 rounded-lg" style={{backgroundColor: '#FFF9E6', color: '#991b1b', border: '1px solid #FBAD3F'}}>
-                        <strong>⚠️ Important:</strong> Hosts displayed may not be open next week either. Please check back on the Monday of the week you plan to drop off to ensure your selected host will be collecting that week.
-                      </p>
-                    </div>
-                  </label>
-                </div>
+            {/* Planning for next week - collapsible accordion */}
+            <details className="mb-4 rounded-lg border border-gray-200 bg-gray-50">
+              <summary className="px-4 py-2 cursor-pointer text-sm font-medium flex items-center gap-2" style={{color: '#666'}}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Planning for next week?
+                {includeUnavailableHosts && <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700">Showing closed hosts</span>}
+              </summary>
+              <div className="px-4 pb-3 pt-2 border-t border-gray-200">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeUnavailableHosts}
+                    onChange={(e) => setIncludeUnavailableHosts(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                    style={{accentColor: '#007E8C'}}
+                  />
+                  <span className="text-sm" style={{color: '#555'}}>
+                    Include hosts not collecting this week
+                  </span>
+                </label>
+                {includeUnavailableHosts && (
+                  <p className="mt-2 text-xs p-2 rounded" style={{backgroundColor: '#FFF9E6', color: '#92400e'}}>
+                    ⚠️ Closed hosts shown for planning only. Check back Monday to confirm availability.
+                  </p>
+                )}
               </div>
-            </div>
+            </details>
             {/* Search Bar for Host List */}
             <div className="mb-4">
               <div className="relative">
@@ -3984,13 +4180,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 // Show section headers based on position
                 const showTopThreeHeader = userCoords && viewMode === 'proximity' && index === 0 && availableTopThreeCount > 0;
                 const showOtherHostsHeader = userCoords && viewMode === 'proximity' && actualRank === availableTopThreeCount + 1;
-                
+
                 const isExpanded = expandedHosts.has(host.id);
+
                 // Check time availability for warning
                 const timeAvail = checkHostTimeAvailability(host, dropOffTime);
                 const availability = getHostAvailability(host);
                 const isOpenNow = availability && availability.status === 'open';
-                
+
                 return (
                 <React.Fragment key={host.id}>
                   {/* Section header: Your 3 Closest Hosts */}
@@ -4033,7 +4230,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {isTopThree && (
-                            <span className={`w-7 h-7 rank-badge rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${
+                            <span className={`w-9 h-9 rank-badge rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0 ${
                               actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                             }`}>
                               {actualRank}
@@ -4075,36 +4272,39 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <div className="flex flex-col gap-2 mb-3">
                         <div className="flex items-center flex-wrap gap-x-1 text-base">
                           <span className="font-medium" style={{color: '#555'}}>{formatAllCollectionHours(host)}</span>
-                          {timeAvail.warning && (
-                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${timeAvail.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                              ⚠️ {timeAvail.warning}
-                            </span>
-                          )}
                           <span className="text-gray-400">•</span>
                           {host.available ? (
                             <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
                           ) : (
                             <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
                           )}
-                          {userCoords && host.distance && (
-                            <>
-                              <span className="text-gray-400">•</span>
-                              <span style={{color: '#007E8C'}}>{host.distance} mi</span>
-                              {hostDriveTimes[host.id] && (
-                                <>
-                                  <span className="text-gray-400">•</span>
-                                  <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]}</span>
-                                </>
-                              )}
-                            </>
-                          )}
-                          {isOpenNow && (
-                            <>
-                              <span className="text-gray-400">•</span>
-                              <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
-                            </>
-                          )}
+                        {userCoords && host.distance && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span style={{color: '#007E8C'}}>{host.distance} mi</span>
+                            {hostDriveTimes[host.id] && (
+                              <>
+                                <span className="text-gray-400">•</span>
+                                <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]}</span>
+                              </>
+                            )}
+                          </>
+                        )}
+                        {isOpenNow && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
+                          </>
+                        )}
                         </div>
+                        {timeAvail.warning && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className={`font-bold ${timeAvail.severity === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
+                              ⚠️ {timeAvail.warning}
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       {/* Phone Number */}
@@ -4249,9 +4449,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             >
                               <div className="flex items-center justify-center gap-3 mb-1">
                                 <i className="lucide-map w-6 h-6" style={{color: '#007E8C'}}></i>
-                                <div className="font-bold text-base" style={{color: '#236383'}}>Open in Google Maps</div>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Google Maps</div>
                               </div>
-                              <div className="text-sm text-gray-600">Navigate with Google Maps app</div>
+                              <div className="text-sm text-gray-600">Works on all devices</div>
                             </button>
                             <button
                               onClick={(e) => {
@@ -4263,9 +4463,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             >
                               <div className="flex items-center justify-center gap-3 mb-1">
                                 <i className="lucide-map-pin w-6 h-6" style={{color: '#007E8C'}}></i>
-                                <div className="font-bold text-base" style={{color: '#236383'}}>Open in Apple Maps</div>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Apple Maps</div>
                               </div>
-                              <div className="text-sm text-gray-600">Navigate with Apple Maps app</div>
+                              <div className="text-sm text-gray-600">Best on iPhone/iPad</div>
                             </button>
                             {/* Sign-in Reminder at bottom */}
                             <div className="p-3 text-center text-sm border-t" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
@@ -4316,7 +4516,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="flex flex-col gap-3 mb-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               {isTopThree && (
-                                <span className={`w-9 h-9 rank-badge rounded-full flex items-center justify-center text-base font-bold text-white flex-shrink-0 ${
+                                <span className={`w-11 h-11 rank-badge rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0 ${
                                   actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                                 }`}>
                                   {actualRank}
@@ -4342,15 +4542,20 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <div className="relative" data-directions-menu style={{zIndex: directionsMenuOpen === host.id ? 1000 : 'auto'}}>
                             <button
                               ref={directionsMenuOpen === host.id ? directionsButtonRef : null}
+                              disabled={!host.available}
                               onClick={(e) => {
                                 e.stopPropagation();
+                                if (!host.available) {
+                                  alert('This host is not collecting this week. Please choose a host marked as "Collecting This Week".');
+                                  return;
+                                }
                                 const buttonRect = e.currentTarget.getBoundingClientRect();
                                 const isOpening = directionsMenuOpen !== host.id;
                                 setDirectionsMenuOpen(isOpening ? host.id : null);
                                 if (isOpening) {
                                   const viewportWidth = window.innerWidth;
                                   const viewportHeight = window.innerHeight;
-                                  const dropdownWidth = 280;
+                                  const dropdownWidth = Math.min(280, viewportWidth - 32);
                                   const dropdownHeight = 200;
                                   
                                   let left = buttonRect.left;
@@ -4397,8 +4602,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 className="fixed bg-white rounded-lg shadow-xl border-2 overflow-hidden"
                                 style={{
                                   borderColor: '#007E8C',
-                                  minWidth: '280px',
-                                  width: 'max-content',
+                                  width: 'min(280px, calc(100vw - 2rem))',
                                   maxWidth: 'calc(100vw - 2rem)',
                                   zIndex: 10000,
                                   top: `${directionsMenuPosition.top}px`,
@@ -4507,7 +4711,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
                       </p>
 
-                      <div className="space-y-4 text-base mb-4">
+                      <div className="space-y-4 text-base">
                         <div className="info-box p-4">
                           <div className="flex items-start">
                             <i className="lucide-clock w-5 h-5 mr-2 mt-0.5" style={{color: '#007E8C'}}></i>
@@ -4728,9 +4932,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
         {/* Admin Modal */}
         {showAdmin && (
-          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowAdmin(false)}>
+          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50" onClick={() => setShowAdmin(false)}>
             <div className="modal-content bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto premium-card-header" onClick={e => e.stopPropagation()}>
-              <div className="p-8">
+              <div className="p-4 sm:p-8">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold" style={{color: '#236383'}}>🔧 Admin: Manage Hosts</h2>
                   <button
@@ -4745,15 +4949,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Import/Export Controls */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-6">
                   <h3 className="font-semibold mb-3" style={{color: '#236383'}}>📁 Backup & Deploy</h3>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                     <button
                       onClick={exportHosts}
-                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      className="w-full sm:w-auto px-4 py-2 rounded-lg font-medium text-white"
                       style={{backgroundColor: '#007E8C'}}
                     >
                       📤 Export JSON
                     </button>
-                    <label className="px-4 py-2 rounded-lg font-medium text-white cursor-pointer" style={{backgroundColor: '#FBAD3F'}}>
+                    <label className="w-full sm:w-auto px-4 py-2 rounded-lg font-medium text-white cursor-pointer text-center" style={{backgroundColor: '#FBAD3F'}}>
                       📥 Import JSON
                       <input
                         type="file"
@@ -4764,7 +4968,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </label>
                     <button
                       onClick={copyAsCode}
-                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      className="w-full sm:w-auto px-4 py-2 rounded-lg font-medium text-white"
                       style={{backgroundColor: '#A31C41'}}
                       title="Copy as code to paste into app.js"
                     >
@@ -4883,6 +5087,23 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </button>
                 </div>
 
+                {/* One-time Coordinate Fix Button */}
+                {userRole === 'admin' && (
+                  <div className="bg-yellow-50 rounded-xl p-4 mb-6 border-2 border-yellow-300">
+                    <h3 className="font-semibold mb-2" style={{color: '#A31C41'}}>🔧 One-Time Fix: Sync Corrected Coordinates</h3>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>
+                      This will fix the coordinates for 8 hosts that have incorrect locations in the database.
+                    </p>
+                    <button
+                      onClick={syncCoordinatesToFirestore}
+                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      style={{backgroundColor: '#A31C41'}}
+                    >
+                      🗺️ Fix Coordinates Now
+                    </button>
+                  </div>
+                )}
+
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
@@ -4900,13 +5121,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   <h3 className="font-semibold text-lg mb-3" style={{color: '#236383'}}>All Hosts ({(allHosts || []).length})</h3>
                   {(allHosts || []).map(host => (
                     <div key={host.id} className={`p-4 rounded-xl border-2 ${host.available ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                             <h4 className="font-bold text-lg">{host.name}</h4>
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                              host.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
+                              host.available ? '' : 'bg-red-100 text-red-800'
+                            }`}
+                            style={host.available ? {
+                              backgroundColor: '#47bc3b',
+                              color: 'white'
+                            } : {}}>
                               {host.available ? '✅ Available' : '❌ Unavailable'}
                             </span>
                           </div>
@@ -4918,7 +5143,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             {host.notes && <p><strong>Notes:</strong> {host.notes}</p>}
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
                           <button
                             onClick={() => toggleHostAvailability(host.id)}
                             className="px-3 py-2 rounded-lg text-sm font-medium text-white"
@@ -4958,9 +5183,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
         {/* Edit Host Modal */}
         {editingHost && (
-          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setEditingHost(null)}>
+          <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50" onClick={() => setEditingHost(null)}>
             <div className="modal-content bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto premium-card-header" onClick={e => e.stopPropagation()}>
-              <div className="p-8">
+              <div className="p-4 sm:p-8">
                 <h3 className="text-2xl font-bold mb-6" style={{color: '#236383'}}>
                   {editingHost.id === 'new' ? '➕ Add New Host' : `✏️ Edit ${editingHost.name}`}
                 </h3>
@@ -4975,7 +5200,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
-                    neighborhood: formData.get('neighborhood'),
+                    neighborhood: formData.get('neighborhood') || '',
                     lat: formData.get('lat'),
                     lng: formData.get('lng'),
                     phone: formData.get('phone'),
@@ -4987,12 +5212,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     // Keep openTime/closeTime for backward compatibility (default to Wednesday)
                     openTime: formData.get('wednesdayOpenTime') || formData.get('openTime'),
                     closeTime: formData.get('wednesdayCloseTime') || formData.get('closeTime'),
-                    thursdayOpenTime: formData.get('thursdayOpenTime'),
-                    thursdayCloseTime: formData.get('thursdayCloseTime'),
-                    notes: formData.get('notes'),
+                    thursdayOpenTime: formData.get('thursdayOpenTime') || '',
+                    thursdayCloseTime: formData.get('thursdayCloseTime') || '',
+                    notes: formData.get('notes') || '',
                     available: formData.get('available') === 'on'
                   };
-                  
+
                   if (editingHost.id === 'new') {
                     addHost(hostData);
                   } else {
@@ -5036,7 +5261,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       />
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Latitude</label>
                         <input
@@ -5088,7 +5313,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <p className="text-sm mt-1" style={{color: '#007E8C'}}>This is shown to users as-is</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Tuesday Open Time (optional)</label>
                         <input
@@ -5113,7 +5338,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Wednesday Open Time</label>
                         <input
@@ -5140,7 +5365,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-2" style={{color: '#236383'}}>Thursday Open Time (optional)</label>
                         <input
@@ -5187,10 +5412,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                   </div>
                   
-                  <div className="flex gap-3 mt-8">
+                  <div className="flex flex-col sm:flex-row gap-3 mt-8">
                     <button
                       type="submit"
-                      className="flex-1 px-6 py-3 rounded-xl font-semibold text-white"
+                      className="w-full sm:flex-1 px-6 py-3 rounded-xl font-semibold text-white"
                       style={{backgroundColor: '#007E8C'}}
                     >
                     {editingHost.id === 'new' ? '➕ Add Host' : '💾 Save Changes'}
@@ -5198,7 +5423,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <button
                       type="button"
                       onClick={() => setEditingHost(null)}
-                      className="px-6 py-3 rounded-xl font-semibold"
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold"
                       style={{backgroundColor: 'white', color: '#236383', border: '2px solid rgba(71, 179, 203, 0.3)'}}
                     >
                       Cancel
@@ -5256,7 +5481,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   <div className="p-3 rounded-lg" style={{backgroundColor: '#e8f5e9', border: '1px solid #c8e6c9'}}>
                     <h4 className="font-semibold mb-2" style={{color: '#2e7d32'}}>📺 Display Window</h4>
                     <p className="text-xs mb-2" style={{color: '#666'}}>When should this collection be visible on the website?</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Display From *</label>
                         <input
@@ -5310,7 +5535,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   <div className="p-3 rounded-lg" style={{backgroundColor: '#fff3e0', border: '1px solid #ffe0b2'}}>
                     <h4 className="font-semibold mb-2" style={{color: '#e65100'}}>📅 Collection Dates</h4>
                     <p className="text-xs mb-2" style={{color: '#666'}}>When does the actual collection happen? (shown to users)</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Collection Starts *</label>
                         <input
@@ -5365,7 +5590,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {editingSpecialCollection.hosts?.length > 0 && (
                   <div className="border-t pt-4 mb-4">
                     <h4 className="font-bold mb-3" style={{color: '#236383'}}>⏰ Bulk Time Edit</h4>
-                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection:</p>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>Set the same hours for all hosts in this collection (applies to all days):</p>
                     <div className="flex flex-wrap items-end gap-3">
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{color: '#236383'}}>Open Time</label>
@@ -5394,14 +5619,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             alert('Please set both open and close times');
                             return;
                           }
+
+                          // Build dailyHours for all days in the collection
+                          const startDate = editingSpecialCollection.startDate ?
+                            (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                             editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                          const endDate = editingSpecialCollection.endDate ?
+                            (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                             editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                          const dailyHours = {};
+                          const currentDate = new Date(startDate);
+                          currentDate.setHours(0, 0, 0, 0);
+                          const endDateNorm = new Date(endDate);
+                          endDateNorm.setHours(23, 59, 59, 999);
+
+                          while (currentDate <= endDateNorm) {
+                            const dateKey = currentDate.toISOString().split('T')[0];
+                            dailyHours[dateKey] = { openTime, closeTime };
+                            currentDate.setDate(currentDate.getDate() + 1);
+                          }
+
                           const updatedHosts = editingSpecialCollection.hosts.map(host => ({
                             ...host,
                             openTime,
                             closeTime,
-                            hours: `${openTime} - ${closeTime}`
+                            hours: `${openTime} - ${closeTime}`,
+                            dailyHours
                           }));
                           setEditingSpecialCollection({...editingSpecialCollection, hosts: updatedHosts});
-                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime}`);
+                          alert(`Updated all ${updatedHosts.length} hosts to ${openTime} - ${closeTime} for all days`);
                         }}
                         className="px-4 py-2 rounded-lg font-medium text-white"
                         style={{backgroundColor: '#FBAD3F'}}
@@ -5414,8 +5661,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                 {/* Copy from Existing Hosts */}
                 <div className="border-t pt-4 mb-4">
-                  <h4 className="font-bold mb-3" style={{color: '#236383'}}>📋 Copy from Existing Hosts</h4>
-                  <p className="text-sm mb-3" style={{color: '#666'}}>Select hosts from your main list to add to this special collection:</p>
+                  <h4 className="font-bold mb-3" style={{color: '#236383'}}>📋 Select Hosts from Main List</h4>
+                  <p className="text-sm mb-3" style={{color: '#666'}}>Check the hosts you want to include in this special collection:</p>
                   <div className="max-h-48 overflow-y-auto border-2 rounded-lg p-2 mb-3" style={{borderColor: '#e0e0e0'}}>
                     {(allHosts || []).filter(h => h.available).map(host => {
                       const alreadyAdded = editingSpecialCollection.hosts?.some(sh => sh.sourceId === host.id || sh.name === host.name);
@@ -5480,7 +5727,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   {editingSpecialCollection.hosts?.length > 0 ? (
                     <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
                       {editingSpecialCollection.hosts.map((host) => (
-                        <div key={host.id} className="flex justify-between items-center p-3 rounded-lg" style={{backgroundColor: '#f0f9fa'}}>
+                        <div key={host.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 rounded-lg gap-2" style={{backgroundColor: '#f0f9fa'}}>
                           <div>
                             <span className="font-medium" style={{color: '#236383'}}>{host.name}</span>
                             <span className="text-sm ml-2" style={{color: '#666'}}>{host.area}</span>
@@ -5574,7 +5821,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4 pt-4 border-t">
                   <button
                     type="button"
                     onClick={() => { setEditingSpecialCollection(null); setEditingSpecialHost(null); }}
@@ -5617,6 +5864,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.target);
+
+                  // Collect daily hours
+                  const dailyHours = {};
+                  const startDate = editingSpecialCollection?.startDate ?
+                    (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                     editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                  const endDate = editingSpecialCollection?.endDate ?
+                    (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                     editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                  const currentDate = new Date(startDate);
+                  currentDate.setHours(0, 0, 0, 0);
+                  const endDateNorm = new Date(endDate);
+                  endDateNorm.setHours(23, 59, 59, 999);
+
+                  while (currentDate <= endDateNorm) {
+                    const dateKey = currentDate.toISOString().split('T')[0];
+                    const openTime = formData.get(`openTime_${dateKey}`);
+                    const closeTime = formData.get(`closeTime_${dateKey}`);
+                    if (openTime && closeTime) {
+                      dailyHours[dateKey] = { openTime, closeTime };
+                    }
+                    currentDate.setDate(currentDate.getDate() + 1);
+                  }
+
+                  // Use first day's hours as default openTime/closeTime for backwards compatibility
+                  const firstDayKey = Object.keys(dailyHours)[0];
+                  const defaultOpen = firstDayKey ? dailyHours[firstDayKey].openTime : '08:00';
+                  const defaultClose = firstDayKey ? dailyHours[firstDayKey].closeTime : '18:00';
+
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
@@ -5624,9 +5901,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     lat: formData.get('lat'),
                     lng: formData.get('lng'),
                     phone: formData.get('phone') || '',
-                    hours: `${formData.get('openTime')} - ${formData.get('closeTime')}`,
-                    openTime: formData.get('openTime'),
-                    closeTime: formData.get('closeTime'),
+                    hours: `${defaultOpen} - ${defaultClose}`,
+                    openTime: defaultOpen,
+                    closeTime: defaultClose,
+                    dailyHours: dailyHours,
                     notes: formData.get('notes') || ''
                   };
                   if (editingSpecialHost.id === 'new') {
@@ -5639,7 +5917,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Host Name *</label>
                     <input type="text" name="name" defaultValue={editingSpecialHost.name} required className="w-full px-3 py-2 rounded-lg border-2" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Area *</label>
                       <input type="text" name="area" defaultValue={editingSpecialHost.area} required className="w-full px-3 py-2 rounded-lg border-2" placeholder="e.g., Downtown" />
@@ -5649,7 +5927,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <input type="text" name="neighborhood" defaultValue={editingSpecialHost.neighborhood} className="w-full px-3 py-2 rounded-lg border-2" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Latitude *</label>
                       <input type="number" step="any" name="lat" defaultValue={editingSpecialHost.lat} required className="w-full px-3 py-2 rounded-lg border-2" />
@@ -5663,21 +5941,70 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Phone</label>
                     <input type="text" name="phone" defaultValue={editingSpecialHost.phone} className="w-full px-3 py-2 rounded-lg border-2" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Open Time *</label>
-                      <input type="time" name="openTime" defaultValue={editingSpecialHost.openTime || '08:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Close Time *</label>
-                      <input type="time" name="closeTime" defaultValue={editingSpecialHost.closeTime || '18:00'} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
+
+                  {/* Daily Hours Section */}
+                  <div className="p-3 rounded-lg" style={{backgroundColor: '#f0f9fa', border: '1px solid #007E8C'}}>
+                    <h5 className="font-semibold mb-2 text-sm" style={{color: '#007E8C'}}>📅 Hours by Day</h5>
+                    <p className="text-xs mb-3" style={{color: '#666'}}>Set different hours for each day of the collection:</p>
+                    {(() => {
+                      const startDate = editingSpecialCollection?.startDate ?
+                        (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
+                         editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
+                      const endDate = editingSpecialCollection?.endDate ?
+                        (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
+                         editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+
+                      const days = [];
+                      const currentDate = new Date(startDate);
+                      currentDate.setHours(0, 0, 0, 0);
+                      const endDateNorm = new Date(endDate);
+                      endDateNorm.setHours(23, 59, 59, 999);
+
+                      while (currentDate <= endDateNorm) {
+                        days.push(new Date(currentDate));
+                        currentDate.setDate(currentDate.getDate() + 1);
+                      }
+
+                      return days.map((day, idx) => {
+                        const dateKey = day.toISOString().split('T')[0];
+                        const dayName = day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                        const existingHours = editingSpecialHost.dailyHours?.[dateKey];
+                        const defaultOpen = existingHours?.openTime || editingSpecialHost.openTime || '08:00';
+                        const defaultClose = existingHours?.closeTime || editingSpecialHost.closeTime || '18:00';
+
+                        return (
+                          <div key={dateKey} className="flex flex-wrap items-center gap-2 mb-2 p-2 bg-white rounded" style={{border: '1px solid #e0e0e0'}}>
+                            <span className="text-sm font-medium w-full sm:w-auto" style={{color: '#236383', minWidth: '120px'}}>{dayName}</span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                name={`openTime_${dateKey}`}
+                                defaultValue={defaultOpen}
+                                required
+                                className="px-2 py-1 rounded border text-sm"
+                                style={{width: '110px'}}
+                              />
+                              <span className="text-sm" style={{color: '#666'}}>to</span>
+                              <input
+                                type="time"
+                                name={`closeTime_${dateKey}`}
+                                defaultValue={defaultClose}
+                                required
+                                className="px-2 py-1 rounded border text-sm"
+                                style={{width: '110px'}}
+                              />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
+
                   <div>
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Special Instructions</label>
                     <textarea name="notes" defaultValue={editingSpecialHost.notes} className="w-full px-3 py-2 rounded-lg border-2" rows={2} />
                   </div>
-                  <div className="flex justify-end gap-3 pt-3">
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-3">
                     <button type="button" onClick={() => setEditingSpecialHost(null)} className="px-4 py-2 rounded-lg font-medium" style={{backgroundColor: '#f0f0f0'}}>
                       Cancel
                     </button>
@@ -5694,17 +6021,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {/* Feedback Button - Fixed position */}
         <button
           onClick={() => setShowFeedback(true)}
-          className="fixed bottom-6 right-6 px-6 py-3 rounded-full font-bold text-white shadow-2xl hover:shadow-3xl transition-all z-50 flex items-center gap-2"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 px-4 sm:px-6 py-3 rounded-full font-bold text-white shadow-2xl hover:shadow-3xl transition-all z-50 flex items-center gap-2 max-w-[calc(100vw-2rem)]"
           style={{backgroundColor: '#007E8C'}}
+          aria-label="Give Feedback"
         >
           <span>💬</span>
-          <span>Give Feedback</span>
+          <span className="hidden sm:inline">Give Feedback</span>
         </button>
 
         {/* Feedback Modal */}
         {showFeedback && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
-            <div className="bg-white rounded-2xl max-w-md w-full p-8 relative">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-[9999]">
+            <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto">
               <button
                 onClick={() => {
                   setShowFeedback(false);
@@ -5838,25 +6166,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </div>
         )}
       </div>
-
-      {/* Read-Only Modal */}
-      {showReadOnlyModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowReadOnlyModal(false)}>
-          <div className="bg-white rounded-lg p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-2" style={{color: '#236383'}}>Read-Only Account</h3>
-            <p className="text-sm mb-4" style={{color: '#666'}}>
-              This reviewer account is read-only. Editing hosts is available to full admins only.
-            </p>
-            <button
-              onClick={() => setShowReadOnlyModal(false)}
-              className="px-4 py-2 rounded-lg font-medium text-white"
-              style={{backgroundColor: '#007E8C'}}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
