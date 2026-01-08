@@ -2222,6 +2222,59 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </div>
 
+              {/* Map */}
+              {specialCollection.hosts?.length > 0 && (
+                <div className="p-5 sm:p-6 bg-white border-b">
+                  <h3 className="font-bold text-lg mb-4" style={{color: '#236383'}}>📍 Map</h3>
+                  <div
+                    id="special-collection-map"
+                    className="w-full rounded-xl overflow-hidden"
+                    style={{height: '300px', border: '2px solid #e0e0e0'}}
+                    ref={(el) => {
+                      if (el && window.google && !el.dataset.initialized) {
+                        el.dataset.initialized = 'true';
+                        const hosts = specialCollection.hosts.filter(h => h.lat && h.lng);
+                        if (hosts.length === 0) return;
+
+                        const bounds = new window.google.maps.LatLngBounds();
+                        hosts.forEach(h => bounds.extend({lat: parseFloat(h.lat), lng: parseFloat(h.lng)}));
+
+                        const mapInstance = new window.google.maps.Map(el, {
+                          center: bounds.getCenter(),
+                          zoom: 11,
+                          mapId: 'special_collection_map'
+                        });
+                        mapInstance.fitBounds(bounds, 50);
+
+                        hosts.forEach((host, index) => {
+                          const markerDiv = document.createElement('div');
+                          markerDiv.innerHTML = `<div style="background-color: #A31C41; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${index + 1}</div>`;
+
+                          const marker = new window.google.maps.marker.AdvancedMarkerElement({
+                            map: mapInstance,
+                            position: {lat: parseFloat(host.lat), lng: parseFloat(host.lng)},
+                            content: markerDiv,
+                            title: host.name
+                          });
+
+                          marker.addListener('click', () => {
+                            const infoWindow = new window.google.maps.InfoWindow({
+                              content: `<div style="padding: 8px; max-width: 200px;">
+                                <strong style="color: #236383;">${host.name}</strong><br>
+                                <span style="color: #666; font-size: 12px;">${host.area}</span><br>
+                                <span style="color: #007E8C; font-weight: bold;">${formatTime(host.openTime)} - ${formatTime(host.closeTime)}</span><br>
+                                <a href="https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}" target="_blank" style="color: #FBAD3F; font-size: 12px;">Get Directions →</a>
+                              </div>`
+                            });
+                            infoWindow.open(mapInstance, marker);
+                          });
+                        });
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Hosts Grid */}
               <div className="p-5 sm:p-6 bg-white">
                 <h3 className="font-bold text-lg mb-4" style={{color: '#236383'}}>
@@ -2229,12 +2282,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </h3>
                 {specialCollection.hosts?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {specialCollection.hosts.map((host) => (
+                    {specialCollection.hosts.map((host, index) => (
                       <div key={host.id} className="rounded-xl p-5 shadow-sm" style={{backgroundColor: '#f8f9fa', border: '2px solid #e0e0e0'}}>
-                        <h4 className="font-bold text-lg mb-2" style={{color: '#236383'}}>{host.name}</h4>
-                        <p className="text-sm mb-3" style={{color: '#666'}}>
-                          📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
-                        </p>
+                        <div className="flex items-start gap-3">
+                          <div style={{backgroundColor: '#A31C41', color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', flexShrink: 0}}>
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-lg mb-1" style={{color: '#236383'}}>{host.name}</h4>
+                            <p className="text-sm mb-3" style={{color: '#666'}}>
+                              {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
+                            </p>
+                          </div>
+                        </div>
                         <div className="flex flex-wrap items-center gap-3 mb-3">
                           <span className="text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
                             🕐 {formatTime(host.openTime)} - {formatTime(host.closeTime)}

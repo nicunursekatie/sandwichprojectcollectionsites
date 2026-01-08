@@ -2052,6 +2052,59 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </div>
 
+              {/* Map */}
+              {specialCollection.hosts?.length > 0 && (
+                <div className="p-5 sm:p-6 bg-white border-b">
+                  <h3 className="font-bold text-lg mb-4" style={{color: '#236383'}}>📍 Map</h3>
+                  <div
+                    id="special-collection-map"
+                    className="w-full rounded-xl overflow-hidden"
+                    style={{height: '300px', border: '2px solid #e0e0e0'}}
+                    ref={(el) => {
+                      if (el && window.google && !el.dataset.initialized) {
+                        el.dataset.initialized = 'true';
+                        const hosts = specialCollection.hosts.filter(h => h.lat && h.lng);
+                        if (hosts.length === 0) return;
+
+                        const bounds = new window.google.maps.LatLngBounds();
+                        hosts.forEach(h => bounds.extend({lat: parseFloat(h.lat), lng: parseFloat(h.lng)}));
+
+                        const mapInstance = new window.google.maps.Map(el, {
+                          center: bounds.getCenter(),
+                          zoom: 11,
+                          mapId: 'special_collection_map'
+                        });
+                        mapInstance.fitBounds(bounds, 50);
+
+                        hosts.forEach((host, index) => {
+                          const markerDiv = document.createElement('div');
+                          markerDiv.innerHTML = `<div style="background-color: #A31C41; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${index + 1}</div>`;
+
+                          const marker = new window.google.maps.marker.AdvancedMarkerElement({
+                            map: mapInstance,
+                            position: {lat: parseFloat(host.lat), lng: parseFloat(host.lng)},
+                            content: markerDiv,
+                            title: host.name
+                          });
+
+                          marker.addListener('click', () => {
+                            const infoWindow = new window.google.maps.InfoWindow({
+                              content: `<div style="padding: 8px; max-width: 200px;">
+                                <strong style="color: #236383;">${host.name}</strong><br>
+                                <span style="color: #666; font-size: 12px;">${host.area}</span><br>
+                                <span style="color: #007E8C; font-weight: bold;">${formatTime(host.openTime)} - ${formatTime(host.closeTime)}</span><br>
+                                <a href="https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}" target="_blank" style="color: #FBAD3F; font-size: 12px;">Get Directions →</a>
+                              </div>`
+                            });
+                            infoWindow.open(mapInstance, marker);
+                          });
+                        });
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Hosts Grid */}
               <div className="p-5 sm:p-6 bg-white">
                 <h3 className="font-bold text-lg mb-4" style={{color: '#236383'}}>
@@ -2059,12 +2112,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </h3>
                 {specialCollection.hosts?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {specialCollection.hosts.map((host) => (
+                    {specialCollection.hosts.map((host, index) => (
                       <div key={host.id} className="rounded-xl p-5 shadow-sm" style={{backgroundColor: '#f8f9fa', border: '2px solid #e0e0e0'}}>
-                        <h4 className="font-bold text-lg mb-2" style={{color: '#236383'}}>{host.name}</h4>
-                        <p className="text-sm mb-3" style={{color: '#666'}}>
-                          📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
-                        </p>
+                        <div className="flex items-start gap-3">
+                          <div style={{backgroundColor: '#A31C41', color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', flexShrink: 0}}>
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-lg mb-1" style={{color: '#236383'}}>{host.name}</h4>
+                            <p className="text-sm mb-3" style={{color: '#666'}}>
+                              {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
+                            </p>
+                          </div>
+                        </div>
                         <div className="flex flex-wrap items-center gap-3 mb-3">
                           <span className="text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
                             🕐 {formatTime(host.openTime)} - {formatTime(host.closeTime)}
@@ -3296,25 +3356,157 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </p>
                       )}
 
-                      {/* Get Directions Button - Direct to Google Maps */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!host.available) {
-                            alert('⚠️ This host is NOT collecting this week.');
-                            return;
-                          }
-                          openGoogleMapsDirections(host);
-                        }}
-                        disabled={!host.available}
-                        className={`w-full px-4 py-3 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all ${
-                          host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        style={{backgroundColor: '#007E8C'}}
-                      >
-                        <i className="lucide-navigation w-5 h-5"></i>
-                        Get Directions
-                      </button>
+                      {/* Get Directions Button - Dropdown Menu */}
+                      <div className="relative" data-directions-menu style={{zIndex: directionsMenuOpen === host.id ? 1000 : 'auto'}}>
+                        <button
+                          ref={directionsMenuOpen === host.id ? directionsButtonRef : null}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!host.available) {
+                              alert('⚠️ This host is NOT collecting this week.');
+                              return;
+                            }
+                            const buttonRect = e.currentTarget.getBoundingClientRect();
+                            const isOpening = directionsMenuOpen !== host.id;
+                            setDirectionsMenuOpen(isOpening ? host.id : null);
+                            if (isOpening) {
+                              const viewportWidth = window.innerWidth;
+                              const viewportHeight = window.innerHeight;
+                              const dropdownWidth = 280;
+                              const dropdownHeight = 200;
+                              
+                              let left = buttonRect.left;
+                              let top = buttonRect.bottom + 4;
+                              
+                              // Ensure dropdown doesn't go off right edge
+                              if (left + dropdownWidth > viewportWidth - 16) {
+                                left = viewportWidth - dropdownWidth - 16;
+                              }
+                              // Ensure dropdown doesn't go off left edge
+                              if (left < 16) {
+                                left = 16;
+                              }
+                              // If dropdown would go off bottom, show above button instead
+                              if (top + dropdownHeight > viewportHeight - 16) {
+                                top = buttonRect.top - dropdownHeight - 4;
+                              }
+                              // Ensure dropdown doesn't go off top edge
+                              if (top < 16) {
+                                top = 16;
+                              }
+                              
+                              setDirectionsMenuPosition({ top, left });
+                            }
+                            trackEvent('get_directions_click', {
+                              event_category: 'Directions',
+                              event_label: 'Get Directions Button',
+                              host_name: host.name,
+                              host_area: host.area
+                            });
+                          }}
+                          disabled={!host.available}
+                          className={`w-full px-4 py-3 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all ${
+                            host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                          }`}
+                          style={{backgroundColor: '#007E8C', minHeight: '48px'}}
+                          title={!host.available ? 'This host is not collecting this week' : 'Choose your maps app'}
+                        >
+                          <i className="lucide-navigation w-5 h-5"></i>
+                          <span>Get Directions</span>
+                          <i className={`lucide-chevron-down w-4 h-4 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
+                        </button>
+                        {directionsMenuOpen === host.id && ReactDOM.createPortal(
+                          <div 
+                            className="fixed bg-white rounded-lg shadow-xl border-2 overflow-hidden"
+                            style={{
+                              borderColor: '#007E8C',
+                              minWidth: '280px',
+                              width: 'max-content',
+                              maxWidth: 'calc(100vw - 2rem)',
+                              zIndex: 10000,
+                              top: `${directionsMenuPosition.top}px`,
+                              left: `${directionsMenuPosition.left}px`
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {userCoords && (
+                              <>
+                                {showingDirections === host.id ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      clearDirections();
+                                      setDirectionsMenuOpen(null);
+                                    }}
+                                    className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                                  >
+                                    <div className="flex items-center justify-center gap-3 mb-1">
+                                      <i className="lucide-x w-6 h-6" style={{color: '#007E8C'}}></i>
+                                      <div className="font-bold text-base" style={{color: '#236383'}}>Clear Route</div>
+                                    </div>
+                                    <div className="text-sm text-gray-600">Remove route from map</div>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!host.available) {
+                                        alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                        setDirectionsMenuOpen(null);
+                                        return;
+                                      }
+                                      showDirections(host);
+                                      setDirectionsMenuOpen(null);
+                                    }}
+                                    className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                                  >
+                                    <div className="flex items-center justify-center gap-3 mb-1">
+                                      <i className="lucide-route w-6 h-6" style={{color: '#007E8C'}}></i>
+                                      <div className="font-bold text-base" style={{color: '#236383'}}>Show Directions In-App</div>
+                                    </div>
+                                    <div className="text-sm text-gray-600">View turn-by-turn directions below map</div>
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openGoogleMapsDirections(host);
+                                setDirectionsMenuOpen(null);
+                              }}
+                              className={`w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center ${userCoords ? 'border-t' : ''}`}
+                              style={userCoords ? {borderColor: '#e0e0e0'} : {}}
+                            >
+                              <div className="flex items-center justify-center gap-3 mb-1">
+                                <i className="lucide-map w-6 h-6" style={{color: '#007E8C'}}></i>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Open in Google Maps</div>
+                              </div>
+                              <div className="text-sm text-gray-600">Navigate with Google Maps app</div>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAppleMapsDirections(host);
+                                setDirectionsMenuOpen(null);
+                              }}
+                              className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center border-t" style={{borderColor: '#e0e0e0'}}
+                            >
+                              <div className="flex items-center justify-center gap-3 mb-1">
+                                <i className="lucide-map-pin w-6 h-6" style={{color: '#007E8C'}}></i>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Open in Apple Maps</div>
+                              </div>
+                              <div className="text-sm text-gray-600">Navigate with Apple Maps app</div>
+                            </button>
+                            {/* Sign-in Reminder at bottom */}
+                            <div className="p-3 text-center text-sm border-t" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+                              <span className="font-bold" style={{color: '#A31C41'}}>Remember: </span>
+                              <span className="text-gray-700">Sign in when you drop off!</span>
+                            </div>
+                          </div>,
+                          document.body
+                        )}
+                      </div>
                     </div>
                   ) : (
                     /* Expanded View */
