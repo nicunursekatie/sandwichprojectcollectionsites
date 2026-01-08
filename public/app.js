@@ -2282,7 +2282,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </h3>
                 {specialCollection.hosts?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {specialCollection.hosts.map((host, index) => (
+                    {[...specialCollection.hosts].sort((a, b) => a.name.localeCompare(b.name)).map((host, index) => (
                       <div key={host.id} className="rounded-xl p-5 shadow-sm" style={{backgroundColor: '#f8f9fa', border: '2px solid #e0e0e0'}}>
                         <div className="flex items-start gap-3">
                           <div style={{backgroundColor: '#A31C41', color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', flexShrink: 0}}>
@@ -2581,7 +2581,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   <div className="p-4 sm:p-5" style={{backgroundColor: '#FFF5F7'}}>
                     {specialCollection.hosts?.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {specialCollection.hosts.map((host) => (
+                        {[...specialCollection.hosts].sort((a, b) => a.name.localeCompare(b.name)).map((host) => (
                           <div key={host.id} className="bg-white rounded-xl p-4 shadow-sm" style={{border: '1px solid #f0c0c0'}}>
                             <h4 className="font-bold text-base mb-1" style={{color: '#236383'}}>{host.name}</h4>
                             <p className="text-sm mb-2" style={{color: '#666'}}>{host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}</p>
