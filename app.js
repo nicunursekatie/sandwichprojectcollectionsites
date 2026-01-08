@@ -38,6 +38,28 @@ const HostAvailabilityApp = () => {
   const [specialCollection, setSpecialCollection] = React.useState(null);
   const [editingSpecialCollection, setEditingSpecialCollection] = React.useState(null);
   const [editingSpecialHost, setEditingSpecialHost] = React.useState(null);
+  // URL-based page routing
+  const [currentPage, setCurrentPage] = React.useState(() => {
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes('specialcollections') || path.includes('special-collections')) {
+      return 'specialcollections';
+    }
+    return 'main';
+  });
+
+  // Handle browser back/forward navigation
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes('specialcollections') || path.includes('special-collections')) {
+        setCurrentPage('specialcollections');
+      } else {
+        setCurrentPage('main');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
@@ -1957,6 +1979,177 @@ This is safe because your API key is already restricted to only the Geocoding AP
         <div className="text-center">
           <div className="text-6xl mb-4">🥪</div>
           <p className="text-xl font-bold" style={{color: '#007E8C'}}>Loading hosts...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Special Collections dedicated page
+  if (currentPage === 'specialcollections') {
+    const now = new Date();
+    const isActive = specialCollection && (() => {
+      const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+      const startDate = specialCollection.startDate?.toDate ? specialCollection.startDate.toDate() : new Date(specialCollection.startDate);
+      return now >= startDate && now <= endDate;
+    })();
+
+    return (
+      <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8" style={{backgroundColor: '#FFF5F7'}}>
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <img
+                src="LOGOS/CMYK_PRINT_TSP-01-01.jpg"
+                alt="The Sandwich Project Logo"
+                className="h-16 sm:h-20 w-auto object-contain mx-auto sm:mx-0"
+              />
+              <div className="text-center sm:text-left flex-1">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2" style={{color: '#A31C41'}}>
+                  🚨 Special Collection
+                </h1>
+                <p className="text-sm sm:text-base" style={{color: '#666'}}>
+                  Emergency & temporary sandwich collection locations
+                </p>
+              </div>
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.pushState({}, '', '/');
+                  setCurrentPage('main');
+                }}
+                className="text-sm px-4 py-2 rounded-lg font-medium text-center"
+                style={{backgroundColor: '#007E8C', color: 'white'}}
+              >
+                ← Back to Weekly Collections
+              </a>
+            </div>
+          </div>
+
+          {/* Active Special Collection */}
+          {isActive ? (
+            <div className="rounded-2xl overflow-hidden shadow-lg" style={{border: '3px solid #A31C41'}}>
+              {/* Header */}
+              <div className="p-5 sm:p-6" style={{backgroundColor: '#A31C41'}}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                      {specialCollection.name}
+                    </h2>
+                    {specialCollection.description && (
+                      <p className="text-base text-white opacity-90 mt-2">{specialCollection.description}</p>
+                    )}
+                  </div>
+                  <div className="text-white text-base sm:text-lg font-semibold px-4 py-2 rounded-lg" style={{backgroundColor: 'rgba(255,255,255,0.2)'}}>
+                    {(() => {
+                      const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+                      const hoursRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60 * 60)));
+                      const minutesRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60)));
+                      return hoursRemaining > 1 ? `Ends in ${hoursRemaining} hours` : minutesRemaining > 0 ? `Ends in ${minutesRemaining} min` : 'Ending soon';
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Hosts Grid */}
+              <div className="p-5 sm:p-6 bg-white">
+                <h3 className="font-bold text-lg mb-4" style={{color: '#236383'}}>
+                  Drop-off Locations ({specialCollection.hosts?.length || 0})
+                </h3>
+                {specialCollection.hosts?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {specialCollection.hosts.map((host) => (
+                      <div key={host.id} className="rounded-xl p-5 shadow-sm" style={{backgroundColor: '#f8f9fa', border: '2px solid #e0e0e0'}}>
+                        <h4 className="font-bold text-lg mb-2" style={{color: '#236383'}}>{host.name}</h4>
+                        <p className="text-sm mb-3" style={{color: '#666'}}>
+                          📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3 mb-3">
+                          <span className="text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
+                            🕐 {formatTime(host.openTime)} - {formatTime(host.closeTime)}
+                          </span>
+                          {host.phone && (
+                            <a href={`tel:${host.phone}`} className="text-sm font-medium px-3 py-1 rounded-lg flex items-center gap-1" style={{backgroundColor: '#47bc3b', color: 'white'}}>
+                              📞 Call
+                            </a>
+                          )}
+                        </div>
+                        {host.lat && host.lng && (
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block text-sm font-medium px-3 py-1 rounded-lg"
+                            style={{backgroundColor: '#FBAD3F', color: 'white'}}
+                          >
+                            🗺️ Get Directions
+                          </a>
+                        )}
+                        {host.notes && (
+                          <p className="text-sm mt-3 p-3 rounded-lg" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                            ⚠️ {host.notes}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center py-8" style={{color: '#666'}}>No drop-off locations have been added yet.</p>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 sm:px-6 py-4 text-center" style={{backgroundColor: '#f0c0c0', color: '#A31C41'}}>
+                <strong>⏰ This is a temporary collection.</strong> Ends at {(() => {
+                  const endDate = specialCollection.endDate?.toDate ? specialCollection.endDate.toDate() : new Date(specialCollection.endDate);
+                  return endDate.toLocaleString([], { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                })()}
+              </div>
+            </div>
+          ) : (
+            /* No Active Special Collection */
+            <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+              <div className="text-6xl mb-4">📭</div>
+              <h2 className="text-2xl font-bold mb-3" style={{color: '#236383'}}>No Active Special Collection</h2>
+              <p className="text-base mb-6" style={{color: '#666'}}>
+                There is no emergency or special collection happening right now.
+              </p>
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.pushState({}, '', '/');
+                  setCurrentPage('main');
+                }}
+                className="inline-block px-6 py-3 rounded-xl font-semibold text-white"
+                style={{backgroundColor: '#007E8C'}}
+              >
+                View Weekly Collections →
+              </a>
+            </div>
+          )}
+
+          {/* Info Box */}
+          <div className="bg-white rounded-2xl shadow-lg p-5 mt-6">
+            <h3 className="font-bold mb-2" style={{color: '#236383'}}>ℹ️ About Special Collections</h3>
+            <p className="text-sm" style={{color: '#666'}}>
+              Special collections are temporary drop-off events for emergencies like warming centers or urgent community needs.
+              They operate independently from our regular Wednesday collections. Check back here during emergencies or
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.pushState({}, '', '/');
+                  setCurrentPage('main');
+                }}
+                className="font-medium ml-1"
+                style={{color: '#007E8C'}}
+              >
+                view our weekly collection schedule
+              </a>.
+            </p>
+          </div>
         </div>
       </div>
     );
