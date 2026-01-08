@@ -4288,7 +4288,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <label className="block font-semibold mb-1" style={{color: '#236383'}}>Start Date/Time *</label>
                       <input
                         type="datetime-local"
-                        value={typeof editingSpecialCollection.startDate === 'string' ? editingSpecialCollection.startDate : new Date(editingSpecialCollection.startDate).toISOString().slice(0, 16)}
+                        value={(() => {
+                          const d = editingSpecialCollection.startDate;
+                          if (!d) return '';
+                          if (typeof d === 'string') return d;
+                          if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                          try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                        })()}
                         onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, startDate: e.target.value})}
                         className="w-full px-4 py-2 rounded-lg border-2"
                         required
@@ -4298,7 +4304,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <label className="block font-semibold mb-1" style={{color: '#236383'}}>End Date/Time *</label>
                       <input
                         type="datetime-local"
-                        value={typeof editingSpecialCollection.endDate === 'string' ? editingSpecialCollection.endDate : new Date(editingSpecialCollection.endDate).toISOString().slice(0, 16)}
+                        value={(() => {
+                          const d = editingSpecialCollection.endDate;
+                          if (!d) return '';
+                          if (typeof d === 'string') return d;
+                          if (d.toDate) return d.toDate().toISOString().slice(0, 16);
+                          try { return new Date(d).toISOString().slice(0, 16); } catch { return ''; }
+                        })()}
                         onChange={(e) => setEditingSpecialCollection({...editingSpecialCollection, endDate: e.target.value})}
                         className="w-full px-4 py-2 rounded-lg border-2"
                         required
