@@ -2233,7 +2233,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     ref={(el) => {
                       if (el && window.google && !el.dataset.initialized) {
                         el.dataset.initialized = 'true';
-                        const hosts = specialCollection.hosts.filter(h => h.lat && h.lng);
+                        const hosts = [...specialCollection.hosts].sort((a, b) => a.name.localeCompare(b.name)).filter(h => h.lat && h.lng);
                         if (hosts.length === 0) return;
 
                         const bounds = new window.google.maps.LatLngBounds();
@@ -3525,25 +3525,157 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </p>
                       )}
 
-                      {/* Get Directions Button - Direct to Google Maps */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!host.available) {
-                            alert('⚠️ This host is NOT collecting this week.');
-                            return;
-                          }
-                          openGoogleMapsDirections(host);
-                        }}
-                        disabled={!host.available}
-                        className={`w-full px-4 py-3 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all ${
-                          host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        style={{backgroundColor: '#007E8C'}}
-                      >
-                        <i className="lucide-navigation w-5 h-5"></i>
-                        Get Directions
-                      </button>
+                      {/* Get Directions Button - Dropdown Menu */}
+                      <div className="relative" data-directions-menu style={{zIndex: directionsMenuOpen === host.id ? 1000 : 'auto'}}>
+                        <button
+                          ref={directionsMenuOpen === host.id ? directionsButtonRef : null}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!host.available) {
+                              alert('⚠️ This host is NOT collecting this week.');
+                              return;
+                            }
+                            const buttonRect = e.currentTarget.getBoundingClientRect();
+                            const isOpening = directionsMenuOpen !== host.id;
+                            setDirectionsMenuOpen(isOpening ? host.id : null);
+                            if (isOpening) {
+                              const viewportWidth = window.innerWidth;
+                              const viewportHeight = window.innerHeight;
+                              const dropdownWidth = 280;
+                              const dropdownHeight = 200;
+                              
+                              let left = buttonRect.left;
+                              let top = buttonRect.bottom + 4;
+                              
+                              // Ensure dropdown doesn't go off right edge
+                              if (left + dropdownWidth > viewportWidth - 16) {
+                                left = viewportWidth - dropdownWidth - 16;
+                              }
+                              // Ensure dropdown doesn't go off left edge
+                              if (left < 16) {
+                                left = 16;
+                              }
+                              // If dropdown would go off bottom, show above button instead
+                              if (top + dropdownHeight > viewportHeight - 16) {
+                                top = buttonRect.top - dropdownHeight - 4;
+                              }
+                              // Ensure dropdown doesn't go off top edge
+                              if (top < 16) {
+                                top = 16;
+                              }
+                              
+                              setDirectionsMenuPosition({ top, left });
+                            }
+                            trackEvent('get_directions_click', {
+                              event_category: 'Directions',
+                              event_label: 'Get Directions Button',
+                              host_name: host.name,
+                              host_area: host.area
+                            });
+                          }}
+                          disabled={!host.available}
+                          className={`w-full px-4 py-3 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all ${
+                            host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                          }`}
+                          style={{backgroundColor: '#007E8C', minHeight: '48px'}}
+                          title={!host.available ? 'This host is not collecting this week' : 'Choose your maps app'}
+                        >
+                          <i className="lucide-navigation w-5 h-5"></i>
+                          <span>Get Directions</span>
+                          <i className={`lucide-chevron-down w-4 h-4 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
+                        </button>
+                        {directionsMenuOpen === host.id && ReactDOM.createPortal(
+                          <div 
+                            className="fixed bg-white rounded-lg shadow-xl border-2 overflow-hidden"
+                            style={{
+                              borderColor: '#007E8C',
+                              minWidth: '280px',
+                              width: 'max-content',
+                              maxWidth: 'calc(100vw - 2rem)',
+                              zIndex: 10000,
+                              top: `${directionsMenuPosition.top}px`,
+                              left: `${directionsMenuPosition.left}px`
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {userCoords && (
+                              <>
+                                {showingDirections === host.id ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      clearDirections();
+                                      setDirectionsMenuOpen(null);
+                                    }}
+                                    className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                                  >
+                                    <div className="flex items-center justify-center gap-3 mb-1">
+                                      <i className="lucide-x w-6 h-6" style={{color: '#007E8C'}}></i>
+                                      <div className="font-bold text-base" style={{color: '#236383'}}>Clear Route</div>
+                                    </div>
+                                    <div className="text-sm text-gray-600">Remove route from map</div>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!host.available) {
+                                        alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
+                                        setDirectionsMenuOpen(null);
+                                        return;
+                                      }
+                                      showDirections(host);
+                                      setDirectionsMenuOpen(null);
+                                    }}
+                                    className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center"
+                                  >
+                                    <div className="flex items-center justify-center gap-3 mb-1">
+                                      <i className="lucide-route w-6 h-6" style={{color: '#007E8C'}}></i>
+                                      <div className="font-bold text-base" style={{color: '#236383'}}>Show Directions In-App</div>
+                                    </div>
+                                    <div className="text-sm text-gray-600">View turn-by-turn directions below map</div>
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openGoogleMapsDirections(host);
+                                setDirectionsMenuOpen(null);
+                              }}
+                              className={`w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center ${userCoords ? 'border-t' : ''}`}
+                              style={userCoords ? {borderColor: '#e0e0e0'} : {}}
+                            >
+                              <div className="flex items-center justify-center gap-3 mb-1">
+                                <i className="lucide-map w-6 h-6" style={{color: '#007E8C'}}></i>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Google Maps</div>
+                              </div>
+                              <div className="text-sm text-gray-600">Works on all devices</div>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAppleMapsDirections(host);
+                                setDirectionsMenuOpen(null);
+                              }}
+                              className="w-full px-5 py-4 hover:bg-gray-50 flex flex-col items-center justify-center gap-2 transition-colors text-center border-t" style={{borderColor: '#e0e0e0'}}
+                            >
+                              <div className="flex items-center justify-center gap-3 mb-1">
+                                <i className="lucide-map-pin w-6 h-6" style={{color: '#007E8C'}}></i>
+                                <div className="font-bold text-base" style={{color: '#236383'}}>Apple Maps</div>
+                              </div>
+                              <div className="text-sm text-gray-600">Best on iPhone/iPad</div>
+                            </button>
+                            {/* Sign-in Reminder at bottom */}
+                            <div className="p-3 text-center text-sm border-t" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+                              <span className="font-bold" style={{color: '#A31C41'}}>Remember: </span>
+                              <span className="text-gray-700">Sign in when you drop off!</span>
+                            </div>
+                          </div>,
+                          document.body
+                        )}
+                      </div>
                     </div>
                   ) : (
                     /* Expanded View */
