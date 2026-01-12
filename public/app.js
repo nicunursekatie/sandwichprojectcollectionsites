@@ -4258,11 +4258,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                       {/* Location Badges: Area and Neighborhood */}
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium" style={{backgroundColor: '#236383', color: '#fff'}}>
+                        <span className="inline-flex items-center px-4 py-1.5 rounded-full text-base font-semibold" style={{backgroundColor: '#236383', color: '#fff'}}>
                           {host.area}
                         </span>
                         {host.neighborhood && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium" style={{backgroundColor: '#007e8c', color: '#fff'}}>
+                          <span className="inline-flex items-center px-4 py-1.5 rounded-full text-base font-semibold" style={{backgroundColor: '#007e8c', color: '#fff'}}>
                             {host.neighborhood}
                           </span>
                         )}
