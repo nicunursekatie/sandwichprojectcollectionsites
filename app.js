@@ -555,6 +555,9 @@ const HostAvailabilityApp = () => {
           } else {
             setSpecialCollection(data);
           }
+        } else {
+          // No active collection found
+          setSpecialCollection(null);
         }
       } catch (error) {
         console.error('Error loading special collection:', error);
@@ -562,6 +565,46 @@ const HostAvailabilityApp = () => {
     };
 
     loadSpecialCollection();
+
+    // Background refresh function - silently refreshes data without disrupting user
+    const refreshData = async () => {
+      try {
+        // Refresh hosts
+        const hostsSnapshot = await db.collection('hosts').get();
+        const hostsData = [];
+        hostsSnapshot.forEach(doc => {
+          hostsData.push({ ...doc.data(), id: doc.data().id });
+        });
+        hostsData.sort((a, b) => a.id - b.id);
+        setAllHosts(hostsData);
+
+        // Refresh special collection
+        await loadSpecialCollection();
+
+        console.log('Data refreshed at', new Date().toLocaleTimeString());
+      } catch (error) {
+        console.error('Background refresh error:', error);
+      }
+    };
+
+    // Refresh data every 5 minutes in the background
+    const refreshInterval = setInterval(refreshData, 5 * 60 * 1000);
+
+    // Refresh when tab becomes visible again (if hidden for more than 1 minute)
+    let lastVisibleTime = Date.now();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const hiddenDuration = Date.now() - lastVisibleTime;
+        // If tab was hidden for more than 1 minute, refresh data
+        if (hiddenDuration > 60 * 1000) {
+          console.log('Tab became visible after', Math.round(hiddenDuration / 1000), 'seconds - refreshing data');
+          refreshData();
+        }
+      } else {
+        lastVisibleTime = Date.now();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Check for special collection expiration every minute
     const expirationInterval = setInterval(async () => {
@@ -579,7 +622,11 @@ const HostAvailabilityApp = () => {
       }
     }, 60000); // Check every minute
 
-    return () => clearInterval(expirationInterval);
+    return () => {
+      clearInterval(expirationInterval);
+      clearInterval(refreshInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Special Collection functions
