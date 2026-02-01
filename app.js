@@ -2397,9 +2397,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               }
 
                               const infoWindow = new window.google.maps.InfoWindow({
-                                content: `<div style="padding: 16px; min-width: 280px; max-width: 320px; font-family: system-ui, -apple-system, sans-serif;">
-                                  <div style="margin-bottom: 12px;">
-                                    <div style="font-size: 18px; font-weight: 700; color: #236383; margin-bottom: 4px;">${host.name}</div>
+                                content: `<div style="padding: 8px 12px 12px 12px; min-width: 260px; max-width: 300px; font-family: system-ui, -apple-system, sans-serif;">
+                                  <div style="margin-bottom: 10px;">
+                                    <div style="font-size: 17px; font-weight: 700; color: #236383; margin-bottom: 3px;">${host.name}</div>
                                     <div style="font-size: 14px; color: #666; margin-bottom: 8px;">${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}</div>
                                     <div style="display: inline-block; background: #007E8C; color: white; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600;">
                                       ${formatTime(host.openTime)} - ${formatTime(host.closeTime)}
