@@ -1823,7 +1823,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
     }
   }, [includeUnavailableHosts]);
 
-  // Initialize map when API is loaded AND map div exists (works with or without user location)
+  // Reset map when hosts data loads (to show markers)
+  const prevHostsCount = React.useRef(0);
+  React.useEffect(() => {
+    const currentCount = allHostsForDisplay?.length || 0;
+    // If hosts went from 0 to having data, reset map to re-create markers
+    if (prevHostsCount.current === 0 && currentCount > 0 && map) {
+      setMap(null);
+    }
+    prevHostsCount.current = currentCount;
+  }, [allHostsForDisplay, map]);
+
+  // Initialize map when API is loaded AND map div exists AND hosts are loaded
   React.useEffect(() => {
     if (viewMode === 'list') {
       // When switching to list-only view, clear the map to allow re-initialization later
@@ -1832,8 +1843,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
       }
       return;
     }
-    
-    if (mapLoaded && !map) {
+
+    // Wait for hosts to be loaded before initializing map
+    if (mapLoaded && !map && allHostsForDisplay?.length > 0) {
       // Check if map element exists in DOM before initializing
       const checkAndInit = () => {
         const mapElement = document.getElementById('map');
@@ -1844,12 +1856,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
           setTimeout(checkAndInit, 100);
         }
       };
-      
+
       // Initial check with a small delay to ensure DOM is ready
       const timeoutId = setTimeout(checkAndInit, 100);
       return () => clearTimeout(timeoutId);
     }
-  }, [mapLoaded, viewMode, initializeMap, map]);
+  }, [mapLoaded, viewMode, initializeMap, map, allHostsForDisplay]);
 
   // Auto-focus map on favorite host when page loads
   React.useEffect(() => {
