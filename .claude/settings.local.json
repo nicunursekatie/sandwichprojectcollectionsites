@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git commit:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "WebFetch(domain:www.dropbox.com)",
+      "WebFetch(domain:uc889afad11b408d011720b34365.dl.dropboxusercontent.com)"
     ]
   }
 }
