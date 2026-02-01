@@ -1609,23 +1609,47 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
     const backgroundMarkers = []; // For clustering
 
-    otherHosts.forEach((host) => {
+    otherHosts.forEach((host, index) => {
       const isUnavailable = !host.available;
+      const hasUserLocation = !!userCoords;
 
-      // Tiny muted dot - barely visible
+      // When no user location, show larger numbered markers; otherwise tiny dots
       const hostMarkerContent = document.createElement('div');
-      hostMarkerContent.innerHTML = `
-        <div style="
-          width: 10px;
-          height: 10px;
-          background: ${isUnavailable ? '#9CA3AF' : '#5BA3A8'};
-          border: 1px solid white;
-          border-radius: 50%;
-          opacity: ${isUnavailable ? '0.3' : '0.5'};
-          cursor: pointer;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        "></div>
-      `;
+      if (!hasUserLocation) {
+        // Larger, visible markers when no user location (these will cluster)
+        hostMarkerContent.innerHTML = `
+          <div style="
+            width: 32px;
+            height: 32px;
+            background: ${isUnavailable ? '#9CA3AF' : '#007E8C'};
+            border: 3px solid white;
+            border-radius: 50%;
+            opacity: ${isUnavailable ? '0.6' : '1'};
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+          ">${index + 1}</div>
+        `;
+      } else {
+        // Tiny muted dot when user has location (background noise)
+        hostMarkerContent.innerHTML = `
+          <div style="
+            width: 10px;
+            height: 10px;
+            background: ${isUnavailable ? '#9CA3AF' : '#5BA3A8'};
+            border: 1px solid white;
+            border-radius: 50%;
+            opacity: ${isUnavailable ? '0.3' : '0.5'};
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+          "></div>
+        `;
+      }
 
       const markerTitle = userCoords
         ? `${host.name} - ${host.distance} mi${isUnavailable ? ' (Not collecting)' : ''}`
