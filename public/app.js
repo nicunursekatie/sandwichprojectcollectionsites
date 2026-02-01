@@ -2700,7 +2700,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </a>
                         )}
                         {host.notes && (
-                          <p className="text-sm mt-3 p-3 rounded-lg" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                          <p className="text-sm mt-3 p-3 rounded-lg" style={{backgroundColor: '#f0f9fa', color: '#666'}}>
                             ⚠️ {host.notes}
                           </p>
                         )}
