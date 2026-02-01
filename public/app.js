@@ -1447,24 +1447,42 @@ This is safe because your API key is already restricted to only the Geocoding AP
       const userMarkerContent = document.createElement('div');
       userMarkerContent.innerHTML = `
         <div style="
-          width: 24px;
-          height: 24px;
-          background: #47B3CB;
-          border: 3px solid white;
-          border-radius: 50%;
-          position: relative;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
         ">
           <div style="
-            width: 8px;
-            height: 8px;
-            background: white;
+            width: 48px;
+            height: 48px;
+            background: #007E8C;
+            border: 5px solid white;
             border-radius: 50%;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-          "></div>
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35), 0 0 0 4px rgba(0, 126, 140, 0.4);
+          ">
+            <div style="
+              width: 16px;
+              height: 16px;
+              background: white;
+              border-radius: 50%;
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+            "></div>
+          </div>
+          <div style="
+            background: #007E8C;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            margin-top: 4px;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          ">YOU ARE HERE</div>
         </div>
       `;
 
