@@ -37,7 +37,7 @@ const HostAvailabilityApp = () => {
   const [searchInput, setSearchInput] = React.useState('');
   const [nameSearch, setNameSearch] = React.useState('');
   const [userCoords, setUserCoords] = React.useState(null);
-  const [viewMode, setViewMode] = React.useState('list');
+  const [viewMode, setViewMode] = React.useState('proximity');
   const [filterArea, setFilterArea] = React.useState('all');
   const [mapTooltip, setMapTooltip] = React.useState(null);
   const [geocoding, setGeocoding] = React.useState(false);
@@ -1431,7 +1431,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
       mapId: 'SANDWICH_DROP_OFF_MAP',
       mapTypeControl: false,
       streetViewControl: false,
-      fullscreenControl: false
+      fullscreenControl: false,
+      zoomControl: true,
+      zoomControlOptions: {
+        position: window.google.maps.ControlPosition.RIGHT_CENTER
+      }
     });
 
     // Store initial values in closure for reset functionality
@@ -2309,7 +2313,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
 
               {/* Collection Dates Banner */}
-              <div className="p-4 sm:p-5 border-b" style={{backgroundColor: '#FFF9E6', borderColor: '#FBAD3F'}}>
+              <div className="p-4 sm:p-5 border-b" style={{backgroundColor: '#FFF5F7', borderColor: '#A31C41'}}>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 text-center">
                   <span className="text-lg sm:text-xl font-bold" style={{color: '#A31C41'}}>📅 Collection Dates:</span>
                   <span className="text-base sm:text-lg font-semibold" style={{color: '#333'}}>
@@ -2361,7 +2365,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           const mapInstance = new window.google.maps.Map(mapEl, {
                             center: bounds.getCenter(),
                             zoom: 11,
-                            mapId: 'special_collection_map'
+                            mapId: 'special_collection_map',
+                            mapTypeControl: false,
+                            streetViewControl: false,
+                            fullscreenControl: false,
+                            zoomControl: true,
+                            zoomControlOptions: {
+                              position: window.google.maps.ControlPosition.RIGHT_CENTER
+                            }
                           });
                           mapInstance.fitBounds(bounds, 50);
 
@@ -2386,11 +2397,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               }
 
                               const infoWindow = new window.google.maps.InfoWindow({
-                                content: `<div style="padding: 8px; max-width: 200px;">
-                                  <strong style="color: #236383;">${host.name}</strong><br>
-                                  <span style="color: #666; font-size: 12px;">${host.area}</span><br>
-                                  <span style="color: #007E8C; font-weight: bold;">${formatTime(host.openTime)} - ${formatTime(host.closeTime)}</span><br>
-                                  <a href="https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}" target="_blank" style="color: #FBAD3F; font-size: 12px;">Get Directions →</a>
+                                content: `<div style="padding: 8px 12px 12px 12px; min-width: 260px; max-width: 300px; font-family: system-ui, -apple-system, sans-serif;">
+                                  <div style="margin-bottom: 10px;">
+                                    <div style="font-size: 17px; font-weight: 700; color: #236383; margin-bottom: 3px;">${host.name}</div>
+                                    <div style="font-size: 14px; color: #666; margin-bottom: 8px;">${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}</div>
+                                    <div style="display: inline-block; background: #007E8C; color: white; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                                      ${formatTime(host.openTime)} - ${formatTime(host.closeTime)}
+                                    </div>
+                                  </div>
+                                  ${host.phone ? '<div style="font-size: 14px; color: #666; margin-bottom: 12px;">📞 ' + host.phone + '</div>' : ''}
+                                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}"
+                                       target="_blank"
+                                       style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #FBAD3F; color: white; padding: 12px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
+                                      <span>🗺️</span> Google Maps Directions
+                                    </a>
+                                    <a href="https://maps.apple.com/?daddr=${host.lat},${host.lng}"
+                                       target="_blank"
+                                       style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #007E8C; color: white; padding: 12px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
+                                      <span>🍎</span> Apple Maps Directions
+                                    </a>
+                                  </div>
                                 </div>`
                               });
                               infoWindow.open(mapInstance, marker);
@@ -2612,7 +2639,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 const sameDay = startDate.toDateString() === endDate.toDateString();
                                 return (
                                   <div className="space-y-2">
-                                    <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                                    <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#f0f9fa', color: '#666'}}>
                                       📅 {sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`}
                                     </div>
                                     <span className="inline-block text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
@@ -2643,7 +2670,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               const sameDay = startDate.toDateString() === endDate.toDateString();
                               return (
                                 <div className="space-y-2">
-                                  <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                                  <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#f0f9fa', color: '#666'}}>
                                     📅 {sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`}
                                   </div>
                                   <span className="inline-block text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
@@ -2673,7 +2700,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </a>
                         )}
                         {host.notes && (
-                          <p className="text-sm mt-3 p-3 rounded-lg" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
+                          <p className="text-sm mt-3 p-3 rounded-lg" style={{backgroundColor: '#f0f9fa', color: '#666'}}>
                             ⚠️ {host.notes}
                           </p>
                         )}
@@ -3149,14 +3176,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   e.preventDefault();
                   const formData = new FormData(e.target);
 
+                  // Helper to get local date key (YYYY-MM-DD) without timezone shifts
+                  const getLocalDateKey = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  };
+
+                  // Parse date handling Firestore Timestamps, ISO strings, and datetime-local strings
+                  const parseDate = (d) => {
+                    if (!d) return new Date();
+                    if (d.toDate) return d.toDate(); // Firestore Timestamp
+                    if (typeof d === 'string') {
+                      const match = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                      if (match) {
+                        return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+                      }
+                      return new Date(d);
+                    }
+                    return new Date(d);
+                  };
+
                   // Collect daily hours
                   const dailyHours = {};
-                  const startDate = editingSpecialCollection?.startDate ?
-                    (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
-                     editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
-                  const endDate = editingSpecialCollection?.endDate ?
-                    (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
-                     editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+                  const startDate = parseDate(editingSpecialCollection?.startDate);
+                  const endDate = parseDate(editingSpecialCollection?.endDate);
 
                   const currentDate = new Date(startDate);
                   currentDate.setHours(0, 0, 0, 0);
@@ -3164,7 +3209,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   endDateNorm.setHours(23, 59, 59, 999);
 
                   while (currentDate <= endDateNorm) {
-                    const dateKey = currentDate.toISOString().split('T')[0];
+                    const dateKey = getLocalDateKey(currentDate);
                     const openTime = formData.get(`openTime_${dateKey}`);
                     const closeTime = formData.get(`closeTime_${dateKey}`);
                     if (openTime && closeTime) {
@@ -3231,12 +3276,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <h5 className="font-semibold mb-2 text-sm" style={{color: '#007E8C'}}>📅 Hours by Day</h5>
                     <p className="text-xs mb-3" style={{color: '#666'}}>Set different hours for each day of the collection:</p>
                     {(() => {
-                      const startDate = editingSpecialCollection?.startDate ?
-                        (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
-                         editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
-                      const endDate = editingSpecialCollection?.endDate ?
-                        (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
-                         editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+                      // Helper to get local date key (YYYY-MM-DD) without timezone shifts
+                      const getLocalDateKey = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                      };
+
+                      // Parse date handling Firestore Timestamps, ISO strings, and datetime-local strings
+                      const parseDate = (d) => {
+                        if (!d) return new Date();
+                        if (d.toDate) return d.toDate(); // Firestore Timestamp
+                        if (typeof d === 'string') {
+                          // datetime-local format: "2026-02-01T08:00"
+                          // Parse as local time by extracting date parts
+                          const match = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                          if (match) {
+                            return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+                          }
+                          return new Date(d);
+                        }
+                        return new Date(d);
+                      };
+
+                      const startDate = parseDate(editingSpecialCollection?.startDate);
+                      const endDate = parseDate(editingSpecialCollection?.endDate);
 
                       const days = [];
                       const currentDate = new Date(startDate);
@@ -3250,7 +3315,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       }
 
                       return days.map((day, idx) => {
-                        const dateKey = day.toISOString().split('T')[0];
+                        const dateKey = getLocalDateKey(day);
                         const dayName = day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
                         const existingHours = editingSpecialHost.dailyHours?.[dateKey];
                         const defaultOpen = existingHours?.openTime || editingSpecialHost.openTime || '08:00';
@@ -5912,14 +5977,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   e.preventDefault();
                   const formData = new FormData(e.target);
 
+                  // Helper to get local date key (YYYY-MM-DD) without timezone shifts
+                  const getLocalDateKey = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  };
+
+                  // Parse date handling Firestore Timestamps, ISO strings, and datetime-local strings
+                  const parseDate = (d) => {
+                    if (!d) return new Date();
+                    if (d.toDate) return d.toDate(); // Firestore Timestamp
+                    if (typeof d === 'string') {
+                      const match = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                      if (match) {
+                        return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+                      }
+                      return new Date(d);
+                    }
+                    return new Date(d);
+                  };
+
                   // Collect daily hours
                   const dailyHours = {};
-                  const startDate = editingSpecialCollection?.startDate ?
-                    (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
-                     editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
-                  const endDate = editingSpecialCollection?.endDate ?
-                    (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
-                     editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+                  const startDate = parseDate(editingSpecialCollection?.startDate);
+                  const endDate = parseDate(editingSpecialCollection?.endDate);
 
                   const currentDate = new Date(startDate);
                   currentDate.setHours(0, 0, 0, 0);
@@ -5927,7 +6010,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   endDateNorm.setHours(23, 59, 59, 999);
 
                   while (currentDate <= endDateNorm) {
-                    const dateKey = currentDate.toISOString().split('T')[0];
+                    const dateKey = getLocalDateKey(currentDate);
                     const openTime = formData.get(`openTime_${dateKey}`);
                     const closeTime = formData.get(`closeTime_${dateKey}`);
                     if (openTime && closeTime) {
@@ -5994,12 +6077,32 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     <h5 className="font-semibold mb-2 text-sm" style={{color: '#007E8C'}}>📅 Hours by Day</h5>
                     <p className="text-xs mb-3" style={{color: '#666'}}>Set different hours for each day of the collection:</p>
                     {(() => {
-                      const startDate = editingSpecialCollection?.startDate ?
-                        (typeof editingSpecialCollection.startDate === 'string' ? new Date(editingSpecialCollection.startDate) :
-                         editingSpecialCollection.startDate.toDate ? editingSpecialCollection.startDate.toDate() : new Date(editingSpecialCollection.startDate)) : new Date();
-                      const endDate = editingSpecialCollection?.endDate ?
-                        (typeof editingSpecialCollection.endDate === 'string' ? new Date(editingSpecialCollection.endDate) :
-                         editingSpecialCollection.endDate.toDate ? editingSpecialCollection.endDate.toDate() : new Date(editingSpecialCollection.endDate)) : new Date();
+                      // Helper to get local date key (YYYY-MM-DD) without timezone shifts
+                      const getLocalDateKey = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                      };
+
+                      // Parse date handling Firestore Timestamps, ISO strings, and datetime-local strings
+                      const parseDate = (d) => {
+                        if (!d) return new Date();
+                        if (d.toDate) return d.toDate(); // Firestore Timestamp
+                        if (typeof d === 'string') {
+                          // datetime-local format: "2026-02-01T08:00"
+                          // Parse as local time by extracting date parts
+                          const match = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                          if (match) {
+                            return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+                          }
+                          return new Date(d);
+                        }
+                        return new Date(d);
+                      };
+
+                      const startDate = parseDate(editingSpecialCollection?.startDate);
+                      const endDate = parseDate(editingSpecialCollection?.endDate);
 
                       const days = [];
                       const currentDate = new Date(startDate);
@@ -6013,7 +6116,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       }
 
                       return days.map((day, idx) => {
-                        const dateKey = day.toISOString().split('T')[0];
+                        const dateKey = getLocalDateKey(day);
                         const dayName = day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
                         const existingHours = editingSpecialHost.dailyHours?.[dateKey];
                         const defaultOpen = existingHours?.openTime || editingSpecialHost.openTime || '08:00';
