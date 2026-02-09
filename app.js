@@ -1634,24 +1634,38 @@ This is safe because your API key is already restricted to only the Geocoding AP
       // When no user location, show larger numbered markers; otherwise tiny dots
       const hostMarkerContent = document.createElement('div');
       if (!hasUserLocation) {
-        // Larger, visible markers when no user location (these will cluster)
+        // Pin-shaped markers when no user location (distinct from circular clusters)
         hostMarkerContent.innerHTML = `
           <div style="
-            width: 32px;
-            height: 32px;
-            background: ${isUnavailable ? '#9CA3AF' : '#007E8C'};
-            border: 3px solid white;
-            border-radius: 50%;
-            opacity: ${isUnavailable ? '0.6' : '1'};
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 12px;
-          ">${index + 1}</div>
+            cursor: pointer;
+            opacity: ${isUnavailable ? '0.6' : '1'};
+          ">
+            <div style="
+              width: 28px;
+              height: 28px;
+              background: ${isUnavailable ? '#9CA3AF' : '#007E8C'};
+              border: 2px solid white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-weight: 600;
+              font-size: 11px;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            ">${index + 1}</div>
+            <div style="
+              width: 0;
+              height: 0;
+              border-left: 6px solid transparent;
+              border-right: 6px solid transparent;
+              border-top: 8px solid ${isUnavailable ? '#9CA3AF' : '#007E8C'};
+              margin-top: -2px;
+            "></div>
+          </div>
         `;
       } else {
         // Tiny muted dot when user has location (background noise)
@@ -1713,21 +1727,23 @@ This is safe because your API key is already restricted to only the Geocoding AP
         renderer: {
           render: ({ count, position }) => {
             const clusterContent = document.createElement('div');
+            // Size scales with count for visual hierarchy
+            const size = Math.min(24 + Math.log2(count) * 6, 48);
             clusterContent.innerHTML = `
               <div style="
-                width: 28px;
-                height: 28px;
-                background: #5BA3A8;
-                border: 2px solid white;
+                width: ${size}px;
+                height: ${size}px;
+                background: linear-gradient(135deg, #FBAD3F 0%, #E89A2E 100%);
+                border: 3px solid white;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                box-shadow: 0 3px 8px rgba(0,0,0,0.3);
                 color: white;
-                font-weight: 600;
-                font-size: 11px;
-                opacity: 0.7;
+                font-weight: 700;
+                font-size: ${Math.min(11 + Math.log2(count) * 2, 16)}px;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.3);
               ">${count}</div>
             `;
             return new google.maps.marker.AdvancedMarkerElement({
@@ -4395,11 +4411,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       {/* Header Row: Rank Badge, Name, Favorite */}
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {isTopThree && (
+                          {isTopThree ? (
                             <span className={`w-9 h-9 rank-badge rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0 ${
                               actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                             }`}>
                               {actualRank}
+                            </span>
+                          ) : !userCoords && (
+                            <span
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                              style={{backgroundColor: host.available ? '#007E8C' : '#9CA3AF'}}
+                            >
+                              {index + 1}
                             </span>
                           )}
                           <h3 className={`font-bold text-lg ${!host.available ? 'opacity-60' : ''}`}>
@@ -4681,11 +4704,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col gap-3 mb-3">
                             <div className="flex items-center gap-3 flex-wrap">
-                              {isTopThree && (
+                              {isTopThree ? (
                                 <span className={`w-11 h-11 rank-badge rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0 ${
                                   actualRank === 1 ? 'bg-yellow-500' : actualRank === 2 ? 'bg-gray-400' : 'bg-amber-600'
                                 }`}>
                                   {actualRank}
+                                </span>
+                              ) : !userCoords && (
+                                <span
+                                  className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
+                                  style={{backgroundColor: host.available ? '#007E8C' : '#9CA3AF'}}
+                                >
+                                  {index + 1}
                                 </span>
                               )}
                               <h3 className={`font-bold text-2xl flex-1 ${!host.available ? 'opacity-60' : ''}`}>{host.name}</h3>
