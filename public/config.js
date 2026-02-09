@@ -4,7 +4,7 @@
 const CONFIG = {
   // Google Maps API Key
   // Get your key at: https://console.cloud.google.com/apis/credentials
-  GOOGLE_MAPS_API_KEY: 'AIzaSyCw0gS44GLFeXnxzdfRdRhBYHjX6OqqOa8',
+  GOOGLE_MAPS_API_KEY: 'AIzaSyAtMtYniYf7JLp2vxqjCGiknYON6odSu_o',
 
   // Geographic bounds for Atlanta metro area (improves geocoding accuracy)
   ATLANTA_BOUNDS: {
