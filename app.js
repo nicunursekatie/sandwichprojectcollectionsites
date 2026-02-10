@@ -3733,13 +3733,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   event_label: 'List View Selected'
                 });
               }}
-              className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                viewMode === 'list' ? 'active' : ''
+              className={`view-toggle-btn px-6 py-3 rounded-xl transition-all ${
+                viewMode === 'list' ? 'font-bold' : 'font-medium'
               }`}
               style={{
-                backgroundColor: viewMode === 'list' ? '#007E8C' : undefined,
-                color: viewMode === 'list' ? 'white' : undefined
+                backgroundColor: viewMode === 'list' ? '#005F6B' : '#f3f4f6',
+                color: viewMode === 'list' ? 'white' : '#666',
+                boxShadow: viewMode === 'list' ? '0 4px 12px rgba(0, 95, 107, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)' : 'none',
+                border: viewMode === 'list' ? '2px solid #007E8C' : '2px solid transparent',
+                transform: viewMode === 'list' ? 'scale(1.02)' : 'scale(1)'
               }}
+              title="See all hosts in a simple list"
             >
               📋 List Only
             </button>
@@ -3751,13 +3755,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   event_label: 'Split View Selected'
                 });
               }}
-              className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                viewMode === 'proximity' ? 'active' : ''
+              className={`view-toggle-btn px-6 py-3 rounded-xl transition-all ${
+                viewMode === 'proximity' ? 'font-bold' : 'font-medium'
               }`}
               style={{
-                backgroundColor: viewMode === 'proximity' ? '#007E8C' : undefined,
-                color: viewMode === 'proximity' ? 'white' : undefined
+                backgroundColor: viewMode === 'proximity' ? '#005F6B' : '#f3f4f6',
+                color: viewMode === 'proximity' ? 'white' : '#666',
+                boxShadow: viewMode === 'proximity' ? '0 4px 12px rgba(0, 95, 107, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)' : 'none',
+                border: viewMode === 'proximity' ? '2px solid #007E8C' : '2px solid transparent',
+                transform: viewMode === 'proximity' ? 'scale(1.02)' : 'scale(1)'
               }}
+              title="See the map and list side-by-side"
             >
               📍 Map + List
             </button>
@@ -3769,17 +3777,28 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   event_label: 'Map View Selected'
                 });
               }}
-              className={`view-toggle-btn px-6 py-3 rounded-xl font-medium transition-all ${
-                viewMode === 'map' ? 'active' : ''
+              className={`view-toggle-btn px-6 py-3 rounded-xl transition-all ${
+                viewMode === 'map' ? 'font-bold' : 'font-medium'
               }`}
               style={{
-                backgroundColor: viewMode === 'map' ? '#007E8C' : undefined,
-                color: viewMode === 'map' ? 'white' : undefined
+                backgroundColor: viewMode === 'map' ? '#005F6B' : '#f3f4f6',
+                color: viewMode === 'map' ? 'white' : '#666',
+                boxShadow: viewMode === 'map' ? '0 4px 12px rgba(0, 95, 107, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)' : 'none',
+                border: viewMode === 'map' ? '2px solid #007E8C' : '2px solid transparent',
+                transform: viewMode === 'map' ? 'scale(1.02)' : 'scale(1)'
               }}
+              title="See hosts on the map"
             >
               🗺️ Map Only
             </button>
           </div>
+
+          {/* Help text for view modes */}
+          <p className="text-center text-sm mt-2" style={{color: '#666'}}>
+            {viewMode === 'list' && 'Showing all hosts in a scrollable list'}
+            {viewMode === 'proximity' && 'Showing map and host list side-by-side'}
+            {viewMode === 'map' && 'Showing hosts on the map — click a pin for details'}
+          </p>
 
         </div>
 
