@@ -40,9 +40,7 @@ const parseInstructionTags = (notes) => {
     { pattern: /\b(gate|gatehouse|gated)\b/i, tag: 'Gate Access', icon: 'lock', color: '#A31C41' },
     { pattern: /\b(text|call|phone)\s*(before|first|ahead|when)\b/i, tag: 'Text/Call First', icon: 'phone', color: '#007E8C' },
     { pattern: /\b(rear|back|side)\s*(door|entrance|driveway|of house)\b/i, tag: 'Rear Entrance', icon: 'corner-down-right', color: '#236383' },
-    { pattern: /\b(fridge|refrigerator|cooler)\s*(in|on|by)?\s*(garage|porch|carport)?\b/i, tag: 'Fridge Drop-off', icon: 'thermometer-snowflake', color: '#47B3CB' },
     { pattern: /\b(porch|front porch|covered porch)\b/i, tag: 'Porch Drop-off', icon: 'home', color: '#236383' },
-    { pattern: /\b(garage|carport)\b/i, tag: 'Garage/Carport', icon: 'warehouse', color: '#236383' },
     { pattern: /\b(ring|doorbell)\b/i, tag: 'Ring Doorbell', icon: 'bell', color: '#007E8C' },
   ];
 
