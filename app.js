@@ -32,6 +32,32 @@ const createDebouncedFunction = (func, delay) => {
   };
 };
 
+// Parse notes and extract instruction tags for high-visibility display
+const parseInstructionTags = (notes) => {
+  if (!notes) return { tags: [], remainingText: '' };
+
+  const tagPatterns = [
+    { pattern: /\b(gate|gatehouse|gated)\b/i, tag: 'Gate Access', icon: 'lock', color: '#A31C41' },
+    { pattern: /\b(text|call|phone)\s*(before|first|ahead|when)\b/i, tag: 'Text/Call First', icon: 'phone', color: '#007E8C' },
+    { pattern: /\b(rear|back|side)\s*(door|entrance|driveway|of house)\b/i, tag: 'Rear Entrance', icon: 'corner-down-right', color: '#236383' },
+    { pattern: /\b(fridge|refrigerator|cooler)\s*(in|on|by)?\s*(garage|porch|carport)?\b/i, tag: 'Fridge Drop-off', icon: 'thermometer-snowflake', color: '#47B3CB' },
+    { pattern: /\b(porch|front porch|covered porch)\b/i, tag: 'Porch Drop-off', icon: 'home', color: '#236383' },
+    { pattern: /\b(garage|carport)\b/i, tag: 'Garage/Carport', icon: 'warehouse', color: '#236383' },
+    { pattern: /\b(ring|doorbell)\b/i, tag: 'Ring Doorbell', icon: 'bell', color: '#007E8C' },
+  ];
+
+  const foundTags = [];
+  let text = notes;
+
+  tagPatterns.forEach(({ pattern, tag, icon, color }) => {
+    if (pattern.test(notes) && !foundTags.some(t => t.tag === tag)) {
+      foundTags.push({ tag, icon, color });
+    }
+  });
+
+  return { tags: foundTags, remainingText: notes };
+};
+
 const HostAvailabilityApp = () => {
   const [userAddress, setUserAddress] = React.useState('');
   const [searchInput, setSearchInput] = React.useState('');
@@ -1278,7 +1304,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
   }, [userCoords, viewMode, allHostsForDisplay, userAddress]);
 
   const filteredHosts = React.useMemo(() => {
-    let filtered = viewMode === 'proximity' ? sortedHosts : [...allHostsForDisplay].sort((a, b) => a.name.localeCompare(b.name));
+    // Sort by proximity if user has location, otherwise alphabetically by name
+    let filtered = (viewMode === 'proximity' && userCoords) ? sortedHosts : [...allHostsForDisplay].sort((a, b) => a.name.localeCompare(b.name));
 
     // Filter out unavailable hosts by default (unless user opts in for planning)
     if (!includeUnavailableHosts) {
@@ -4445,74 +4472,96 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </button>
                       </div>
 
-                      {/* Location Badges: Area and Neighborhood */}
+                      {/* Status Row: Open/Closed badge + Location badges */}
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <span className="inline-flex items-center px-4 py-1.5 rounded-full text-base font-semibold" style={{backgroundColor: '#236383', color: '#fff'}}>
+                        {/* Open/Closed Status Badge */}
+                        {isOpenNow ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                            <i className="lucide-clock w-3.5 h-3.5"></i>
+                            OPEN NOW
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#6B7280'}}>
+                            <i className="lucide-clock w-3.5 h-3.5"></i>
+                            CLOSED
+                          </span>
+                        )}
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold" style={{backgroundColor: '#236383', color: '#fff'}}>
                           {host.area}
                         </span>
                         {host.neighborhood && (
-                          <span className="inline-flex items-center px-4 py-1.5 rounded-full text-base font-semibold" style={{backgroundColor: '#007e8c', color: '#fff'}}>
+                          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold" style={{backgroundColor: '#007e8c', color: '#fff'}}>
                             {host.neighborhood}
                           </span>
                         )}
                       </div>
 
-                      {/* Info Line: Hours • Status • Distance/Drive Time */}
-                      <div className="flex flex-col gap-2 mb-3">
-                        <div className="flex items-center flex-wrap gap-x-1 text-base">
-                          <span className="font-medium" style={{color: '#555'}}>{formatAllCollectionHours(host)}</span>
-                          <span className="text-gray-400">•</span>
-                          {host.available ? (
-                            <span className="font-semibold" style={{color: '#47bc3b'}}>Collecting This Week</span>
-                          ) : (
-                            <span className="font-semibold" style={{color: '#dc2626'}}>NOT Collecting</span>
-                          )}
+                      {/* Instruction Tags - High visibility */}
+                      {host.notes && (() => {
+                        const { tags } = parseInstructionTags(host.notes);
+                        return tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {tags.map((t, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-white shadow-sm"
+                                style={{backgroundColor: t.color}}
+                              >
+                                <i className={`lucide-${t.icon} w-4 h-4`}></i>
+                                {t.tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
+
+                      {/* Hours + Distance info */}
+                      <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-sm mb-3" style={{color: '#555'}}>
+                        <span className="font-medium">{formatAllCollectionHours(host)}</span>
                         {userCoords && host.distance && (
                           <>
-                            <span className="text-gray-400">•</span>
-                            <span style={{color: '#007E8C'}}>{host.distance} mi</span>
+                            <span className="text-gray-300">|</span>
+                            <span className="font-semibold" style={{color: '#007E8C'}}>{host.distance} mi</span>
                             {hostDriveTimes[host.id] && (
-                              <>
-                                <span className="text-gray-400">•</span>
-                                <span style={{color: '#007E8C'}}>{hostDriveTimes[host.id]}</span>
-                              </>
+                              <span style={{color: '#007E8C'}}>({hostDriveTimes[host.id]})</span>
                             )}
                           </>
                         )}
-                        {isOpenNow && (
+                        {!host.available && (
                           <>
-                            <span className="text-gray-400">•</span>
-                            <span className="font-bold" style={{color: '#47bc3b'}}>OPEN NOW</span>
-                          </>
-                        )}
-                        </div>
-                        {timeAvail.warning && (
-                          <>
-                            <span className="text-gray-400">•</span>
-                            <span className={`font-bold ${timeAvail.severity === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
-                              ⚠️ {timeAvail.warning}
-                            </span>
+                            <span className="text-gray-300">|</span>
+                            <span className="font-bold" style={{color: '#dc2626'}}>NOT Collecting This Week</span>
                           </>
                         )}
                       </div>
 
-                      {/* Phone Number */}
+                      {/* Time warning if applicable */}
+                      {timeAvail.warning && (
+                        <div className={`mb-3 px-3 py-2 rounded-lg text-sm font-bold ${timeAvail.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          ⚠️ {timeAvail.warning}
+                        </div>
+                      )}
+
+                      {/* Notes text (only if there are notes but we show tags separately) */}
+                      {host.notes && (() => {
+                        const { tags, remainingText } = parseInstructionTags(host.notes);
+                        // Only show remaining text if there's more than just the tag-triggering words
+                        const hasSubstantialText = remainingText && remainingText.length > 20;
+                        return hasSubstantialText ? (
+                          <p className="text-sm text-gray-600 italic mb-3">{remainingText}</p>
+                        ) : null;
+                      })()}
+
+                      {/* Phone Number - smaller, secondary */}
                       <a
                         href={`tel:${host.phone}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2 text-sm mb-2 hover:underline"
-                        style={{color: '#236383'}}
+                        className="inline-flex items-center gap-1.5 text-xs mb-3 hover:underline"
+                        style={{color: '#666'}}
                       >
-                        <i className="lucide-phone w-4 h-4"></i>
+                        <i className="lucide-phone w-3 h-3"></i>
                         {host.phone}
                       </a>
-
-                      {/* Notes */}
-                      {host.notes && (
-                        <p className="text-sm text-gray-600 mb-3 italic">
-                          {host.notes}
-                        </p>
-                      )}
 
                       {/* Get Directions Button - Dropdown Menu */}
                       <div className="relative" data-directions-menu style={{zIndex: directionsMenuOpen === host.id ? 1000 : 'auto'}}>
@@ -4563,15 +4612,19 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             });
                           }}
                           disabled={!host.available}
-                          className={`w-full px-4 py-3 rounded-lg font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all ${
-                            host.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
+                          className={`w-full px-5 py-4 rounded-xl font-bold text-base text-white flex items-center justify-center gap-3 transition-all ${
+                            host.available ? 'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]' : 'opacity-50 cursor-not-allowed'
                           }`}
-                          style={{backgroundColor: '#007E8C', minHeight: '48px'}}
+                          style={{
+                            background: host.available ? 'linear-gradient(135deg, #007E8C 0%, #005F6B 100%)' : '#9CA3AF',
+                            minHeight: '56px',
+                            boxShadow: host.available ? '0 4px 14px rgba(0, 126, 140, 0.4)' : 'none'
+                          }}
                           title={!host.available ? 'This host is not collecting this week' : 'Choose your maps app'}
                         >
-                          <i className="lucide-navigation w-5 h-5"></i>
+                          <i className="lucide-navigation w-6 h-6"></i>
                           <span>Get Directions</span>
-                          <i className={`lucide-chevron-down w-4 h-4 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
+                          <i className={`lucide-chevron-down w-5 h-5 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
                         </button>
                         {directionsMenuOpen === host.id && ReactDOM.createPortal(
                           <div 
@@ -5020,17 +5073,34 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         )}
                       </div>
 
-                {host.notes && (
-                  <div className="mt-4 warning-box p-4">
-                    <div className="flex items-start">
-                      <i className="lucide-alert-circle w-5 h-5 mr-3 flex-shrink-0 mt-0.5" style={{color: '#FBAD3F'}}></i>
-                      <div>
-                        <div className="font-bold mb-1.5 text-base" style={{color: '#A31C41'}}>⚠️ Special Instructions</div>
-                        <div className="text-base font-medium" style={{color: '#236383'}}>{host.notes}</div>
+                {host.notes && (() => {
+                  const { tags, remainingText } = parseInstructionTags(host.notes);
+                  return (
+                    <div className="mt-4 warning-box p-4">
+                      <div className="flex items-start">
+                        <i className="lucide-alert-circle w-5 h-5 mr-3 flex-shrink-0 mt-0.5" style={{color: '#FBAD3F'}}></i>
+                        <div className="flex-1">
+                          <div className="font-bold mb-2 text-base" style={{color: '#A31C41'}}>⚠️ Special Instructions</div>
+                          {tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {tags.map((t, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold text-white"
+                                  style={{backgroundColor: t.color}}
+                                >
+                                  <i className={`lucide-${t.icon} w-4 h-4`}></i>
+                                  {t.tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="text-base font-medium" style={{color: '#236383'}}>{remainingText}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
                       
                       {/* Hide Details Button */}
                       <button
