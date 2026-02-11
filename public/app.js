@@ -3651,7 +3651,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                     <div className="flex items-center gap-2 text-base" style={{color: '#236383'}}>
                       <i className="lucide-clock w-5 h-5 flex-shrink-0" style={{color: '#007E8C'}}></i>
-                      <span className="font-medium">{formatAllCollectionHours(favoriteHost)}</span>
+                      <span className="font-medium">Drop-off Hours: {formatAllCollectionHours(favoriteHost)}</span>
                     </div>
                     <a
                       href={`tel:${favoriteHost.phone.replace(/\D/g, '')}`}
@@ -4627,7 +4627,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <div className="text-base mb-2">
                         <span className="font-semibold" style={{color: '#236383'}}>
                           <i className="lucide-clock w-4 h-4 inline mr-1.5" style={{verticalAlign: 'text-bottom'}}></i>
-                          {formatAllCollectionHours(host)}
+                          Drop-off Hours: {formatAllCollectionHours(host)}
                         </span>
                       </div>
 
