@@ -393,7 +393,7 @@ const HostAvailabilityApp = () => {
       const tueOpen = host.tuesdayOpenTime || host.openTime;
       const tueClose = host.tuesdayCloseTime || host.closeTime;
       if (tueOpen && tueClose) {
-        hours.push(`Tue: ${formatTime(tueOpen)}–${formatTime(tueClose)}`);
+        hours.push(`Tue ${formatTime(tueOpen)}–${formatTime(tueClose)}`);
       }
     }
 
@@ -401,12 +401,12 @@ const HostAvailabilityApp = () => {
     const wedOpen = host.wednesdayOpenTime || host.openTime;
     const wedClose = host.wednesdayCloseTime || host.closeTime;
     if (wedOpen && wedClose) {
-      hours.push(`Wed: ${formatTime(wedOpen)}–${formatTime(wedClose)}`);
+      hours.push(`Wed ${formatTime(wedOpen)}–${formatTime(wedClose)}`);
     }
 
     // Thursday hours (if available)
     if (host.thursdayOpenTime && host.thursdayCloseTime) {
-      hours.push(`Thu: ${formatTime(host.thursdayOpenTime)}–${formatTime(host.thursdayCloseTime)}`);
+      hours.push(`Thu ${formatTime(host.thursdayOpenTime)}–${formatTime(host.thursdayCloseTime)}`);
     }
 
     return hours.length > 0 ? hours.join(' • ') : (host.hours || 'Hours not available');
