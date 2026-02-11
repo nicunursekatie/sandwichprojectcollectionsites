@@ -412,6 +412,19 @@ const HostAvailabilityApp = () => {
     return hours.length > 0 ? hours.join(' • ') : (host.hours || 'Hours not available');
   };
 
+  // Helper to format phone numbers as (XXX) XXX-XXXX
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+    if (digits.length === 11 && digits[0] === '1') {
+      return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+    }
+    return phone; // Return original if not standard format
+  };
+
   // Helper to check if host is open at a specific time and how much buffer there is
   const checkHostTimeAvailability = (host, timeStr) => {
     if (!timeStr || !host.openTime || !host.closeTime) {
@@ -4508,9 +4521,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 >
                   {/* Collapsed View (Default) */}
                   {!isExpanded ? (
-                    <div className="p-4 md:p-5">
+                    <div className="p-5 md:p-6">
                       {/* Header Row: Rank Badge, Name, Favorite */}
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {isTopThree ? (
                             <span className={`w-9 h-9 rank-badge rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0 ${
@@ -4526,7 +4539,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               {index + 1}
                             </span>
                           )}
-                          <h3 className={`font-bold text-lg ${!host.available ? 'opacity-60' : ''}`}>
+                          <h3 className={`font-extrabold text-xl ${!host.available ? 'opacity-60' : ''}`} style={{color: '#236383'}}>
                             {host.name}
                           </h3>
                         </div>
@@ -4547,24 +4560,22 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       </div>
 
                       {/* Status Row: Collecting status + Location badges */}
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <div className="flex items-center gap-2 flex-wrap mb-4">
                         {/* Weekly availability - most important */}
                         {host.available ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#007E8C'}}>
                             ✓ Collecting This Week
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold bg-red-100 text-red-700">
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#A31C41'}}>
                             ✗ Not Collecting
                           </span>
                         )}
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm" style={{backgroundColor: '#236383', color: '#fff'}}>
-                          <span style={{opacity: 0.7, fontSize: '0.7rem'}}>Area:</span>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm" style={{backgroundColor: '#47B3CB', color: '#fff'}}>
                           <span className="font-semibold">{host.area}</span>
                         </span>
                         {host.neighborhood && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm" style={{backgroundColor: '#007e8c', color: '#fff'}}>
-                            <span style={{opacity: 0.7, fontSize: '0.7rem'}}>Neighborhood:</span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm" style={{backgroundColor: '#47B3CB', color: '#fff'}}>
                             <span className="font-semibold">{host.neighborhood}</span>
                           </span>
                         )}
@@ -4572,47 +4583,68 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                       {/* Current timing status - secondary info */}
                       {host.available && availability && (
-                        <p className="text-sm font-medium mb-2" style={{color: availability.color}}>
-                          <i className="lucide-clock w-3.5 h-3.5 inline mr-1" style={{verticalAlign: 'text-bottom'}}></i>
+                        <p className="text-sm font-medium mb-4" style={{color: availability.color}}>
+                          <i className="lucide-timer w-3.5 h-3.5 inline mr-1" style={{verticalAlign: 'text-bottom'}}></i>
                           {availability.message}
                         </p>
                       )}
 
-                      {/* Instruction Tags - High visibility */}
+                      {/* Special Instructions - Gold highlighted box */}
                       {host.notes && (() => {
-                        const { tags } = parseInstructionTags(host.notes);
-                        return tags.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {tags.map((t, i) => (
-                              <span
-                                key={i}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-white shadow-sm"
-                                style={{backgroundColor: t.color}}
-                              >
-                                <i className={`lucide-${t.icon} w-4 h-4`}></i>
-                                {t.tag}
-                              </span>
-                            ))}
+                        const { tags, remainingText } = parseInstructionTags(host.notes);
+                        const hasContent = tags.length > 0 || (remainingText && remainingText.length > 10);
+                        return hasContent ? (
+                          <div
+                            className="mb-4 p-3 rounded-lg"
+                            style={{
+                              backgroundColor: '#FFF8EC',
+                              borderLeft: '4px solid #FBAD3F'
+                            }}
+                          >
+                            <div className="font-bold text-sm mb-2" style={{color: '#A31C41'}}>
+                              ⚠️ Special Instructions
+                            </div>
+                            {tags.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                {tags.map((t, i) => (
+                                  <span
+                                    key={i}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold text-white"
+                                    style={{backgroundColor: t.color}}
+                                  >
+                                    <i className={`lucide-${t.icon} w-3.5 h-3.5`}></i>
+                                    {t.tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {remainingText && remainingText.length > 10 && (
+                              <p className="text-sm" style={{color: '#236383'}}>{remainingText}</p>
+                            )}
                           </div>
                         ) : null;
                       })()}
 
-                      {/* Hours + Distance info */}
-                      <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-base mb-3">
+                      {/* Hours - on its own line */}
+                      <div className="text-base mb-2">
                         <span className="font-semibold" style={{color: '#236383'}}>
-                          <i className="lucide-clock w-4 h-4 inline mr-1" style={{verticalAlign: 'text-bottom'}}></i>
+                          <i className="lucide-clock w-4 h-4 inline mr-1.5" style={{verticalAlign: 'text-bottom'}}></i>
                           {formatAllCollectionHours(host)}
                         </span>
-                        {userCoords && host.distance && (
-                          <>
-                            <span style={{color: '#ccc'}}>•</span>
-                            <span className="font-semibold" style={{color: '#007E8C'}}>{host.distance} mi</span>
-                            {hostDriveTimes[host.id] && (
-                              <span style={{color: '#007E8C'}}>({hostDriveTimes[host.id]})</span>
-                            )}
-                          </>
-                        )}
                       </div>
+
+                      {/* Distance + Drive time - separate line */}
+                      {userCoords && host.distance && (
+                        <div className="text-base mb-3">
+                          <span className="font-semibold" style={{color: '#236383'}}>
+                            <i className="lucide-car w-4 h-4 inline mr-1.5" style={{verticalAlign: 'text-bottom'}}></i>
+                            {host.distance} miles
+                            {hostDriveTimes[host.id] && (
+                              <span style={{color: '#666'}}> • {hostDriveTimes[host.id]} drive</span>
+                            )}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Time warning if applicable */}
                       {timeAvail.warning && (
@@ -4621,35 +4653,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </div>
                       )}
 
-                      {/* Notes text (only if there are notes but we show tags separately) */}
-                      {host.notes && (() => {
-                        const { tags, remainingText } = parseInstructionTags(host.notes);
-                        // Only show remaining text if there's more than just the tag-triggering words
-                        const hasSubstantialText = remainingText && remainingText.length > 20;
-                        return hasSubstantialText ? (
-                          <p className="text-sm text-gray-600 italic mb-3">{remainingText}</p>
-                        ) : null;
-                      })()}
-
-                      {/* Phone Number - Call or Text */}
-                      <div className="flex items-center gap-3 mb-3">
+                      {/* Phone Number - clickable link */}
+                      <div className="mb-4">
                         <a
-                          href={`tel:${host.phone}`}
+                          href={`tel:${host.phone.replace(/\D/g, '')}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors"
-                          style={{color: '#236383', border: '1px solid #e0e0e0'}}
+                          className="inline-flex items-center gap-2 text-base font-semibold hover:underline"
+                          style={{color: '#007E8C'}}
                         >
                           <i className="lucide-phone w-4 h-4"></i>
-                          Call {host.phone}
-                        </a>
-                        <a
-                          href={`sms:${host.phone}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors"
-                          style={{color: '#236383', border: '1px solid #e0e0e0'}}
-                        >
-                          <i className="lucide-message-circle w-4 h-4"></i>
-                          Text
+                          {formatPhoneNumber(host.phone)}
                         </a>
                       </div>
 
@@ -4706,9 +4719,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             host.available ? 'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]' : 'opacity-50 cursor-not-allowed'
                           }`}
                           style={{
-                            background: host.available ? 'linear-gradient(135deg, #007E8C 0%, #005F6B 100%)' : '#9CA3AF',
+                            backgroundColor: host.available ? '#236383' : '#9CA3AF',
                             minHeight: '56px',
-                            boxShadow: host.available ? '0 4px 14px rgba(0, 126, 140, 0.4)' : 'none'
+                            boxShadow: host.available ? '0 4px 14px rgba(35, 99, 131, 0.4)' : 'none'
                           }}
                           title={!host.available ? 'This host is not collecting this week' : 'Choose your maps app'}
                         >
@@ -4861,7 +4874,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                   {index + 1}
                                 </span>
                               )}
-                              <h3 className={`font-bold text-2xl flex-1 ${!host.available ? 'opacity-60' : ''}`}>{host.name}</h3>
+                              <h3 className={`font-extrabold text-2xl flex-1 ${!host.available ? 'opacity-60' : ''}`} style={{color: '#236383'}}>{host.name}</h3>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -5076,24 +5089,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                     {host.hours}
                                   </div>
                                 )}
-                                <div className={`px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-1.5 ${
-                                  host.available
-                                    ? 'border-2'
-                                    : 'bg-red-100 text-red-800 border-2 border-red-300'
-                                }`}
-                                style={host.available ? {
-                                  backgroundColor: '#47b3cb',
-                                  color: 'white',
-                                  borderColor: '#47b3cb'
-                                } : {}}>
+                                <div className="px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-1.5 text-white"
+                                style={{
+                                  backgroundColor: host.available ? '#007E8C' : '#A31C41'
+                                }}>
                                   {host.available ? (
                                     <>
-                                      <span className="text-base">✅</span>
+                                      <span className="text-base">✓</span>
                                       <span>Collecting This Week</span>
                                     </>
                                   ) : (
                                     <>
-                                      <span className="text-base">❌</span>
+                                      <span className="text-base">✗</span>
                                       <span>NOT Collecting This Week</span>
                                     </>
                                   )}
@@ -5128,9 +5135,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             <i className="lucide-phone w-5 h-5 mr-2" style={{color: '#007E8C'}}></i>
                             <div>
                               <span className="font-semibold" style={{color: '#236383'}}>Contact: </span>
-                              <a 
-                                href={`tel:${host.phone.replace(/[^0-9]/g, '')}`} 
-                                className="hover:underline font-semibold" 
+                              <a
+                                href={`tel:${host.phone.replace(/[^0-9]/g, '')}`}
+                                className="hover:underline font-semibold"
                                 style={{color: '#007E8C'}}
                                 onClick={() => {
                                   trackEvent('call_host', {
@@ -5141,7 +5148,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                   });
                                 }}
                               >
-                                {host.phone}
+                                {formatPhoneNumber(host.phone)}
                               </a>
                             </div>
                           </div>
