@@ -4558,12 +4558,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             ✗ Not Collecting
                           </span>
                         )}
-                        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold" style={{backgroundColor: '#236383', color: '#fff'}}>
-                          {host.area}
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm" style={{backgroundColor: '#236383', color: '#fff'}}>
+                          <span style={{opacity: 0.7, fontSize: '0.7rem'}}>Area:</span>
+                          <span className="font-semibold">{host.area}</span>
                         </span>
                         {host.neighborhood && (
-                          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold" style={{backgroundColor: '#007e8c', color: '#fff'}}>
-                            {host.neighborhood}
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm" style={{backgroundColor: '#007e8c', color: '#fff'}}>
+                            <span style={{opacity: 0.7, fontSize: '0.7rem'}}>Near:</span>
+                            <span className="font-semibold">{host.neighborhood}</span>
                           </span>
                         )}
                       </div>
