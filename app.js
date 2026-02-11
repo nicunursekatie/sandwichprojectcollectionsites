@@ -4596,21 +4596,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       })()}
 
                       {/* Hours + Distance info */}
-                      <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-sm mb-3" style={{color: '#555'}}>
-                        <span className="font-medium">{formatAllCollectionHours(host)}</span>
+                      <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-base mb-3">
+                        <span className="font-semibold" style={{color: '#236383'}}>
+                          <i className="lucide-clock w-4 h-4 inline mr-1" style={{verticalAlign: 'text-bottom'}}></i>
+                          {formatAllCollectionHours(host)}
+                        </span>
                         {userCoords && host.distance && (
                           <>
-                            <span className="text-gray-300">|</span>
+                            <span style={{color: '#ccc'}}>•</span>
                             <span className="font-semibold" style={{color: '#007E8C'}}>{host.distance} mi</span>
                             {hostDriveTimes[host.id] && (
                               <span style={{color: '#007E8C'}}>({hostDriveTimes[host.id]})</span>
                             )}
-                          </>
-                        )}
-                        {!host.available && (
-                          <>
-                            <span className="text-gray-300">|</span>
-                            <span className="font-bold" style={{color: '#dc2626'}}>NOT Collecting This Week</span>
                           </>
                         )}
                       </div>
@@ -4632,16 +4629,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         ) : null;
                       })()}
 
-                      {/* Phone Number - smaller, secondary */}
-                      <a
-                        href={`tel:${host.phone}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1.5 text-xs mb-3 hover:underline"
-                        style={{color: '#666'}}
-                      >
-                        <i className="lucide-phone w-3 h-3"></i>
-                        {host.phone}
-                      </a>
+                      {/* Phone Number - Call or Text */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <a
+                          href={`tel:${host.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors"
+                          style={{color: '#236383', border: '1px solid #e0e0e0'}}
+                        >
+                          <i className="lucide-phone w-4 h-4"></i>
+                          Call {host.phone}
+                        </a>
+                        <a
+                          href={`sms:${host.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors"
+                          style={{color: '#236383', border: '1px solid #e0e0e0'}}
+                        >
+                          <i className="lucide-message-circle w-4 h-4"></i>
+                          Text
+                        </a>
+                      </div>
 
                       {/* Get Directions Button - Dropdown Menu */}
                       <div className="relative" data-directions-menu style={{zIndex: directionsMenuOpen === host.id ? 1000 : 'auto'}}>
