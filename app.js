@@ -3606,16 +3606,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
             const favAvailability = getHostAvailability(favoriteHost);
             return (
               <div className="mb-4 mx-3 sm:mx-4 bg-white rounded-xl shadow-lg border-l-4 overflow-hidden" style={{borderLeftColor: '#FBAD3F'}}>
-                <div className="p-4">
+                <div className="p-5">
                   {/* Header */}
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">⭐</span>
-                      <h4 className="font-bold text-base" style={{color: '#236383'}}>Your Saved Host</h4>
+                      <span className="text-2xl">⭐</span>
+                      <h4 className="font-bold text-lg" style={{color: '#236383'}}>Your Saved Host</h4>
                     </div>
                     <button
                       onClick={() => toggleFavoriteHost(favoriteHostId)}
-                      className="text-xs px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+                      className="text-sm px-3 py-1.5 rounded hover:bg-gray-100 transition-colors"
                       style={{color: '#666'}}
                     >
                       Remove
@@ -3623,69 +3623,65 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
 
                   {/* Host name and status */}
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="font-bold text-lg" style={{color: '#007E8C'}}>{favoriteHost.name}</span>
+                  <div className="flex flex-wrap items-center gap-3 mb-3">
+                    <span className="font-extrabold text-xl" style={{color: '#236383'}}>{favoriteHost.name}</span>
                     {favoriteHost.available ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#007E8C'}}>
                         ✓ Collecting This Week
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#A31C41'}}>
                         ✗ Not Collecting This Week
                       </span>
                     )}
                   </div>
                   {/* Current open/closed status */}
                   {favoriteHost.available && favAvailability && (
-                    <p className="text-sm font-medium mb-3" style={{color: favAvailability.color}}>
+                    <p className="text-base font-medium mb-4" style={{color: favAvailability.color}}>
+                      <i className="lucide-timer w-4 h-4 inline mr-1.5" style={{verticalAlign: 'text-bottom'}}></i>
                       {favAvailability.message}
                     </p>
                   )}
 
-                  {/* Details grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
-                    <div className="flex items-center gap-2" style={{color: '#555'}}>
-                      <i className="lucide-map-pin w-4 h-4 flex-shrink-0" style={{color: '#007E8C'}}></i>
-                      <span>{favoriteHost.area}{favoriteHost.neighborhood ? ` • ${favoriteHost.neighborhood}` : ''}</span>
+                  {/* Details - stacked for clarity */}
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center gap-2 text-base" style={{color: '#236383'}}>
+                      <i className="lucide-map-pin w-5 h-5 flex-shrink-0" style={{color: '#007E8C'}}></i>
+                      <span className="font-medium">{favoriteHost.area}{favoriteHost.neighborhood ? ` • ${favoriteHost.neighborhood}` : ''}</span>
                     </div>
-                    <div className="flex items-center gap-2" style={{color: '#555'}}>
-                      <i className="lucide-clock w-4 h-4 flex-shrink-0" style={{color: '#007E8C'}}></i>
-                      <span>{formatAllCollectionHours(favoriteHost)}</span>
+                    <div className="flex items-center gap-2 text-base" style={{color: '#236383'}}>
+                      <i className="lucide-clock w-5 h-5 flex-shrink-0" style={{color: '#007E8C'}}></i>
+                      <span className="font-medium">{formatAllCollectionHours(favoriteHost)}</span>
                     </div>
                     <a
-                      href={`tel:${favoriteHost.phone}`}
-                      className="flex items-center gap-2 hover:underline"
-                      style={{color: '#236383'}}
+                      href={`tel:${favoriteHost.phone.replace(/\D/g, '')}`}
+                      className="flex items-center gap-2 text-base font-semibold hover:underline"
+                      style={{color: '#007E8C'}}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <i className="lucide-phone w-4 h-4 flex-shrink-0"></i>
-                      <span>{favoriteHost.phone}</span>
+                      <i className="lucide-phone w-5 h-5 flex-shrink-0"></i>
+                      <span>{formatPhoneNumber(favoriteHost.phone)}</span>
                     </a>
-                    {favAvailability && (
-                      <div className="flex items-center gap-2" style={{color: favAvailability.color}}>
-                        <i className="lucide-timer w-4 h-4 flex-shrink-0"></i>
-                        <span className="font-medium">{favAvailability.message}</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Notes if any */}
                   {favoriteHost.notes && (
-                    <p className="text-xs italic mb-3 px-2 py-1 rounded" style={{backgroundColor: '#FFF9E6', color: '#666'}}>
-                      📝 {favoriteHost.notes}
-                    </p>
+                    <div className="mb-4 p-3 rounded-lg" style={{backgroundColor: '#FFF8EC', borderLeft: '4px solid #FBAD3F'}}>
+                      <div className="font-bold text-sm mb-1" style={{color: '#A31C41'}}>⚠️ Special Instructions</div>
+                      <p className="text-base" style={{color: '#236383'}}>{favoriteHost.notes}</p>
+                    </div>
                   )}
 
                   {/* Action button */}
                   <button
                     onClick={() => setDirectionsMenuOpen(favoriteHostId)}
                     disabled={!favoriteHost.available}
-                    className={`w-full px-4 py-2.5 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2 transition-all ${
+                    className={`w-full px-4 py-3.5 rounded-xl text-base font-bold text-white flex items-center justify-center gap-2 transition-all ${
                       favoriteHost.available ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'
                     }`}
-                    style={{backgroundColor: favoriteHost.available ? '#007E8C' : '#9CA3AF'}}
+                    style={{backgroundColor: favoriteHost.available ? '#236383' : '#9CA3AF'}}
                   >
-                    <i className="lucide-navigation w-4 h-4"></i>
+                    <i className="lucide-navigation w-5 h-5"></i>
                     Get Directions to {favoriteHost.name}
                   </button>
                 </div>
