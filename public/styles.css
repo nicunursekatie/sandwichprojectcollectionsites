@@ -35,6 +35,14 @@ body {
 .lucide-alert-circle::before { content: '⚠️'; }
 .lucide-map::before { content: '🗺️'; }
 .lucide-map-pin::before { content: '📌'; }
+.lucide-message-circle::before { content: '💬'; }
+.lucide-timer::before { content: '⏱️'; }
+.lucide-lock::before { content: '🔒'; }
+.lucide-corner-down-right::before { content: '↳'; }
+.lucide-home::before { content: '🏠'; }
+.lucide-bell::before { content: '🔔'; }
+.lucide-warehouse::before { content: '🏪'; }
+.lucide-thermometer-snowflake::before { content: '❄️'; }
 
 /* Premium Card Shadows */
 .premium-card {
