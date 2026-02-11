@@ -3610,22 +3610,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
 
                   {/* Host name and status */}
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="font-bold text-lg" style={{color: '#007E8C'}}>{favoriteHost.name}</span>
-                    {favAvailability && (
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold text-white"
-                        style={{backgroundColor: favAvailability.color}}
-                      >
-                        {favAvailability.status === 'open' ? 'OPEN' : favAvailability.status === 'opens-soon' ? 'OPENS SOON' : 'CLOSED'}
+                    {favoriteHost.available ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                        ✓ Collecting This Week
                       </span>
-                    )}
-                    {!favoriteHost.available && (
+                    ) : (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
-                        Not Collecting This Week
+                        ✗ Not Collecting This Week
                       </span>
                     )}
                   </div>
+                  {/* Current open/closed status */}
+                  {favoriteHost.available && favAvailability && (
+                    <p className="text-sm font-medium mb-3" style={{color: favAvailability.color}}>
+                      {favAvailability.message}
+                    </p>
+                  )}
 
                   {/* Details grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
@@ -4544,21 +4546,16 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </button>
                       </div>
 
-                      {/* Status Row: Availability badge + Location badges */}
+                      {/* Status Row: Collecting status + Location badges */}
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        {/* Availability Status Badge with timing */}
-                        {availability ? (
-                          <span
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold text-white"
-                            style={{backgroundColor: availability.color}}
-                          >
-                            <i className="lucide-clock w-3.5 h-3.5"></i>
-                            {availability.message}
+                        {/* Weekly availability - most important */}
+                        {host.available ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#47bc3b'}}>
+                            ✓ Collecting This Week
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold text-white" style={{backgroundColor: '#6B7280'}}>
-                            <i className="lucide-clock w-3.5 h-3.5"></i>
-                            Check hours
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold bg-red-100 text-red-700">
+                            ✗ Not Collecting
                           </span>
                         )}
                         <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold" style={{backgroundColor: '#236383', color: '#fff'}}>
@@ -4570,6 +4567,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </span>
                         )}
                       </div>
+
+                      {/* Current timing status - secondary info */}
+                      {host.available && availability && (
+                        <p className="text-sm font-medium mb-2" style={{color: availability.color}}>
+                          <i className="lucide-clock w-3.5 h-3.5 inline mr-1" style={{verticalAlign: 'text-bottom'}}></i>
+                          {availability.message}
+                        </p>
+                      )}
 
                       {/* Instruction Tags - High visibility */}
                       {host.notes && (() => {
