@@ -804,12 +804,22 @@ const HostAvailabilityApp = () => {
 
   // Admin functions - now save to Firestore
   const addHost = async (hostData) => {
+    const parsedLat = parseFloat(hostData.lat);
+    const parsedLng = parseFloat(hostData.lng);
+
+    // Debug: confirm coordinates before saving
+    if (!confirm(`Saving coordinates:\nLat: ${parsedLat}\nLng: ${parsedLng}\n\nDo these look correct?`)) {
+      return;
+    }
+
     const newHost = {
       ...hostData,
       id: Math.max(...(allHosts || []).map(h => h.id)) + 1,
-      lat: parseFloat(hostData.lat),
-      lng: parseFloat(hostData.lng)
+      lat: parsedLat,
+      lng: parsedLng
     };
+    // Remove the raw coords field so it doesn't clutter Firestore
+    delete newHost.coords;
 
     try {
       await db.collection('hosts').doc(String(newHost.id)).set(newHost);
@@ -821,7 +831,17 @@ const HostAvailabilityApp = () => {
   };
 
   const updateHost = async (hostId, hostData) => {
-    const updatedHost = { ...hostData, id: hostId, lat: parseFloat(hostData.lat), lng: parseFloat(hostData.lng) };
+    const parsedLat = parseFloat(hostData.lat);
+    const parsedLng = parseFloat(hostData.lng);
+
+    // Debug: confirm coordinates before saving
+    if (!confirm(`Saving coordinates:\nLat: ${parsedLat}\nLng: ${parsedLng}\n\nDo these look correct?`)) {
+      return;
+    }
+
+    const updatedHost = { ...hostData, id: hostId, lat: parsedLat, lng: parsedLng };
+    // Remove the raw coords field so it doesn't clutter Firestore
+    delete updatedHost.coords;
 
     try {
       await db.collection('hosts').doc(String(hostId)).set(updatedHost);
