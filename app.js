@@ -864,17 +864,49 @@ const HostAvailabilityApp = () => {
     }
   };
 
+  // Find the alternate partner for a given host (works bidirectionally)
+  const findAlternatePartner = (hostId, hosts) => {
+    const host = hosts.find(h => h.id === hostId);
+    if (!host) return null;
+    // Case 1: This host has alternateFor set — its partner is the primary
+    if (host.alternateFor) {
+      return hosts.find(h => h.id === host.alternateFor) || null;
+    }
+    // Case 2: Another host lists this host as their primary — that host is the partner
+    return hosts.find(h => h.alternateFor === hostId) || null;
+  };
+
   const toggleHostAvailability = async (hostId) => {
     const host = allHosts.find(h => h.id === hostId);
     if (!host) return;
 
-    const updatedHost = { ...host, available: !host.available };
+    const newAvailable = !host.available;
+    const updatedHost = { ...host, available: newAvailable };
+
+    // If enabling this host, check for an alternate partner and disable them
+    const partner = findAlternatePartner(hostId, allHosts);
+    const shouldDisablePartner = newAvailable && partner && partner.available;
+
+    if (shouldDisablePartner) {
+      if (!confirm(`Enabling ${host.name} will automatically disable their alternate, ${partner.name}. Continue?`)) {
+        return;
+      }
+    }
 
     try {
       await db.collection('hosts').doc(String(hostId)).set(updatedHost);
-      setAllHosts((allHosts || []).map(h =>
-        h.id === hostId ? updatedHost : h
-      ));
+
+      let updatedPartner = null;
+      if (shouldDisablePartner) {
+        updatedPartner = { ...partner, available: false };
+        await db.collection('hosts').doc(String(partner.id)).set(updatedPartner);
+      }
+
+      setAllHosts((allHosts || []).map(h => {
+        if (h.id === hostId) return updatedHost;
+        if (updatedPartner && h.id === partner.id) return updatedPartner;
+        return h;
+      }));
     } catch (error) {
       console.error('Error toggling host availability:', error);
       alert('Error updating host availability. Please try again.');
@@ -970,6 +1002,7 @@ const HostAvailabilityApp = () => {
       if (host.openTime) fields += `, openTime: '${host.openTime}', closeTime: '${host.closeTime}'`;
       if (host.thursdayOpenTime) fields += `, thursdayOpenTime: '${host.thursdayOpenTime}', thursdayCloseTime: '${host.thursdayCloseTime}'`;
       if (host.customDropoffDays) fields += `, customDropoffDays: '${host.customDropoffDays}'`;
+      if (host.alternateFor) fields += `, alternateFor: ${host.alternateFor}`;
       fields += `, notes: '${host.notes}', available: ${host.available} }`;
       return fields;
     }).join(',\n')}\n    ];`;
@@ -5489,7 +5522,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true })}
+                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true, alternateFor: null })}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
                     style={{backgroundColor: '#007E8C', opacity: userRole === 'viewer' ? 0.7 : 1}}
                     title={userRole === 'viewer' ? 'Available to full admins. This reviewer account is read-only.' : 'Add a new host'}
@@ -5517,6 +5550,24 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               {host.available ? '✅ Available' : '❌ Unavailable'}
                             </span>
                           </div>
+                          {/* Alternate relationship indicator */}
+                          {(() => {
+                            const partner = findAlternatePartner(host.id, allHosts || []);
+                            if (!partner) return null;
+                            const isAlternate = host.alternateFor === partner.id;
+                            return (
+                              <div className="mb-2">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold" style={{backgroundColor: '#E0F2FE', color: '#1E40AF'}}>
+                                  🔄 {isAlternate ? `Alternate for ${partner.name}` : `Alternate: ${partner.name}`}
+                                </span>
+                                {host.available && partner.available && (
+                                  <p className="text-sm font-bold mt-1" style={{color: '#A31C41'}}>
+                                    ⚠️ Both {host.name} and {partner.name} are enabled! Only one should be active.
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })()}
                           <div className="text-sm space-y-1" style={{color: '#236383'}}>
                             <p><strong>Area:</strong> {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}</p>
                             <p><strong>Phone:</strong> {host.phone}</p>
@@ -5603,6 +5654,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     thursdayOpenTime: formData.get('thursdayOpenTime') || '',
                     thursdayCloseTime: formData.get('thursdayCloseTime') || '',
                     notes: formData.get('notes') || '',
+                    alternateFor: formData.get('alternateFor') ? parseInt(formData.get('alternateFor'), 10) : null,
                     available: formData.get('available') === 'on'
                   };
 
@@ -5775,6 +5827,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       />
                     </div>
                     
+                    <div>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Alternate For (optional)</label>
+                      <select
+                        name="alternateFor"
+                        defaultValue={editingHost.alternateFor || ''}
+                        className="w-full px-4 py-3 premium-input rounded-xl"
+                      >
+                        <option value="">-- None (standalone host) --</option>
+                        {(allHosts || [])
+                          .filter(h => h.id !== editingHost.id)
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map(h => (
+                            <option key={h.id} value={h.id}>{h.name}</option>
+                          ))
+                        }
+                      </select>
+                      <p className="text-sm mt-1" style={{color: '#007E8C'}}>
+                        If set, enabling this host will automatically disable their primary (and vice versa).
+                      </p>
+                    </div>
+
                     <div className="flex items-center">
                       <input
                         type="checkbox"
