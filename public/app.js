@@ -3331,12 +3331,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   const defaultOpen = firstDayKey ? dailyHours[firstDayKey].openTime : '08:00';
                   const defaultClose = firstDayKey ? dailyHours[firstDayKey].closeTime : '18:00';
 
+                  const scCoordsRaw = formData.get('coords') || '';
+                  const scCoordsParts = scCoordsRaw.split(',').map(s => s.trim());
+                  if (scCoordsParts.length !== 2 || isNaN(parseFloat(scCoordsParts[0])) || isNaN(parseFloat(scCoordsParts[1]))) {
+                    alert('Invalid coordinates. Please paste in the format: 33.67980, -83.85904');
+                    return;
+                  }
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
                     neighborhood: formData.get('neighborhood') || '',
-                    lat: formData.get('lat'),
-                    lng: formData.get('lng'),
+                    lat: scCoordsParts[0],
+                    lng: scCoordsParts[1],
                     phone: formData.get('phone') || '',
                     hours: `${defaultOpen} - ${defaultClose}`,
                     openTime: defaultOpen,
@@ -3364,15 +3370,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <input type="text" name="neighborhood" defaultValue={editingSpecialHost.neighborhood} className="w-full px-3 py-2 rounded-lg border-2" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Latitude *</label>
-                      <input type="number" step="any" name="lat" defaultValue={editingSpecialHost.lat} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Longitude *</label>
-                      <input type="number" step="any" name="lng" defaultValue={editingSpecialHost.lng} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Coordinates (paste from Google Maps) *</label>
+                    <input type="text" name="coords" defaultValue={editingSpecialHost.lat ? `${editingSpecialHost.lat}, ${editingSpecialHost.lng}` : ''} required className="w-full px-3 py-2 rounded-lg border-2" placeholder="33.67980, -83.85904" />
+                    <p className="text-xs mt-1" style={{color: '#007E8C'}}>Paste coordinates directly from Google Maps</p>
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Phone</label>
@@ -5558,12 +5559,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     return;
                   }
                   const formData = new FormData(e.target);
+                  const coordsRaw = formData.get('coords') || '';
+                  const coordsParts = coordsRaw.split(',').map(s => s.trim());
+                  if (coordsParts.length !== 2 || isNaN(parseFloat(coordsParts[0])) || isNaN(parseFloat(coordsParts[1]))) {
+                    alert('Invalid coordinates. Please paste in the format: 33.67980, -83.85904');
+                    return;
+                  }
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
                     neighborhood: formData.get('neighborhood') || '',
-                    lat: formData.get('lat'),
-                    lng: formData.get('lng'),
+                    lat: coordsParts[0],
+                    lng: coordsParts[1],
                     phone: formData.get('phone'),
                     hours: formData.get('hours'),
                     tuesdayOpenTime: formData.get('tuesdayOpenTime'),
@@ -5622,31 +5629,17 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       />
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Latitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          name="lat"
-                          defaultValue={editingHost.lat}
-                          required
-                          className="w-full px-4 py-3 premium-input rounded-xl"
-                          placeholder="34.0562454"
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>Longitude</label>
-                        <input
-                          type="number"
-                          step="any"
-                          name="lng"
-                          defaultValue={editingHost.lng}
-                          required
-                          className="w-full px-4 py-3 premium-input rounded-xl"
-                          placeholder="-84.2510305"
-                        />
-                      </div>
+                    <div>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Coordinates (paste from Google Maps)</label>
+                      <input
+                        type="text"
+                        name="coords"
+                        defaultValue={editingHost.lat ? `${editingHost.lat}, ${editingHost.lng}` : ''}
+                        required
+                        className="w-full px-4 py-3 premium-input rounded-xl"
+                        placeholder="33.67980, -83.85904"
+                      />
+                      <p className="text-sm mt-1" style={{color: '#007E8C'}}>Paste coordinates directly from Google Maps (e.g., 33.67980, -83.85904)</p>
                     </div>
                     
                     <div>
@@ -6273,12 +6266,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   const defaultOpen = firstDayKey ? dailyHours[firstDayKey].openTime : '08:00';
                   const defaultClose = firstDayKey ? dailyHours[firstDayKey].closeTime : '18:00';
 
+                  const scCoordsRaw = formData.get('coords') || '';
+                  const scCoordsParts = scCoordsRaw.split(',').map(s => s.trim());
+                  if (scCoordsParts.length !== 2 || isNaN(parseFloat(scCoordsParts[0])) || isNaN(parseFloat(scCoordsParts[1]))) {
+                    alert('Invalid coordinates. Please paste in the format: 33.67980, -83.85904');
+                    return;
+                  }
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
                     neighborhood: formData.get('neighborhood') || '',
-                    lat: formData.get('lat'),
-                    lng: formData.get('lng'),
+                    lat: scCoordsParts[0],
+                    lng: scCoordsParts[1],
                     phone: formData.get('phone') || '',
                     hours: `${defaultOpen} - ${defaultClose}`,
                     openTime: defaultOpen,
@@ -6306,15 +6305,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <input type="text" name="neighborhood" defaultValue={editingSpecialHost.neighborhood} className="w-full px-3 py-2 rounded-lg border-2" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Latitude *</label>
-                      <input type="number" step="any" name="lat" defaultValue={editingSpecialHost.lat} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Longitude *</label>
-                      <input type="number" step="any" name="lng" defaultValue={editingSpecialHost.lng} required className="w-full px-3 py-2 rounded-lg border-2" />
-                    </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Coordinates (paste from Google Maps) *</label>
+                    <input type="text" name="coords" defaultValue={editingSpecialHost.lat ? `${editingSpecialHost.lat}, ${editingSpecialHost.lng}` : ''} required className="w-full px-3 py-2 rounded-lg border-2" placeholder="33.67980, -83.85904" />
+                    <p className="text-xs mt-1" style={{color: '#007E8C'}}>Paste coordinates directly from Google Maps</p>
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-sm" style={{color: '#236383'}}>Phone</label>
