@@ -2329,7 +2329,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
       const url = `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}`;
       window.open(url, '_blank');
     } else {
-      // Fallback to destination only
       const url = `https://www.google.com/maps/search/?api=1&query=${host.lat},${host.lng}`;
       window.open(url, '_blank');
     }
