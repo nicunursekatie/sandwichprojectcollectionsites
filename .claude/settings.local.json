@@ -8,7 +8,9 @@
       "WebFetch(domain:uc889afad11b408d011720b34365.dl.dropboxusercontent.com)",
       "Bash(npm install:*)",
       "Bash(firebase --version:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)"
     ]
   }
 }

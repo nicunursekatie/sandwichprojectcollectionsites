@@ -75,6 +75,8 @@ const HostAvailabilityApp = () => {
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
+  const [verifiedCoords, setVerifiedCoords] = React.useState(null); // { lat, lng, formattedAddress }
+  const [verifyingAddress, setVerifyingAddress] = React.useState(false);
   const [userRole, setUserRole] = React.useState(null);
   const [showReadOnlyModal, setShowReadOnlyModal] = React.useState(false);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
@@ -804,22 +806,12 @@ const HostAvailabilityApp = () => {
 
   // Admin functions - now save to Firestore
   const addHost = async (hostData) => {
-    const parsedLat = parseFloat(hostData.lat);
-    const parsedLng = parseFloat(hostData.lng);
-
-    // Debug: confirm coordinates before saving
-    if (!confirm(`Saving coordinates:\nLat: ${parsedLat}\nLng: ${parsedLng}\n\nDo these look correct?`)) {
-      return;
-    }
-
     const newHost = {
       ...hostData,
       id: Math.max(...(allHosts || []).map(h => h.id)) + 1,
-      lat: parsedLat,
-      lng: parsedLng
+      lat: parseFloat(hostData.lat),
+      lng: parseFloat(hostData.lng)
     };
-    // Remove the raw coords field so it doesn't clutter Firestore
-    delete newHost.coords;
 
     try {
       await db.collection('hosts').doc(String(newHost.id)).set(newHost);
@@ -831,17 +823,12 @@ const HostAvailabilityApp = () => {
   };
 
   const updateHost = async (hostId, hostData) => {
-    const parsedLat = parseFloat(hostData.lat);
-    const parsedLng = parseFloat(hostData.lng);
-
-    // Debug: confirm coordinates before saving
-    if (!confirm(`Saving coordinates:\nLat: ${parsedLat}\nLng: ${parsedLng}\n\nDo these look correct?`)) {
-      return;
-    }
-
-    const updatedHost = { ...hostData, id: hostId, lat: parsedLat, lng: parsedLng };
-    // Remove the raw coords field so it doesn't clutter Firestore
-    delete updatedHost.coords;
+    const updatedHost = {
+      ...hostData,
+      id: hostId,
+      lat: parseFloat(hostData.lat),
+      lng: parseFloat(hostData.lng)
+    };
 
     try {
       await db.collection('hosts').doc(String(hostId)).set(updatedHost);
@@ -861,6 +848,40 @@ const HostAvailabilityApp = () => {
     } catch (error) {
       console.error('Error deleting host:', error);
       alert('Error deleting host. Please try again.');
+    }
+  };
+
+  // Geocode an address and verify coordinates via Google Maps API
+  const verifyAddress = async (address) => {
+    if (!address || address.trim().length < 5) {
+      alert('Please enter a valid address.');
+      return;
+    }
+    if (!window.google || !window.google.maps) {
+      alert('Google Maps is not loaded. Please refresh the page.');
+      return;
+    }
+    setVerifyingAddress(true);
+    setVerifiedCoords(null);
+    try {
+      const geocoder = new window.google.maps.Geocoder();
+      const result = await new Promise((resolve, reject) => {
+        geocoder.geocode({ address: address.trim() }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            resolve(results[0]);
+          } else {
+            reject(new Error(`Geocoding failed: ${status}`));
+          }
+        });
+      });
+      const lat = result.geometry.location.lat();
+      const lng = result.geometry.location.lng();
+      setVerifiedCoords({ lat, lng, formattedAddress: result.formatted_address });
+    } catch (error) {
+      alert(`Could not find that address. Please check spelling and try again.\n\n${error.message}`);
+      setVerifiedCoords(null);
+    } finally {
+      setVerifyingAddress(false);
     }
   };
 
@@ -5522,7 +5543,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => userRole === 'viewer' ? setShowReadOnlyModal(true) : setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true, alternateFor: null })}
+                    onClick={() => { if (userRole === 'viewer') { setShowReadOnlyModal(true); return; } setVerifiedCoords(null); setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', address: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true, alternateFor: null }); }}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
                     style={{backgroundColor: '#007E8C', opacity: userRole === 'viewer' ? 0.7 : 1}}
                     title={userRole === 'viewer' ? 'Available to full admins. This reviewer account is read-only.' : 'Add a new host'}
@@ -5570,6 +5591,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           })()}
                           <div className="text-sm space-y-1" style={{color: '#236383'}}>
                             <p><strong>Area:</strong> {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}</p>
+                            {host.address && <p><strong>Address:</strong> {host.address}</p>}
                             <p><strong>Phone:</strong> {host.phone}</p>
                             <p><strong>Hours:</strong> {host.hours}</p>
                             <p><strong>Location:</strong> {host.lat}, {host.lng}</p>
@@ -5587,7 +5609,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             {host.available ? '💤 Disable' : '✅ Enable'}
                           </button>
                           <button
-                            onClick={() => setEditingHost(host)}
+                            onClick={() => { setVerifiedCoords(host.lat && host.lng ? { lat: parseFloat(host.lat), lng: parseFloat(host.lng), formattedAddress: host.address || '' } : null); setEditingHost(host); }}
                             className="px-3 py-2 rounded-lg text-sm font-medium text-white"
                             style={{backgroundColor: '#FBAD3F'}}
                           >
@@ -5630,18 +5652,27 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     return;
                   }
                   const formData = new FormData(e.target);
-                  const coordsRaw = formData.get('coords') || '';
-                  const coordsParts = coordsRaw.split(',').map(s => s.trim());
-                  if (coordsParts.length !== 2 || isNaN(parseFloat(coordsParts[0])) || isNaN(parseFloat(coordsParts[1]))) {
-                    alert('Invalid coordinates. Please paste in the format: 33.67980, -83.85904');
+                  // Use verified coordinates from geocoding
+                  const isExistingHost = editingHost.id !== 'new';
+                  const hasVerified = verifiedCoords && verifiedCoords.lat && verifiedCoords.lng;
+                  const hasExistingCoords = isExistingHost && editingHost.lat && editingHost.lng;
+
+                  if (!hasVerified && !hasExistingCoords) {
+                    alert('Please verify the address before saving. Click the "Verify Address" button.');
                     return;
                   }
+
+                  const lat = hasVerified ? verifiedCoords.lat : parseFloat(editingHost.lat);
+                  const lng = hasVerified ? verifiedCoords.lng : parseFloat(editingHost.lng);
+                  const address = formData.get('address') || (hasVerified ? verifiedCoords.formattedAddress : editingHost.address || '');
+
                   const hostData = {
                     name: formData.get('name'),
                     area: formData.get('area'),
                     neighborhood: formData.get('neighborhood') || '',
-                    lat: coordsParts[0],
-                    lng: coordsParts[1],
+                    lat: lat,
+                    lng: lng,
+                    address: address,
                     phone: formData.get('phone'),
                     hours: formData.get('hours'),
                     tuesdayOpenTime: formData.get('tuesdayOpenTime'),
@@ -5702,16 +5733,62 @@ This is safe because your API key is already restricted to only the Geocoding AP
                     </div>
                     
                     <div>
-                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Coordinates (paste from Google Maps)</label>
-                      <input
-                        type="text"
-                        name="coords"
-                        defaultValue={editingHost.lat ? `${editingHost.lat}, ${editingHost.lng}` : ''}
-                        required
-                        className="w-full px-4 py-3 premium-input rounded-xl"
-                        placeholder="33.67980, -83.85904"
-                      />
-                      <p className="text-sm mt-1" style={{color: '#007E8C'}}>Paste coordinates directly from Google Maps (e.g., 33.67980, -83.85904)</p>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Address</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          name="address"
+                          defaultValue={editingHost.address || ''}
+                          className="flex-1 px-4 py-3 premium-input rounded-xl"
+                          placeholder="970 Lake Stone Lea Dr, Oxford, GA 30054"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            const addressInput = e.target.closest('div').querySelector('input[name=address]');
+                            verifyAddress(addressInput.value);
+                          }}
+                          disabled={verifyingAddress}
+                          className="px-4 py-3 rounded-xl font-semibold text-white text-sm flex-shrink-0"
+                          style={{backgroundColor: '#007E8C'}}
+                        >
+                          {verifyingAddress ? 'Verifying...' : 'Verify'}
+                        </button>
+                      </div>
+                      {/* Verification result */}
+                      {verifiedCoords ? (
+                        <div className="mt-3 p-3 rounded-lg" style={{backgroundColor: '#f0fdf4', border: '2px solid #22c55e'}}>
+                          <div className="flex items-start gap-3">
+                            <img
+                              src={`https://maps.googleapis.com/maps/api/staticmap?center=${verifiedCoords.lat},${verifiedCoords.lng}&zoom=16&size=120x120&maptype=roadmap&markers=color:red%7C${verifiedCoords.lat},${verifiedCoords.lng}&key=${GOOGLE_MAPS_API_KEY}`}
+                              alt="Verified location"
+                              className="rounded-lg flex-shrink-0"
+                              style={{width: '120px', height: '120px'}}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-sm" style={{color: '#22c55e'}}>✓ Address Verified</p>
+                              {verifiedCoords.formattedAddress && (
+                                <p className="text-sm mt-1" style={{color: '#236383'}}>{verifiedCoords.formattedAddress}</p>
+                              )}
+                              <p className="text-xs mt-1" style={{color: '#666'}}>
+                                Lat: {verifiedCoords.lat.toFixed(8)}, Lng: {verifiedCoords.lng.toFixed(8)}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setVerifiedCoords(null)}
+                                className="text-xs mt-2 underline"
+                                style={{color: '#A31C41'}}
+                              >
+                                Clear and re-verify
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm mt-2 font-medium" style={{color: '#A31C41'}}>
+                          {editingHost.id !== 'new' && editingHost.lat ? '⚠️ Existing coordinates loaded. Enter address and click Verify to update.' : '⚠️ You must verify the address before saving.'}
+                        </p>
+                      )}
                     </div>
                     
                     <div>
