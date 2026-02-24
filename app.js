@@ -77,6 +77,8 @@ const HostAvailabilityApp = () => {
   const [editingHost, setEditingHost] = React.useState(null);
   const [verifiedCoords, setVerifiedCoords] = React.useState(null); // { lat, lng, formattedAddress }
   const [verifyingAddress, setVerifyingAddress] = React.useState(false);
+  const [auditResults, setAuditResults] = React.useState(null); // array of { host, status, detail, geocodedLat, geocodedLng, distanceMeters }
+  const [auditRunning, setAuditRunning] = React.useState(false);
   const [userRole, setUserRole] = React.useState(null);
   const [showReadOnlyModal, setShowReadOnlyModal] = React.useState(false);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
@@ -882,6 +884,82 @@ const HostAvailabilityApp = () => {
       setVerifiedCoords(null);
     } finally {
       setVerifyingAddress(false);
+    }
+  };
+
+  // Audit all hosts: geocode each address and compare to stored coordinates
+  const verifyAllHosts = async () => {
+    if (!window.google || !window.google.maps) {
+      alert('Google Maps is not loaded. Please refresh the page.');
+      return;
+    }
+    const hosts = allHosts || [];
+    if (!hosts.length) return;
+
+    setAuditRunning(true);
+    setAuditResults([]);
+    const geocoder = new window.google.maps.Geocoder();
+    const results = [];
+
+    for (const host of hosts) {
+      // If no address stored, flag it
+      if (!host.address) {
+        results.push({ host, status: 'no-address', detail: 'No address stored — needs to be added and verified.' });
+        setAuditResults([...results]);
+        continue;
+      }
+
+      try {
+        // Small delay to avoid hitting geocoding rate limits
+        await new Promise(r => setTimeout(r, 300));
+
+        const geocodeResult = await new Promise((resolve, reject) => {
+          geocoder.geocode({ address: host.address.trim() }, (res, status) => {
+            if (status === 'OK' && res[0]) resolve(res[0]);
+            else reject(new Error(status));
+          });
+        });
+
+        const gLat = geocodeResult.geometry.location.lat();
+        const gLng = geocodeResult.geometry.location.lng();
+        const storedLat = parseFloat(host.lat);
+        const storedLng = parseFloat(host.lng);
+
+        // Calculate distance between stored and geocoded coords (Haversine)
+        const toRad = (deg) => deg * Math.PI / 180;
+        const R = 6371000; // meters
+        const dLat = toRad(gLat - storedLat);
+        const dLng = toRad(gLng - storedLng);
+        const a = Math.sin(dLat/2)**2 + Math.cos(toRad(storedLat)) * Math.cos(toRad(gLat)) * Math.sin(dLng/2)**2;
+        const distanceMeters = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        if (distanceMeters < 100) {
+          results.push({ host, status: 'ok', detail: `Match — ${Math.round(distanceMeters)}m difference`, geocodedLat: gLat, geocodedLng: gLng, distanceMeters });
+        } else if (distanceMeters < 500) {
+          results.push({ host, status: 'warning', detail: `Close but off by ${Math.round(distanceMeters)}m`, geocodedLat: gLat, geocodedLng: gLng, distanceMeters });
+        } else {
+          results.push({ host, status: 'mismatch', detail: `MISMATCH — off by ${distanceMeters > 1000 ? (distanceMeters/1000).toFixed(1) + 'km' : Math.round(distanceMeters) + 'm'}`, geocodedLat: gLat, geocodedLng: gLng, distanceMeters });
+        }
+      } catch (error) {
+        results.push({ host, status: 'error', detail: `Geocoding failed: ${error.message}` });
+      }
+      setAuditResults([...results]);
+    }
+    setAuditRunning(false);
+  };
+
+  // Auto-fix a mismatched host's coordinates from audit results
+  const fixHostCoords = async (hostId, newLat, newLng) => {
+    const host = (allHosts || []).find(h => h.id === hostId);
+    if (!host) return;
+    const updatedHost = { ...host, lat: newLat, lng: newLng };
+    try {
+      await db.collection('hosts').doc(String(hostId)).set(updatedHost);
+      setAllHosts((allHosts || []).map(h => h.id === hostId ? updatedHost : h));
+      // Update audit results to reflect the fix
+      setAuditResults(prev => prev ? prev.map(r => r.host.id === hostId ? { ...r, status: 'fixed', detail: 'Coordinates updated to match address.' } : r) : prev);
+    } catch (error) {
+      alert('Error fixing coordinates: ' + error.message);
     }
   };
 
@@ -5539,6 +5617,73 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </div>
                 )}
 
+                {/* Verify All Hosts */}
+                {userRole === 'admin' && (
+                  <div className="rounded-xl p-4 mb-6 border-2" style={{backgroundColor: '#f0f9ff', borderColor: '#47B3CB'}}>
+                    <h3 className="font-semibold mb-2" style={{color: '#236383'}}>🔍 Address Verification Audit</h3>
+                    <p className="text-sm mb-3" style={{color: '#666'}}>
+                      Geocodes every host's stored address and checks if the coordinates match. Flags any mismatches so you can fix them.
+                    </p>
+                    <button
+                      onClick={verifyAllHosts}
+                      disabled={auditRunning}
+                      className="px-4 py-2 rounded-lg font-medium text-white"
+                      style={{backgroundColor: '#007E8C', opacity: auditRunning ? 0.6 : 1}}
+                    >
+                      {auditRunning ? `Verifying... (${(auditResults || []).length}/${(allHosts || []).length})` : '🗺️ Verify All Hosts'}
+                    </button>
+
+                    {auditResults && auditResults.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        {/* Summary */}
+                        {!auditRunning && (
+                          <div className="flex flex-wrap gap-3 mb-3 text-sm font-semibold">
+                            <span style={{color: '#22c55e'}}>✓ {auditResults.filter(r => r.status === 'ok' || r.status === 'fixed').length} OK</span>
+                            <span style={{color: '#f59e0b'}}>⚠ {auditResults.filter(r => r.status === 'warning').length} Close</span>
+                            <span style={{color: '#ef4444'}}>✗ {auditResults.filter(r => r.status === 'mismatch').length} Mismatch</span>
+                            <span style={{color: '#6b7280'}}>? {auditResults.filter(r => r.status === 'no-address').length} No Address</span>
+                            <span style={{color: '#6b7280'}}>⚠ {auditResults.filter(r => r.status === 'error').length} Errors</span>
+                          </div>
+                        )}
+
+                        {/* Individual results — only show problems + no-address, hide OK ones unless expanded */}
+                        {auditResults.filter(r => r.status !== 'ok').map((result, idx) => (
+                          <div key={result.host.id} className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg text-sm" style={{
+                            backgroundColor: result.status === 'mismatch' ? '#fef2f2' : result.status === 'warning' ? '#fffbeb' : result.status === 'fixed' ? '#f0fdf4' : result.status === 'no-address' ? '#f9fafb' : '#fef2f2',
+                            border: `1px solid ${result.status === 'mismatch' ? '#fecaca' : result.status === 'warning' ? '#fde68a' : result.status === 'fixed' ? '#bbf7d0' : result.status === 'no-address' ? '#e5e7eb' : '#fecaca'}`
+                          }}>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-bold">{result.host.name}</span>
+                              <span className="ml-2" style={{color: result.status === 'mismatch' ? '#ef4444' : result.status === 'warning' ? '#f59e0b' : result.status === 'fixed' ? '#22c55e' : '#6b7280'}}>
+                                {result.detail}
+                              </span>
+                              {result.host.address && <span className="block text-xs mt-1" style={{color: '#666'}}>Address: {result.host.address}</span>}
+                            </div>
+                            {(result.status === 'mismatch' || result.status === 'warning') && result.geocodedLat && (
+                              <button
+                                onClick={() => fixHostCoords(result.host.id, result.geocodedLat, result.geocodedLng)}
+                                className="px-3 py-1 rounded-lg text-xs font-semibold text-white flex-shrink-0"
+                                style={{backgroundColor: '#007E8C'}}
+                              >
+                                Fix → Use Geocoded Coords
+                              </button>
+                            )}
+                            {result.status === 'no-address' && (
+                              <button
+                                onClick={() => { setVerifiedCoords(result.host.lat && result.host.lng ? { lat: parseFloat(result.host.lat), lng: parseFloat(result.host.lng), formattedAddress: '' } : null); setEditingHost(result.host); }}
+                                className="px-3 py-1 rounded-lg text-xs font-semibold text-white flex-shrink-0"
+                                style={{backgroundColor: '#FBAD3F'}}
+                              >
+                                Edit → Add Address
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
@@ -5593,7 +5738,9 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             {host.address && <p><strong>Address:</strong> {host.address}</p>}
                             <p><strong>Phone:</strong> {host.phone}</p>
                             <p><strong>Hours:</strong> {host.hours}</p>
-                            <p><strong>Location:</strong> {host.lat}, {host.lng}</p>
+                            <p><strong>Location:</strong> {host.lat}, {host.lng}
+                              {' '}<a href={`https://www.google.com/maps/search/?api=1&query=${host.lat},${host.lng}`} target="_blank" rel="noopener noreferrer" style={{color: '#007E8C', textDecoration: 'underline', fontWeight: '600'}}>Test on Google Maps ↗</a>
+                            </p>
                             {host.notes && <p><strong>Notes:</strong> {host.notes}</p>}
                           </div>
                         </div>
