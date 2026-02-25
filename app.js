@@ -1150,6 +1150,13 @@ const HostAvailabilityApp = () => {
   const availableHosts = allHostsForDisplay.filter(h => h.available);
   const areas = [...new Set(allHostsForDisplay.map(h => h.area))].sort();
 
+  // Area aliases allow alternate city names to match hosts in neighboring/overlapping areas.
+  // Keys are lowercase search terms; values are the canonical area name stored in Firestore.
+  const AREA_ALIASES = {
+    'alpharetta': "Johns Creek",
+    "john's creek": "Johns Creek"
+  };
+
   // Use centralized distance calculation utility
   const calculateDistance = window.HostUtils?.calculateDistance || ((lat1, lon1, lat2, lon2) => '0.0');
 
@@ -1488,12 +1495,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
       filtered = filtered.filter(h => h.area === filterArea);
     }
 
-    // Apply name search filter
+    // Apply name search filter (including area aliases)
     if (nameSearch.trim()) {
       const searchLower = nameSearch.toLowerCase();
+      const aliasedArea = AREA_ALIASES[searchLower];
       filtered = filtered.filter(h =>
         h.name.toLowerCase().includes(searchLower) ||
         h.area.toLowerCase().includes(searchLower) ||
+        (aliasedArea && h.area === aliasedArea) ||
         (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
       );
     }
@@ -1515,11 +1524,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
     if (!searchInput.trim()) return;
 
     const input = searchInput.trim();
+    const aliasedArea = AREA_ALIASES[input.toLowerCase()];
 
-    // Check if any host matches the input as a name or area
+    // Check if any host matches the input as a name or area (including area aliases)
     const matchingHosts = availableHosts.filter(h =>
       h.name.toLowerCase().includes(input.toLowerCase()) ||
       h.area.toLowerCase().includes(input.toLowerCase()) ||
+      (aliasedArea && h.area === aliasedArea) ||
       (h.neighborhood && h.neighborhood.toLowerCase().includes(input.toLowerCase()))
     );
 
@@ -3865,12 +3876,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                 {(() => {
                   let availableHosts = allHosts.filter(h => h.available);
-                  // Apply search filter
+                  // Apply search filter (including area aliases)
                   if (nameSearch.trim()) {
                     const searchLower = nameSearch.toLowerCase();
+                    const aliasedArea = AREA_ALIASES[searchLower];
                     availableHosts = availableHosts.filter(h =>
                       h.name.toLowerCase().includes(searchLower) ||
                       h.area.toLowerCase().includes(searchLower) ||
+                      (aliasedArea && h.area === aliasedArea) ||
                       (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
                     );
                   }
