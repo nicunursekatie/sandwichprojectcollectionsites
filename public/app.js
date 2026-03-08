@@ -75,12 +75,12 @@ const HostAvailabilityApp = () => {
   const [showAllHostsOnMap, setShowAllHostsOnMap] = React.useState(false);
   const [showAdmin, setShowAdmin] = React.useState(false);
   const [editingHost, setEditingHost] = React.useState(null);
+  const [verifiedCoords, setVerifiedCoords] = React.useState(null); // { lat, lng, formattedAddress }
+  const [verifyingAddress, setVerifyingAddress] = React.useState(false);
+  const [auditResults, setAuditResults] = React.useState(null); // array of { host, status, detail, geocodedLat, geocodedLng, distanceMeters }
+  const [auditRunning, setAuditRunning] = React.useState(false);
   const [userRole, setUserRole] = React.useState(null);
   const [showReadOnlyModal, setShowReadOnlyModal] = React.useState(false);
-  const [verifiedCoords, setVerifiedCoords] = React.useState(null);
-  const [verifyingAddress, setVerifyingAddress] = React.useState(false);
-  const [auditResults, setAuditResults] = React.useState(null);
-  const [auditRunning, setAuditRunning] = React.useState(false);
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
   const [directionsMenuOpen, setDirectionsMenuOpen] = React.useState(null);
   const [directionsMenuPosition, setDirectionsMenuPosition] = React.useState({ top: 0, left: 0 });
@@ -902,6 +902,7 @@ const HostAvailabilityApp = () => {
     const results = [];
 
     for (const host of hosts) {
+      // If no address stored, flag it
       if (!host.address) {
         results.push({ host, status: 'no-address', detail: 'No address stored — needs to be added and verified.' });
         setAuditResults([...results]);
@@ -909,6 +910,7 @@ const HostAvailabilityApp = () => {
       }
 
       try {
+        // Small delay to avoid hitting geocoding rate limits
         await new Promise(r => setTimeout(r, 300));
 
         const geocodeResult = await new Promise((resolve, reject) => {
@@ -923,8 +925,9 @@ const HostAvailabilityApp = () => {
         const storedLat = parseFloat(host.lat);
         const storedLng = parseFloat(host.lng);
 
+        // Calculate distance between stored and geocoded coords (Haversine)
         const toRad = (deg) => deg * Math.PI / 180;
-        const R = 6371000;
+        const R = 6371000; // meters
         const dLat = toRad(gLat - storedLat);
         const dLng = toRad(gLng - storedLng);
         const a = Math.sin(dLat/2)**2 + Math.cos(toRad(storedLat)) * Math.cos(toRad(gLat)) * Math.sin(dLng/2)**2;
@@ -945,6 +948,7 @@ const HostAvailabilityApp = () => {
     setAuditRunning(false);
   };
 
+  // Auto-fix a mismatched host's coordinates from audit results
   const fixHostCoords = async (hostId, newLat, newLng) => {
     const host = (allHosts || []).find(h => h.id === hostId);
     if (!host) return;
@@ -952,6 +956,7 @@ const HostAvailabilityApp = () => {
     try {
       await db.collection('hosts').doc(String(hostId)).set(updatedHost);
       setAllHosts((allHosts || []).map(h => h.id === hostId ? updatedHost : h));
+      // Update audit results to reflect the fix
       setAuditResults(prev => prev ? prev.map(r => r.host.id === hostId ? { ...r, status: 'fixed', detail: 'Coordinates updated to match address.' } : r) : prev);
     } catch (error) {
       alert('Error fixing coordinates: ' + error.message);
@@ -2125,10 +2130,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
         <div class="flex items-center justify-between py-2 px-3 rounded hover:bg-orange-50 cursor-pointer" data-host-id="${h.id}" style="border: 1px solid #FBAD3F; margin-top: 8px;">
           <div>
             <p class="font-semibold text-sm" style="color: #236383;">${h.name}</p>
-            <p class="text-xs" style="color: #666;">${h.area}${h.neighborhood ? ' - ' + h.neighborhood : ''}</p>
+            <p class="text-sm" style="color: #666;">${h.area}${h.neighborhood ? ' - ' + h.neighborhood : ''}</p>
           </div>
           <div class="text-right">
-            <p class="text-xs font-bold" style="color: #007E8C;">${h.distance.toFixed(1)} mi</p>
+            <p class="text-sm font-bold" style="color: #007E8C;">${h.distance.toFixed(1)} mi</p>
           </div>
         </div>
       `).join('');
@@ -2904,7 +2909,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 const sameDay = startDate.toDateString() === endDate.toDateString();
                                 return (
                                   <div className="space-y-2">
-                                    <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#f0f9fa', color: '#666'}}>
+                                    <div className="text-sm font-medium px-2 py-1 rounded" style={{backgroundColor: '#f0f9fa', color: '#666'}}>
                                       📅 {sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`}
                                     </div>
                                     <span className="inline-block text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
@@ -2935,7 +2940,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               const sameDay = startDate.toDateString() === endDate.toDateString();
                               return (
                                 <div className="space-y-2">
-                                  <div className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: '#f0f9fa', color: '#666'}}>
+                                  <div className="text-sm font-medium px-2 py-1 rounded" style={{backgroundColor: '#f0f9fa', color: '#666'}}>
                                     📅 {sameDay ? formatDay(startDate) : `${formatDay(startDate)} - ${formatDay(endDate)}`}
                                   </div>
                                   <span className="inline-block text-base font-bold px-3 py-1 rounded-lg" style={{backgroundColor: '#007E8C', color: 'white'}}>
@@ -2948,7 +2953,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                         </div>
                         <div className="flex flex-wrap items-center gap-3 mb-3">
                           {host.phone && (
-                            <a href={`tel:${host.phone}`} className="text-sm font-medium px-3 py-1 rounded-lg flex items-center gap-1" style={{backgroundColor: '#236383', color: 'white'}}>
+                            <a href={`tel:${host.phone}`} className="text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-1" style={{backgroundColor: '#236383', color: 'white', minHeight: '44px'}}>
                               📞 Call
                             </a>
                           )}
@@ -2958,8 +2963,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             href={`https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}${window.specialCollectionUserCoords ? `&origin=${window.specialCollectionUserCoords.lat},${window.specialCollectionUserCoords.lng}` : ''}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-block text-sm font-medium px-3 py-1 rounded-lg"
-                            style={{backgroundColor: '#FBAD3F', color: 'white'}}
+                            className="inline-block text-sm font-medium px-4 py-2.5 rounded-lg"
+                            style={{backgroundColor: '#FBAD3F', color: 'white', minHeight: '44px'}}
                           >
                             🗺️ Get Directions
                           </a>
@@ -3071,15 +3076,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditingSpecialCollection({...specialCollection})}
-                          className="px-3 py-1 rounded text-sm font-medium text-white"
-                          style={{backgroundColor: '#007E8C'}}
+                          className="px-4 py-2.5 rounded-lg text-sm font-medium text-white"
+                          style={{backgroundColor: '#007E8C', minHeight: '44px'}}
                         >
                           Edit Collection
                         </button>
                         <button
                           onClick={deactivateSpecialCollection}
-                          className="px-3 py-1 rounded text-sm font-medium text-white"
-                          style={{backgroundColor: '#A31C41'}}
+                          className="px-4 py-2.5 rounded-lg text-sm font-medium text-white"
+                          style={{backgroundColor: '#A31C41', minHeight: '44px'}}
                         >
                           End Early
                         </button>
@@ -3116,7 +3121,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {editingSpecialCollection && (
           <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => { setEditingSpecialCollection(null); setEditingSpecialHost(null); }}>
             <div className="modal-content bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-bold" style={{color: '#A31C41'}}>
                     {editingSpecialCollection.id ? '✏️ Edit Special Collection' : '🚨 Create Special Collection'}
@@ -3433,7 +3438,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {editingSpecialHost && (
           <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-[60]" onClick={() => setEditingSpecialHost(null)}>
             <div className="modal-content bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <h4 className="text-lg font-bold mb-4" style={{color: '#236383'}}>
                   {editingSpecialHost.id === 'new' ? '➕ Add Host to Collection' : '✏️ Edit Host'}
                 </h4>
@@ -3699,7 +3704,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       setUserCoords(null);
                       setUserAddress('');
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl w-11 h-11 flex items-center justify-center"
                   >
                     ×
                   </button>
@@ -4033,7 +4038,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
           {/* Map View */}
           {viewMode !== 'list' && (
             <div className="bg-white rounded-2xl premium-card overflow-hidden">
-            <div className="p-6 border-b" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}}>
+            <div className="p-4 sm:p-6 border-b" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}}>
               <h2 className="text-xl font-bold mb-3" style={{color: '#236383'}}>
                 🗺️ Drop-Off Locations Map
               </h2>
@@ -4117,7 +4122,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <p className="text-sm font-medium mb-1" style={{color: '#236383'}}>
                             No hosts available
                           </p>
-                          <p className="text-xs" style={{color: '#666'}}>
+                          <p className="text-sm" style={{color: '#666'}}>
                             No hosts are collecting this week. If you need to plan for another week, enter your address and select "I'm planning a future dropoff (not this week)" to see all host locations.
                           </p>
                         </div>
@@ -4396,7 +4401,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               {/* Turn-by-Turn Directions */}
               {directionSteps && routeInfo && (
                 <div className="border-t" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}} data-directions-panel>
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-bold" style={{color: '#236383'}}>
                         📍 Turn-by-Turn Directions
@@ -4484,7 +4489,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                   : `Opens ${dayName} at ${openTimeStr}`
                                 }
                               </p>
-                              <p className="text-xs" style={{color: '#666'}}>
+                              <p className="text-sm" style={{color: '#666'}}>
                                 Host Hours: {routeInfo.hours}
                                 {!isCurrentlyOpen && ' · Drop-off must occur during listed hours'}
                               </p>
@@ -4530,7 +4535,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Planning for next week?
-                {includeUnavailableHosts && <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700">Showing closed hosts</span>}
+                {includeUnavailableHosts && <span className="ml-2 px-2 py-0.5 text-sm rounded-full bg-amber-100 text-amber-700">Showing closed hosts</span>}
               </summary>
               <div className="px-4 pb-3 pt-2 border-t border-gray-200">
                 <label className="flex items-start gap-3 cursor-pointer">
@@ -4546,7 +4551,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                   </span>
                 </label>
                 {includeUnavailableHosts && (
-                  <p className="mt-2 text-xs p-2 rounded" style={{backgroundColor: '#FFF9E6', color: '#92400e'}}>
+                  <p className="mt-2 text-sm p-2 rounded" style={{backgroundColor: '#FFF9E6', color: '#92400e'}}>
                     ⚠️ Closed hosts shown for planning only. Check back Monday to confirm availability.
                   </p>
                 )}
@@ -4594,7 +4599,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               >
                 Give Feedback
               </button>
-              <p className="text-xs mt-1" style={{color: '#666'}}>
+              <p className="text-sm mt-1" style={{color: '#666'}}>
                 Let us know how we can make this work better for you!
               </p>
             </div>
@@ -4767,7 +4772,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 {tags.map((t, i) => (
                                   <span
                                     key={i}
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold text-white"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-bold text-white"
                                     style={{backgroundColor: t.color}}
                                   >
                                     <i className={`lucide-${t.icon} w-3.5 h-3.5`}></i>
@@ -5552,15 +5557,15 @@ This is safe because your API key is already restricted to only the Geocoding AP
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditingSpecialCollection({...specialCollection})}
-                          className="px-3 py-1 rounded text-sm font-medium text-white"
-                          style={{backgroundColor: '#007E8C'}}
+                          className="px-4 py-2.5 rounded-lg text-sm font-medium text-white"
+                          style={{backgroundColor: '#007E8C', minHeight: '44px'}}
                         >
                           Edit Collection
                         </button>
                         <button
                           onClick={deactivateSpecialCollection}
-                          className="px-3 py-1 rounded text-sm font-medium text-white"
-                          style={{backgroundColor: '#A31C41'}}
+                          className="px-4 py-2.5 rounded-lg text-sm font-medium text-white"
+                          style={{backgroundColor: '#A31C41', minHeight: '44px'}}
                         >
                           End Early
                         </button>
@@ -5643,6 +5648,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
 
                     {auditResults && auditResults.length > 0 && (
                       <div className="mt-4 space-y-2">
+                        {/* Summary */}
                         {!auditRunning && (
                           <div className="flex flex-wrap gap-3 mb-3 text-sm font-semibold">
                             <span style={{color: '#22c55e'}}>✓ {auditResults.filter(r => r.status === 'ok' || r.status === 'fixed').length} OK</span>
@@ -5653,6 +5659,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           </div>
                         )}
 
+                        {/* Individual results — only show problems + no-address, hide OK ones unless expanded */}
                         {auditResults.filter(r => r.status !== 'ok').map((result, idx) => (
                           <div key={result.host.id} className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg text-sm" style={{
                             backgroundColor: result.status === 'mismatch' ? '#fef2f2' : result.status === 'warning' ? '#fffbeb' : result.status === 'fixed' ? '#f0fdf4' : result.status === 'no-address' ? '#f9fafb' : '#fef2f2',
@@ -5668,8 +5675,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             {(result.status === 'mismatch' || result.status === 'warning') && result.geocodedLat && (
                               <button
                                 onClick={() => fixHostCoords(result.host.id, result.geocodedLat, result.geocodedLng)}
-                                className="px-3 py-1 rounded-lg text-xs font-semibold text-white flex-shrink-0"
-                                style={{backgroundColor: '#007E8C'}}
+                                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white flex-shrink-0"
+                                style={{backgroundColor: '#007E8C', minHeight: '44px'}}
                               >
                                 Fix → Use Geocoded Coords
                               </button>
@@ -5677,8 +5684,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             {result.status === 'no-address' && (
                               <button
                                 onClick={() => { setVerifiedCoords(result.host.lat && result.host.lng ? { lat: parseFloat(result.host.lat), lng: parseFloat(result.host.lng), formattedAddress: '' } : null); setEditingHost(result.host); }}
-                                className="px-3 py-1 rounded-lg text-xs font-semibold text-white flex-shrink-0"
-                                style={{backgroundColor: '#FBAD3F'}}
+                                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white flex-shrink-0"
+                                style={{backgroundColor: '#FBAD3F', minHeight: '44px'}}
                               >
                                 Edit → Add Address
                               </button>
@@ -6115,7 +6122,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {editingSpecialCollection && (
           <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => { setEditingSpecialCollection(null); setEditingSpecialHost(null); }}>
             <div className="modal-content bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-bold" style={{color: '#A31C41'}}>
                     {editingSpecialCollection.id ? '✏️ Edit Special Collection' : '🚨 Create Special Collection'}
@@ -6533,7 +6540,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         {editingSpecialHost && (
           <div className="modal-backdrop fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-[60]" onClick={() => setEditingSpecialHost(null)}>
             <div className="modal-content bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <h4 className="text-lg font-bold mb-4" style={{color: '#236383'}}>
                   {editingSpecialHost.id === 'new' ? '➕ Add Host to Collection' : '✏️ Edit Host'}
                 </h4>
