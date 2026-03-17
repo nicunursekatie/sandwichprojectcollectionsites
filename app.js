@@ -67,6 +67,7 @@ const HostAvailabilityApp = () => {
   const [geocoding, setGeocoding] = React.useState(false);
   const [map, setMap] = React.useState(null);
   const [mapLoaded, setMapLoaded] = React.useState(false);
+  const [mapLoadError, setMapLoadError] = React.useState(false);
   const [directionsService, setDirectionsService] = React.useState(null);
   const [directionsRenderer, setDirectionsRenderer] = React.useState(null);
   const [showingDirections, setShowingDirections] = React.useState(null);
