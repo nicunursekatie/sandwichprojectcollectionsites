@@ -5397,7 +5397,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <a
-                href="https://images.squarespace-cdn.com/content/644c1a7612e58c4d658841f5/65728819-6fb4-49af-a3ac-c98e11e3ac07/20240622-TSP-Deli+Sandwich+Making+101.png?content-type=image%2Fpng"
+                href="Deli%20Sandwich%20Making%20101%2003172026.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
@@ -5411,7 +5411,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </a>
               <a
-                href="https://images.squarespace-cdn.com/content/644c1a7612e58c4d658841f5/145e50cb-547e-4f35-b703-e69c39d6d309/20250622-TSP-PBJ+Sandwich+Making+101.png?content-type=image%2Fpng"
+                href="PBJ%20Sandwich%20Making%202%20101%2003172026.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
@@ -5425,7 +5425,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </a>
               <a
-                href="https://static1.squarespace.com/static/644c1a7612e58c4d658841f5/t/689e37912777ae317d08033a/1755199378103/20250205-TSP-Food%2BSafety%2BVolunteers.pdf"
+                href="20260317-TSP-Food%20Safety%20Volunteers.docx.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
