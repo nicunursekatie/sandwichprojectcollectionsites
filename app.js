@@ -1254,7 +1254,8 @@ const HostAvailabilityApp = () => {
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=us&bounds=33.4734,-84.8882|34.1620,-83.9937&key=${GOOGLE_MAPS_API_KEY}`
       );
       const data = await response.json();
-      
+      console.log('Geocoding API response status:', data.status, data.error_message || '');
+
       if (data.status === 'OK' && data.results && data.results.length > 0) {
         const location = data.results[0].geometry.location;
         setUserCoords({
@@ -1269,9 +1270,11 @@ const HostAvailabilityApp = () => {
         alert('Too many requests. Please try again in a moment.');
         return false;
       } else if (data.status === 'REQUEST_DENIED') {
-        if (data.error_message && data.error_message.includes('referer restrictions')) {
+        console.error('Geocoding REQUEST_DENIED:', data.error_message);
+        const errMsg = (data.error_message || '').toLowerCase();
+        if (errMsg.includes('referer restrictions') || errMsg.includes('referrer restrictions')) {
           alert(`API Key Issue: The Geocoding API doesn't support HTTP referrer restrictions.
-          
+
 To fix this:
 1. Go to Google Cloud Console → Credentials
 2. Edit your API key
@@ -1280,8 +1283,41 @@ To fix this:
 5. Save the changes
 
 This is safe because your API key is already restricted to only the Geocoding API.`);
+        } else if (errMsg.includes('not enabled') || errMsg.includes('not activated') || errMsg.includes('not authorized') || errMsg.includes('has not been used')) {
+          alert(`Google Maps API Not Enabled: The Geocoding API is not enabled for the Google Cloud project linked to this API key.
+
+To fix this:
+1. Go to https://console.cloud.google.com/apis/library
+2. Make sure you are in the correct Google Cloud project (check the project selector at the top)
+3. Search for and enable ALL of these APIs:
+   - "Geocoding API"
+   - "Maps JavaScript API"
+   - "Maps Static API"
+4. Wait 2-3 minutes for changes to take effect
+5. Refresh this page and try again
+
+Note: Do NOT delete the Google Cloud project - just enable the APIs listed above.
+If the project was already deleted, a new API key will need to be generated from an active project.
+
+Error details: ${data.error_message}`);
+        } else if (errMsg.includes('expired') || errMsg.includes('invalid') || errMsg.includes('deleted')) {
+          alert(`API Key Invalid: The Google Maps API key may have been deleted or is no longer valid.
+
+To fix this:
+1. Go to https://console.cloud.google.com/apis/credentials
+2. Check if the API key still exists and is active
+3. If the key was deleted, create a new one and update config.js
+4. Make sure the project has billing enabled
+
+Error details: ${data.error_message}`);
         } else {
-          alert(`API key error: ${data.error_message || 'Please check your Google Maps API configuration.'}`);
+          alert(`Google Maps API Error: ${data.error_message || 'Request denied. Please check your Google Maps API configuration.'}
+
+Troubleshooting steps:
+1. Verify the API key is valid at https://console.cloud.google.com/apis/credentials
+2. Ensure these APIs are enabled: Geocoding API, Maps JavaScript API, Maps Static API
+3. Check that billing is enabled on the Google Cloud project
+4. Make sure the API key has no overly restrictive application restrictions`);
         }
         return false;
       } else {
@@ -2024,6 +2060,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
     script.defer = true;
     script.onload = () => {
       setMapLoaded(true);
+    };
+    script.onerror = (e) => {
+      console.error('Failed to load Google Maps JavaScript API. Check that:',
+        '\n1. The API key is valid',
+        '\n2. "Maps JavaScript API" is enabled in Google Cloud Console',
+        '\n3. Billing is enabled on the Google Cloud project',
+        '\nAPI key used:', GOOGLE_MAPS_API_KEY ? GOOGLE_MAPS_API_KEY.substring(0, 10) + '...' : 'MISSING');
     };
     document.head.appendChild(script);
 
