@@ -1255,7 +1255,12 @@ const HostAvailabilityApp = () => {
       const data = await response.json();
       
       if (data.status === 'OK' && data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
+        const result = data.results[0];
+        if (!result.geometry || !result.geometry.location) {
+          alert('Could not determine coordinates for that address. Please try a more specific address.');
+          return false;
+        }
+        const location = result.geometry.location;
         setUserCoords({
           lat: location.lat,
           lng: location.lng
@@ -2415,10 +2420,10 @@ This is safe because your API key is already restricted to only the Geocoding AP
     });
     
     if (userCoords) {
-      const url = `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}`;
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${host.lat},${host.lng}&travelmode=driving`;
       window.open(url, '_blank');
     } else {
-      const url = `https://www.google.com/maps/search/?api=1&query=${host.lat},${host.lng}`;
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}&travelmode=driving`;
       window.open(url, '_blank');
     }
     setDirectionsMenuOpen(null);
@@ -2465,7 +2470,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
     text += `Drop-off Date: ${dropOffDate}\n`;
     text += `Host Hours: ${routeInfo.hours}\n`;
     text += `\nView full turn-by-turn directions on Google Maps:\n`;
-    text += `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}\n`;
+    text += `https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${host.lat},${host.lng}&travelmode=driving\n`;
 
     navigator.clipboard.writeText(text).then(() => {
       alert('✓ Directions copied to clipboard! You can now paste them into an email or text message.');
