@@ -4869,7 +4869,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                 top = 16;
                               }
                               
-                              setDirectionsMenuPosition({ top, left });
+                              const maxH = viewportHeight - top - 16;
+                              setDirectionsMenuPosition({ top, left, maxHeight: Math.max(maxH, 150) });
                             }
                             trackEvent('get_directions_click', {
                               event_category: 'Directions',
@@ -4901,7 +4902,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               minWidth: '280px',
                               width: 'max-content',
                               maxWidth: 'calc(100vw - 2rem)',
-                              maxHeight: 'calc(100vh - 2rem)',
+                              maxHeight: `${directionsMenuPosition.maxHeight || 300}px`,
                               zIndex: 10000,
                               top: `${directionsMenuPosition.top}px`,
                               left: `${directionsMenuPosition.left}px`
@@ -5095,7 +5096,8 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                     top = 16;
                                   }
                                   
-                                  setDirectionsMenuPosition({ top, left });
+                                  const maxH = viewportHeight - top - 16;
+                                  setDirectionsMenuPosition({ top, left, maxHeight: Math.max(maxH, 150) });
                                 }
                                 trackEvent('get_directions_click', {
                                   event_category: 'Directions',
@@ -5115,13 +5117,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               <i className={`lucide-chevron-down w-4 h-4 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
                             </button>
                             {directionsMenuOpen === host.id && ReactDOM.createPortal(
-                              <div 
+                              <div
                                 className="fixed bg-white rounded-lg shadow-xl border-2 overflow-y-auto"
                                 style={{
                                   borderColor: '#007E8C',
                                   width: 'min(280px, calc(100vw - 2rem))',
                                   maxWidth: 'calc(100vw - 2rem)',
-                                  maxHeight: 'calc(100vh - 2rem)',
+                                  maxHeight: `${directionsMenuPosition.maxHeight || 300}px`,
                                   zIndex: 10000,
                                   top: `${directionsMenuPosition.top}px`,
                                   left: `${directionsMenuPosition.left}px`
