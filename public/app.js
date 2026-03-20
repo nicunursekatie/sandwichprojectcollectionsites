@@ -67,6 +67,7 @@ const HostAvailabilityApp = () => {
   const [geocoding, setGeocoding] = React.useState(false);
   const [map, setMap] = React.useState(null);
   const [mapLoaded, setMapLoaded] = React.useState(false);
+  const [mapLoadError, setMapLoadError] = React.useState(false);
   const [directionsService, setDirectionsService] = React.useState(null);
   const [directionsRenderer, setDirectionsRenderer] = React.useState(null);
   const [showingDirections, setShowingDirections] = React.useState(null);
@@ -4180,7 +4181,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
               </div>
               <div className="relative">
                 {/* Mobile optimization: Responsive map height for small screens */}
-                <div id="map" className="h-64 sm:h-80 md:h-96 lg:h-[calc(100vh-400px)]"></div>
+                <div id="map" className="h-80 sm:h-96 md:h-[28rem] lg:h-[calc(100vh-400px)]" style={{minHeight: '320px'}}></div>
 
                 {/* Map Tooltip */}
                 {mapTooltip && (
@@ -4846,11 +4847,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
                               const viewportWidth = window.innerWidth;
                               const viewportHeight = window.innerHeight;
                               const dropdownWidth = 280;
-                              const dropdownHeight = 200;
-                              
+                              const dropdownHeight = 300;
+
                               let left = buttonRect.left;
                               let top = buttonRect.bottom + 4;
-                              
+
                               // Ensure dropdown doesn't go off right edge
                               if (left + dropdownWidth > viewportWidth - 16) {
                                 left = viewportWidth - dropdownWidth - 16;
@@ -4893,13 +4894,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
                           <i className={`lucide-chevron-down w-5 h-5 transition-transform ${directionsMenuOpen === host.id ? 'rotate-180' : ''}`}></i>
                         </button>
                         {directionsMenuOpen === host.id && ReactDOM.createPortal(
-                          <div 
-                            className="fixed bg-white rounded-lg shadow-xl border-2 overflow-hidden"
+                          <div
+                            className="fixed bg-white rounded-lg shadow-xl border-2 overflow-y-auto"
                             style={{
                               borderColor: '#007E8C',
                               minWidth: '280px',
                               width: 'max-content',
                               maxWidth: 'calc(100vw - 2rem)',
+                              maxHeight: 'calc(100vh - 2rem)',
                               zIndex: 10000,
                               top: `${directionsMenuPosition.top}px`,
                               left: `${directionsMenuPosition.left}px`
@@ -5071,7 +5073,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                                   const viewportWidth = window.innerWidth;
                                   const viewportHeight = window.innerHeight;
                                   const dropdownWidth = Math.min(280, viewportWidth - 32);
-                                  const dropdownHeight = 200;
+                                  const dropdownHeight = 300;
                                   
                                   let left = buttonRect.left;
                                   let top = buttonRect.bottom + 4;
@@ -5114,11 +5116,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
                             </button>
                             {directionsMenuOpen === host.id && ReactDOM.createPortal(
                               <div 
-                                className="fixed bg-white rounded-lg shadow-xl border-2 overflow-hidden"
+                                className="fixed bg-white rounded-lg shadow-xl border-2 overflow-y-auto"
                                 style={{
                                   borderColor: '#007E8C',
                                   width: 'min(280px, calc(100vw - 2rem))',
                                   maxWidth: 'calc(100vw - 2rem)',
+                                  maxHeight: 'calc(100vh - 2rem)',
                                   zIndex: 10000,
                                   top: `${directionsMenuPosition.top}px`,
                                   left: `${directionsMenuPosition.left}px`
