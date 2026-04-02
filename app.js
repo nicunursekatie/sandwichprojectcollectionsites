@@ -56,6 +56,9 @@ const parseInstructionTags = (notes) => {
   return { tags: foundTags, remainingText: notes };
 };
 
+// Get Google Maps API key from config (module-level constant, not re-evaluated on each render)
+const GOOGLE_MAPS_API_KEY = window.CONFIG?.GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
+
 const HostAvailabilityApp = () => {
   const [userAddress, setUserAddress] = React.useState('');
   const [searchInput, setSearchInput] = React.useState('');
@@ -129,6 +132,9 @@ const HostAvailabilityApp = () => {
   const directionsButtonRef = React.useRef(null);
   const hostIdsRef = React.useRef('');
   const markersRef = React.useRef({});
+  const mapInstanceRef = React.useRef(null);
+  const clustererRef = React.useRef(null);
+  const userMarkerRef = React.useRef(null);
   // Refs for stable event handler references (prevents memory leaks in event listener cleanup)
   const menuThrottledScrollRef = React.useRef(null);
   const menuDebouncedResizeRef = React.useRef(null);
@@ -553,19 +559,40 @@ const HostAvailabilityApp = () => {
   const [allHosts, setAllHosts] = React.useState([]);
   const [hostsLoading, setHostsLoading] = React.useState(true);
 
-  // Load hosts from Firestore on mount
+  // Load hosts from Firestore on mount (with localStorage cache)
   React.useEffect(() => {
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
     const loadHosts = async () => {
       try {
+        // Check localStorage cache first for instant load
+        const cached = localStorage.getItem('cachedHosts');
+        const cachedTime = parseInt(localStorage.getItem('cachedHostsTimestamp') || '0');
+        const cacheAge = Date.now() - cachedTime;
+
+        if (cached && cacheAge < CACHE_TTL) {
+          try {
+            const cachedData = JSON.parse(cached);
+            if (cachedData.length > 0) {
+              setAllHosts(cachedData);
+              setHostsLoading(false);
+            }
+          } catch (e) { /* ignore bad cache */ }
+        }
+
+        // Always fetch fresh data from Firestore (stale-while-revalidate)
         const snapshot = await db.collection('hosts').get();
         const hostsData = [];
         snapshot.forEach(doc => {
           hostsData.push({ ...doc.data(), id: doc.data().id });
         });
-        // Sort by ID
         hostsData.sort((a, b) => a.id - b.id);
         setAllHosts(hostsData);
         setHostsLoading(false);
+
+        // Update cache
+        localStorage.setItem('cachedHosts', JSON.stringify(hostsData));
+        localStorage.setItem('cachedHostsTimestamp', Date.now().toString());
       } catch (error) {
         console.error('Error loading hosts:', error);
         setHostsLoading(false);
@@ -620,6 +647,10 @@ const HostAvailabilityApp = () => {
         hostsData.sort((a, b) => a.id - b.id);
         setAllHosts(hostsData);
 
+        // Update cache
+        localStorage.setItem('cachedHosts', JSON.stringify(hostsData));
+        localStorage.setItem('cachedHostsTimestamp', Date.now().toString());
+
         // Refresh special collection
         await loadSpecialCollection();
 
@@ -629,16 +660,15 @@ const HostAvailabilityApp = () => {
       }
     };
 
-    // Refresh data every 5 minutes in the background
-    const refreshInterval = setInterval(refreshData, 5 * 60 * 1000);
+    // Refresh data every 30 minutes in the background (host data changes ~once/week)
+    const refreshInterval = setInterval(refreshData, 30 * 60 * 1000);
 
-    // Refresh when tab becomes visible again (if hidden for more than 1 minute)
+    // Refresh when tab becomes visible again (if hidden for more than 30 minutes)
     let lastVisibleTime = Date.now();
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         const hiddenDuration = Date.now() - lastVisibleTime;
-        // If tab was hidden for more than 1 minute, refresh data
-        if (hiddenDuration > 60 * 1000) {
+        if (hiddenDuration > 30 * 60 * 1000) {
           console.log('Tab became visible after', Math.round(hiddenDuration / 1000), 'seconds - refreshing data');
           refreshData();
         }
@@ -662,7 +692,7 @@ const HostAvailabilityApp = () => {
           }
         }
       }
-    }, 60000); // Check every minute
+    }, 10 * 60 * 1000); // Check every 10 minutes
 
     return () => {
       clearInterval(expirationInterval);
@@ -1161,9 +1191,6 @@ const HostAvailabilityApp = () => {
   // Use centralized distance calculation utility
   const calculateDistance = window.HostUtils?.calculateDistance || ((lat1, lon1, lat2, lon2) => '0.0');
 
-  // Get Google Maps API key from config
-  const GOOGLE_MAPS_API_KEY = window.CONFIG?.GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
-
   const CALENDAR_TIMEZONE = 'America/New_York';
 
   const handleAddToCalendar = (host) => {
@@ -1576,29 +1603,21 @@ This is safe because your API key is already restricted to only the Geocoding AP
       }
       // If geocoding fails and no matches, user will see "No hosts found"
     } else {
-      // Doesn't look like address and no name match - try geocoding anyway as fallback
-      const success = await geocodeAddress(input);
-      if (success) {
-        setUserAddress(input);
-        setNameSearch('');
-        setViewMode('proximity');
-        
-        trackEvent('search_by_address', {
-          event_category: 'Search',
-          event_label: 'Address Geocoded (Fallback)',
-          search_term: input
-        });
-      }
-      // If geocoding fails, user will see "No hosts found"
+      // Doesn't look like an address and no name match — show no results
+      // (No paid geocoding API call for random non-address text)
+      setNameSearch(input);
+      setViewMode('list');
     }
   };
 
-  // Initialize Google Map
-  const initializeMap = React.useCallback(() => {
-    if (!window.google) return;
-    if (map) return; // Map already initialized
+  // Create map instance ONCE (does not depend on hosts/coords/filters)
+  const createMap = React.useCallback(() => {
+    if (!window.google || !window.google.maps) return;
+    if (mapInstanceRef.current) return; // Already created
 
-    // Calculate map center: use user location if available, otherwise center on Atlanta
+    const mapElement = document.getElementById('map');
+    if (!mapElement) return;
+
     const atlBounds = window.CONFIG?.ATLANTA_BOUNDS || {
       southwest: { lat: 33.4734, lng: -84.8882 },
       northeast: { lat: 34.1620, lng: -83.9937 }
@@ -1607,29 +1626,13 @@ This is safe because your API key is already restricted to only the Geocoding AP
       lat: (atlBounds.southwest.lat + atlBounds.northeast.lat) / 2,
       lng: (atlBounds.southwest.lng + atlBounds.northeast.lng) / 2
     };
-    const mapCenter = userCoords || atlCenter;
-    const mapZoom = userCoords ? 11 : 10;
 
-    // Store initial map state for reset
-    setInitialMapCenter(mapCenter);
-    setInitialMapZoom(mapZoom);
+    setInitialMapCenter(atlCenter);
+    setInitialMapZoom(10);
 
-    if (!window.google || !window.google.maps) {
-      console.error('Google Maps API not loaded');
-      return;
-    }
-
-    const mapElement = document.getElementById('map');
-    if (!mapElement) {
-      console.error('Map element not found');
-      return;
-    }
-
-    // Note: Map styling is configured via Cloud-based styling in Google Cloud Console
-    // using the mapId. Client-side styles are not compatible with mapId.
     const mapInstance = new window.google.maps.Map(mapElement, {
-      center: mapCenter,
-      zoom: mapZoom,
+      center: atlCenter,
+      zoom: 10,
       mapId: 'SANDWICH_DROP_OFF_MAP',
       mapTypeControl: false,
       streetViewControl: false,
@@ -1640,11 +1643,58 @@ This is safe because your API key is already restricted to only the Geocoding AP
       }
     });
 
-    // Store initial values in closure for reset functionality
-    const savedMapCenter = mapCenter;
-    const savedMapZoom = mapZoom;
+    mapInstanceRef.current = mapInstance;
 
-    // Add user location marker only if we have user coordinates
+    // Directions service/renderer — created once, reused
+    const directionsServiceInstance = new google.maps.DirectionsService();
+    const directionsRendererInstance = new google.maps.DirectionsRenderer({
+      map: mapInstance,
+      panel: null,
+      polylineOptions: { strokeColor: '#007E8C', strokeWeight: 4, strokeOpacity: 0.8 },
+      markerOptions: { visible: false }
+    });
+    setDirectionsService(directionsServiceInstance);
+    setDirectionsRenderer(directionsRendererInstance);
+
+    // Close tooltip and reset map view when clicking on the map (not on a marker)
+    mapInstance.addListener('click', () => {
+      setMapTooltip(null);
+      setHighlightedHostId(null);
+      setMapTooltipMenuOpen(false);
+      if (mapInstanceRef.current) {
+        const center = initialMapCenter || atlCenter;
+        const zoom = initialMapZoom || 10;
+        mapInstanceRef.current.setCenter(center);
+        mapInstanceRef.current.setZoom(zoom);
+      }
+    });
+
+    setMap(mapInstance);
+  }, []);
+
+  // Update markers on the existing map (runs when hosts, coords, or filters change)
+  const updateMarkers = React.useCallback(() => {
+    const mapInstance = mapInstanceRef.current;
+    if (!mapInstance || !window.google) return;
+
+    // 1. Clear old markers
+    Object.values(markersRef.current).forEach(({ marker }) => {
+      marker.map = null;
+    });
+    markersRef.current = {};
+
+    // 2. Clear old clusterer
+    if (clustererRef.current) {
+      clustererRef.current.clearMarkers();
+      clustererRef.current = null;
+    }
+
+    // 3. Clear/recreate user marker
+    if (userMarkerRef.current) {
+      userMarkerRef.current.map = null;
+      userMarkerRef.current = null;
+    }
+
     if (userCoords) {
       const userMarkerContent = document.createElement('div');
       userMarkerContent.innerHTML = `
@@ -1688,7 +1738,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         </div>
       `;
 
-      new google.maps.marker.AdvancedMarkerElement({
+      userMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
         position: userCoords,
         map: mapInstance,
         title: 'Your Location',
@@ -1696,13 +1746,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     }
 
-    // Prepare host data: sort by distance if user coords available
+    // 4. Calculate host groupings
     let hostsWithDistance;
     let topThreeHosts = [];
     let otherHosts = [];
 
     if (userCoords) {
-      // Filter to only available hosts for ranking (unavailable shown separately if checkbox checked)
       const availableHosts = allHostsForDisplay.filter(h => h.available);
       const unavailableHosts = includeUnavailableHosts ? allHostsForDisplay.filter(h => !h.available) : [];
 
@@ -1711,9 +1760,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
         distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
       })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
 
-      // Top 3 closest AVAILABLE hosts - these are the "sore thumbs"
       topThreeHosts = hostsWithDistance.slice(0, 3);
-      // Other hosts only shown when "show all" is clicked
       otherHosts = showAllHostsOnMap ? [
         ...hostsWithDistance.slice(3),
         ...unavailableHosts.map(h => ({
@@ -1722,18 +1769,11 @@ This is safe because your API key is already restricted to only the Geocoding AP
         }))
       ] : [];
     } else {
-      // No user location - show all available hosts as equal (no Top 3 highlighting)
       const hostsForMap = includeUnavailableHosts ? allHostsForDisplay : allHostsForDisplay.filter(h => h.available);
       hostsWithDistance = hostsForMap;
       topThreeHosts = [];
       otherHosts = hostsForMap;
     }
-
-    // Clear previous markers
-    markersRef.current = {};
-
-    // ========== TOP 3 MARKERS: HUGE, GOLD, NUMBERED, PULSING ==========
-    // These must be unmistakable - the "sore thumbs"
 
     // Add CSS animation for pulsing halo (only once)
     if (!document.getElementById('marker-pulse-style')) {
@@ -1752,14 +1792,12 @@ This is safe because your API key is already restricted to only the Geocoding AP
       document.head.appendChild(style);
     }
 
+    // 5. Create Top 3 markers
     topThreeHosts.forEach((host, index) => {
       const rank = index + 1;
-
-      // Create the "sore thumb" marker - LARGE, GOLD, NUMBERED
       const hostMarkerContent = document.createElement('div');
       hostMarkerContent.innerHTML = `
         <div style="position: relative; display: flex; align-items: center; justify-content: center;">
-          <!-- Pulsing halo ring -->
           <div class="marker-pulse-ring" style="
             position: absolute;
             width: 44px;
@@ -1768,7 +1806,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
             border-radius: 50%;
             z-index: 1;
           "></div>
-          <!-- Main pin -->
           <div style="
             position: relative;
             z-index: 2;
@@ -1794,22 +1831,18 @@ This is safe because your API key is already restricted to only the Geocoding AP
       `;
 
       const markerTitle = `#${rank} Closest: ${host.name} - ${host.distance} mi`;
-
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: host.lat, lng: host.lng },
         map: mapInstance,
         title: markerTitle,
         content: hostMarkerContent,
-        zIndex: 1000 + (3 - rank) // Top 3 always on top, #1 highest
+        zIndex: 1000 + (3 - rank)
       });
 
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
 
       marker.addListener('click', (e) => {
-        // Stop the event from propagating to the map click listener
-        if (e && e.domEvent) {
-          e.domEvent.stopPropagation();
-        }
+        if (e && e.domEvent) e.domEvent.stopPropagation();
         setMapTooltip(host);
         setHighlightedHostId(host.id);
         mapInstance.setZoom(14);
@@ -1824,19 +1857,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     });
 
-    // ========== OTHER MARKERS: TINY, MUTED, BACKGROUND NOISE ==========
-    // These should fade into the background - just small dots
-
-    const backgroundMarkers = []; // For clustering
-
+    // 6. Create background markers
+    const backgroundMarkers = [];
     otherHosts.forEach((host, index) => {
       const isUnavailable = !host.available;
       const hasUserLocation = !!userCoords;
-
-      // When no user location, show larger numbered markers; otherwise tiny dots
       const hostMarkerContent = document.createElement('div');
+
       if (!hasUserLocation) {
-        // Pin-shaped markers when no user location (distinct from circular clusters)
         hostMarkerContent.innerHTML = `
           <div style="
             display: flex;
@@ -1870,7 +1898,6 @@ This is safe because your API key is already restricted to only the Geocoding AP
           </div>
         `;
       } else {
-        // Tiny muted dot when user has location (background noise)
         hostMarkerContent.innerHTML = `
           <div style="
             width: 10px;
@@ -1894,17 +1921,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
         map: mapInstance,
         title: markerTitle,
         content: hostMarkerContent,
-        zIndex: isUnavailable ? 1 : 10 // Low z-index, below Top 3
+        zIndex: isUnavailable ? 1 : 10
       });
 
       markersRef.current[host.id] = { marker, content: hostMarkerContent };
       backgroundMarkers.push(marker);
 
       marker.addListener('click', (e) => {
-        // Stop the event from propagating to the map click listener
-        if (e && e.domEvent) {
-          e.domEvent.stopPropagation();
-        }
+        if (e && e.domEvent) e.domEvent.stopPropagation();
         if (isUnavailable) {
           alert('⚠️ IMPORTANT: This host is NOT collecting this week. You cannot drop off sandwiches here. Please choose a host marked as "Collecting This Week" instead.');
         }
@@ -1921,15 +1945,14 @@ This is safe because your API key is already restricted to only the Geocoding AP
       });
     });
 
-    // ========== CLUSTERING: Only for background markers ==========
+    // 7. Clustering
     if (backgroundMarkers.length > 5 && window.markerClusterer) {
-      new window.markerClusterer.MarkerClusterer({
+      clustererRef.current = new window.markerClusterer.MarkerClusterer({
         map: mapInstance,
         markers: backgroundMarkers,
         renderer: {
           render: ({ count, position }) => {
             const clusterContent = document.createElement('div');
-            // Size scales with count for visual hierarchy
             const size = Math.min(24 + Math.log2(count) * 6, 48);
             clusterContent.innerHTML = `
               <div style="
@@ -1951,68 +1974,36 @@ This is safe because your API key is already restricted to only the Geocoding AP
             return new google.maps.marker.AdvancedMarkerElement({
               position,
               content: clusterContent,
-              zIndex: 5 // Below top 3
+              zIndex: 5
             });
           }
         }
       });
     }
 
-    // ========== FOCUS MODE: Fit bounds to user + Top 3 ==========
+    // 8. Fit bounds
     if (userCoords && topThreeHosts.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       bounds.extend({ lat: userCoords.lat, lng: userCoords.lng });
       topThreeHosts.forEach(host => {
         bounds.extend({ lat: host.lat, lng: host.lng });
       });
-      // Fit bounds with generous padding for clear separation
       mapInstance.fitBounds(bounds, { padding: 60 });
-
-      // Ensure minimum zoom for readability (don't zoom out too far)
       google.maps.event.addListenerOnce(mapInstance, 'bounds_changed', () => {
-        if (mapInstance.getZoom() > 13) {
-          mapInstance.setZoom(13);
-        }
+        if (mapInstance.getZoom() > 13) mapInstance.setZoom(13);
       });
+
+      // Update initial center/zoom for reset
+      setInitialMapCenter(userCoords);
+      setInitialMapZoom(11);
     } else if (otherHosts.length > 0) {
-      // No user location - show all hosts
       const bounds = new google.maps.LatLngBounds();
       otherHosts.forEach(host => {
         bounds.extend({ lat: host.lat, lng: host.lng });
       });
       mapInstance.fitBounds(bounds, { padding: 50 });
     }
-
-    // Initialize directions service and renderer
-    const directionsServiceInstance = new google.maps.DirectionsService();
-    const directionsRendererInstance = new google.maps.DirectionsRenderer({
-      map: mapInstance,
-      panel: null, // We'll handle this ourselves
-      polylineOptions: {
-        strokeColor: '#007E8C',
-        strokeWeight: 4,
-        strokeOpacity: 0.8
-      },
-      markerOptions: {
-        visible: false // Hide default markers since we have custom ones
-      }
-    });
-    
-    setDirectionsService(directionsServiceInstance);
-    setDirectionsRenderer(directionsRendererInstance);
-
-    // Close tooltip and reset map view when clicking on the map (not on a marker)
-    mapInstance.addListener('click', () => {
-      setMapTooltip(null);
-      setHighlightedHostId(null);
-      setMapTooltipMenuOpen(false);
-      // Reset map to initial view
-      mapInstance.setCenter(savedMapCenter);
-      mapInstance.setZoom(savedMapZoom);
-    });
-
-    setMap(mapInstance);
-  }, [userCoords, allHostsForDisplay, map, showAllHostsOnMap, includeUnavailableHosts]);
+  }, [userCoords, allHostsForDisplay, showAllHostsOnMap, includeUnavailableHosts]);
 
   // Load Google Maps API on component mount
   React.useEffect(() => {
@@ -2034,70 +2025,57 @@ This is safe because your API key is already restricted to only the Geocoding AP
         document.head.removeChild(existingScript);
       }
     };
-  }, [GOOGLE_MAPS_API_KEY, mapLoaded]);
+  }, [mapLoaded]);
 
-  // Reset map when toggle changes or when includeUnavailableHosts changes
+  // Update markers when filters/coords change (map instance persists)
   React.useEffect(() => {
-    if (map) {
-      setMap(null); // Force map re-initialization
+    if (mapInstanceRef.current) {
+      updateMarkers();
     }
-  }, [showAllHostsOnMap, includeUnavailableHosts]);
+  }, [showAllHostsOnMap, includeUnavailableHosts, updateMarkers]);
 
-  // Reset map when user coordinates change (to re-center and add user marker)
-  const prevUserCoords = React.useRef(userCoords);
+  // Update markers when user coordinates change
   React.useEffect(() => {
-    if (userCoords && prevUserCoords.current !== userCoords && map) {
-      setMap(null); // Force map re-initialization with new user location
+    if (mapInstanceRef.current && userCoords) {
+      updateMarkers();
     }
-    prevUserCoords.current = userCoords;
-  }, [userCoords, map]);
+  }, [userCoords, updateMarkers]);
 
-  // Reset map when includeUnavailableHosts changes to update markers
-  React.useEffect(() => {
-    if (map) {
-      setMap(null); // Force map re-initialization to show/hide unavailable hosts
-    }
-  }, [includeUnavailableHosts]);
-
-  // Reset map when hosts data loads (to show markers)
+  // Update markers when hosts data first loads
   const prevHostsCount = React.useRef(0);
   React.useEffect(() => {
     const currentCount = allHostsForDisplay?.length || 0;
-    // If hosts went from 0 to having data, reset map to re-create markers
-    if (prevHostsCount.current === 0 && currentCount > 0 && map) {
-      setMap(null);
+    if (prevHostsCount.current === 0 && currentCount > 0 && mapInstanceRef.current) {
+      updateMarkers();
     }
     prevHostsCount.current = currentCount;
-  }, [allHostsForDisplay, map]);
+  }, [allHostsForDisplay, updateMarkers]);
 
-  // Initialize map when API is loaded AND map div exists AND hosts are loaded
+  // Create map when API is loaded AND map div exists — only once
   React.useEffect(() => {
-    if (viewMode === 'list') {
-      // When switching to list-only view, clear the map to allow re-initialization later
-      if (map) {
-        setMap(null);
-      }
-      return;
-    }
+    if (viewMode === 'list') return;
 
-    // Wait for hosts to be loaded before initializing map
-    if (mapLoaded && !map && allHostsForDisplay?.length > 0) {
-      // Check if map element exists in DOM before initializing
+    if (mapLoaded && !mapInstanceRef.current && allHostsForDisplay?.length > 0) {
       const checkAndInit = () => {
         const mapElement = document.getElementById('map');
-        if (mapElement && !map) {
-          initializeMap();
+        if (mapElement && !mapInstanceRef.current) {
+          createMap();
+          // After map is created, populate markers
+          setTimeout(() => updateMarkers(), 50);
         } else if (!mapElement) {
-          // If map element doesn't exist yet, try again after a short delay
           setTimeout(checkAndInit, 100);
         }
       };
-
-      // Initial check with a small delay to ensure DOM is ready
       const timeoutId = setTimeout(checkAndInit, 100);
       return () => clearTimeout(timeoutId);
     }
-  }, [mapLoaded, viewMode, initializeMap, map, allHostsForDisplay]);
+
+    // When switching back to map view, trigger resize and update markers
+    if (mapInstanceRef.current && viewMode !== 'list') {
+      google.maps.event.trigger(mapInstanceRef.current, 'resize');
+      updateMarkers();
+    }
+  }, [mapLoaded, viewMode, createMap, updateMarkers, allHostsForDisplay]);
 
   // Auto-focus map on favorite host when page loads
   React.useEffect(() => {
