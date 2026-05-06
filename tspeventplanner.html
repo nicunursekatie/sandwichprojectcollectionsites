@@ -1103,14 +1103,17 @@
         <div class="form-field"><label for="driver-name">Driver</label> <input type="text" id="driver-name">
          <div class="checkbox-field"><input type="checkbox" id="driver-present"> <label for="driver-present">Driver Present</label>
          </div>
+         <textarea id="driver-notes" placeholder="Notes about the driver for this event..." style="margin-top: 8px;"></textarea>
         </div>
         <div class="form-field"><label for="speaker-name">Speaker(s)</label> <input type="text" id="speaker-name" placeholder="Separate multiple names with commas">
          <div class="checkbox-field"><input type="checkbox" id="speaker-present"> <label for="speaker-present">Speaker(s) Present</label>
          </div>
+         <textarea id="speaker-notes" placeholder="Notes about the speaker(s) for this event..." style="margin-top: 8px;"></textarea>
         </div>
         <div class="form-field"><label for="volunteer-name">Volunteer(s)</label> <input type="text" id="volunteer-name" placeholder="Separate multiple names with commas">
          <div class="checkbox-field"><input type="checkbox" id="volunteer-present"> <label for="volunteer-present">Volunteer(s) Present</label>
          </div>
+         <textarea id="volunteer-notes" placeholder="Notes about the volunteer(s) for this event..." style="margin-top: 8px;"></textarea>
         </div>
        </div>
       </div><!-- Follow-up -->
@@ -1906,10 +1909,13 @@
       document.getElementById('tsp-contact').value = currentEvent.tsp_contact || '';
       document.getElementById('driver-name').value = currentEvent.driver_name_assigned || '';
       document.getElementById('driver-present').checked = currentEvent.driver_present || false;
+      document.getElementById('driver-notes').value = currentEvent.driver_notes || '';
       document.getElementById('speaker-name').value = currentEvent.speaker_name_assigned || '';
       document.getElementById('speaker-present').checked = currentEvent.speaker_present || false;
+      document.getElementById('speaker-notes').value = currentEvent.speaker_notes || '';
       document.getElementById('volunteer-name').value = currentEvent.volunteer_name_assigned || '';
       document.getElementById('volunteer-present').checked = currentEvent.volunteer_present || false;
+      document.getElementById('volunteer-notes').value = currentEvent.volunteer_notes || '';
       document.getElementById('collection-log-link').value = currentEvent.collection_log_link || '';
       document.getElementById('photo-followup').checked = currentEvent.photo_followup_done || false;
       document.getElementById('final-count-recorded').checked = currentEvent.final_sandwich_count_recorded || false;
@@ -1992,10 +1998,13 @@
         tsp_contact: document.getElementById('tsp-contact').value,
         driver_name_assigned: document.getElementById('driver-name').value,
         driver_present: document.getElementById('driver-present').checked,
+        driver_notes: document.getElementById('driver-notes').value,
         speaker_name_assigned: document.getElementById('speaker-name').value,
         speaker_present: document.getElementById('speaker-present').checked,
+        speaker_notes: document.getElementById('speaker-notes').value,
         volunteer_name_assigned: document.getElementById('volunteer-name').value,
         volunteer_present: document.getElementById('volunteer-present').checked,
+        volunteer_notes: document.getElementById('volunteer-notes').value,
         status: document.getElementById('event-status').value,
         photo_followup_done: document.getElementById('photo-followup').checked,
         final_sandwich_count_recorded: document.getElementById('final-count-recorded').checked,

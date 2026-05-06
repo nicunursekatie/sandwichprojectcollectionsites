@@ -1177,7 +1177,18 @@ const HostAvailabilityApp = () => {
 
   // Only show available hosts
   // Show ALL hosts for planning purposes, not just available ones
-  const allHostsForDisplay = allHosts || [];
+  const rawHosts = allHosts || [];
+  // Enforce alternate rule: if an alternate's primary partner is currently available,
+  // the alternate must not display as available — only one of the pair collects per week.
+  const allHostsForDisplay = rawHosts.map(h => {
+    if (h.available && h.alternateFor) {
+      const primary = rawHosts.find(p => p.id === h.alternateFor);
+      if (primary && primary.available) {
+        return { ...h, available: false };
+      }
+    }
+    return h;
+  });
   const availableHosts = allHostsForDisplay.filter(h => h.available);
   const areas = [...new Set(allHostsForDisplay.map(h => h.area))].sort();
 
@@ -5400,7 +5411,7 @@ This is safe because your API key is already restricted to only the Geocoding AP
                 </div>
               </a>
               <a
-                href="20260317-TSP-Food%20Safety%20Volunteers.docx.pdf"
+                href="20260506-TSP-Food%2BSafety%2BVolunteers.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2.5 p-3 rounded-lg hover:shadow-lg transition-all"
