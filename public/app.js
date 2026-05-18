@@ -1277,60 +1277,64 @@ const HostAvailabilityApp = () => {
     });
   };
   
-  // Geocode address using Google Maps Geocoding API
+  // Geocode address using the Maps JavaScript SDK Geocoder.
+  // We deliberately do NOT call the Geocoding REST API directly because that
+  // endpoint does not support HTTP referrer restrictions — exposing a key with
+  // no restrictions in client-side JS would let anyone run up our bill.
+  // The JS Geocoder runs through the Maps JS API, which IS referrer-restricted.
   const geocodeAddress = async (address) => {
     setGeocoding(true);
     try {
-      // Check if API key is set
       if (GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE') {
         alert('Google Maps API key not configured. Please add your API key to use address lookup.');
         return false;
       }
-      
-      // Using Google Maps Geocoding API
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=us&bounds=33.4734,-84.8882|34.1620,-83.9937&key=${GOOGLE_MAPS_API_KEY}`
+
+      if (!window.google || !window.google.maps || !window.google.maps.Geocoder) {
+        alert('Map is still loading. Please wait a moment and try again.');
+        return false;
+      }
+
+      const geocoder = new window.google.maps.Geocoder();
+      const bounds = new window.google.maps.LatLngBounds(
+        { lat: 33.4734, lng: -84.8882 },
+        { lat: 34.1620, lng: -83.9937 }
       );
-      const data = await response.json();
-      
-      if (data.status === 'OK' && data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
+
+      const { results, status } = await new Promise((resolve) => {
+        geocoder.geocode(
+          { address, region: 'us', bounds },
+          (results, status) => resolve({ results, status })
+        );
+      });
+
+      const GeocoderStatus = window.google.maps.GeocoderStatus;
+
+      if (status === GeocoderStatus.OK && results && results.length > 0) {
+        const location = results[0].geometry.location;
         setUserCoords({
-          lat: location.lat,
-          lng: location.lng
+          lat: typeof location.lat === 'function' ? location.lat() : location.lat,
+          lng: typeof location.lng === 'function' ? location.lng() : location.lng,
         });
         return true;
-      } else if (data.status === 'ZERO_RESULTS') {
+      }
+
+      if (status === GeocoderStatus.ZERO_RESULTS) {
         alert('Could not find that address. Please check the spelling and try again.');
         return false;
-      } else if (data.status === 'OVER_QUERY_LIMIT') {
+      }
+      if (status === GeocoderStatus.OVER_QUERY_LIMIT) {
         alert('Too many requests. Please try again in a moment.');
         return false;
-      } else if (data.status === 'REQUEST_DENIED') {
-        if (data.error_message && data.error_message.includes('referer restrictions')) {
-          alert(`API Key Issue: The Geocoding API doesn't support HTTP referrer restrictions.
-          
-To fix this:
-1. Go to Google Cloud Console → Credentials
-2. Edit your API key
-3. Under "Application restrictions", select "None"
-4. Keep "API restrictions" set to "Geocoding API" only
-5. Save the changes
-
-This is safe because your API key is already restricted to only the Geocoding API.`);
-        } else {
-          alert(`API key error: ${data.error_message || 'Please check your Google Maps API configuration.'}`);
-        }
-        return false;
-      } else {
-        alert(`Geocoding failed: ${data.status} - ${data.error_message || 'Unknown error'}`);
+      }
+      if (status === GeocoderStatus.REQUEST_DENIED || status === GeocoderStatus.INVALID_REQUEST) {
+        alert(`API key error (${status}). Please check your Google Maps API configuration.`);
         return false;
       }
+      alert(`Geocoding failed: ${status}`);
+      return false;
     } catch (error) {
       console.error('Geocoding error:', error);
-      if (error.message) {
-        console.error('Error message:', error.message);
-      }
       alert('Error looking up address. Please check your internet connection and try again.');
       return false;
     } finally {
