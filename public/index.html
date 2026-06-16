@@ -42,7 +42,9 @@
     <!-- React -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Pinned to v7: Babel 8's preset-react defaults to the automatic JSX runtime, which injects
+         `import { jsx } from "react/jsx-runtime"` and breaks the in-browser (classic script) transform. -->
+    <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -52,8 +54,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 
-    <!-- Google Maps Marker Clusterer -->
-    <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+    <!-- Google Maps Marker Clusterer (UMD build — ESM build breaks in-browser Babel) -->
+    <script src="https://unpkg.com/@googlemaps/markerclusterer@2.5.3/dist/index.umd.js"></script>
 
     <!-- Custom styles -->
     <link rel="stylesheet" href="styles.css">
