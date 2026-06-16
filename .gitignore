@@ -54,3 +54,8 @@ config.local.js
 
 # Firebase local state / caches (generated)
 .firebase/
+
+# Duplicate/backup project copies (not part of the deployed site; were
+# accidentally tracked as submodules and broke the GitHub Pages build)
+/sandwichprojectcollectionsites/
+/sandwichprojectcollectionsites-1/
