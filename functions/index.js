@@ -36,20 +36,13 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-function setCors(res) {
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-}
+const functionSecrets = [magicLinkSecret, adminApiSecret, sendgridApiKey];
 
-function handleOptions(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
-    return true;
-  }
-  return false;
-}
+const httpOptions = {
+  secrets: functionSecrets,
+  cors: true,
+  invoker: 'public',
+};
 
 function parseJsonBody(req) {
   if (req.body && typeof req.body === 'object') return req.body;
@@ -67,13 +60,9 @@ function requireAdminSecret(req) {
   if (provided !== expected) throw new Error('Unauthorized');
 }
 
-const functionSecrets = [magicLinkSecret, adminApiSecret, sendgridApiKey];
-
 /** GET /verifyMagicLink?host=1&token=abc */
-exports.verifyMagicLink = onRequest({ secrets: functionSecrets }, async (req, res) => {
+exports.verifyMagicLink = onRequest(httpOptions, async (req, res) => {
   bindRuntimeEnv();
-  if (handleOptions(req, res)) return;
-  setCors(res);
 
   try {
     const hostId = req.query.host;
@@ -95,10 +84,8 @@ exports.verifyMagicLink = onRequest({ secrets: functionSecrets }, async (req, re
 });
 
 /** POST { host_id, token, add_dates[], remove_dates[] } */
-exports.updateUnavailableDates = onRequest({ secrets: functionSecrets }, async (req, res) => {
+exports.updateUnavailableDates = onRequest(httpOptions, async (req, res) => {
   bindRuntimeEnv();
-  if (handleOptions(req, res)) return;
-  setCors(res);
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -126,10 +113,8 @@ exports.updateUnavailableDates = onRequest({ secrets: functionSecrets }, async (
 });
 
 /** POST with Authorization: Bearer <ADMIN_API_SECRET> — manual test batch */
-exports.sendMagicLinkBatch = onRequest({ secrets: functionSecrets }, async (req, res) => {
+exports.sendMagicLinkBatch = onRequest(httpOptions, async (req, res) => {
   bindRuntimeEnv();
-  if (handleOptions(req, res)) return;
-  setCors(res);
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });

@@ -67,7 +67,14 @@ const CONFIG = {
   // Data Version (increment when host data changes to force cache refresh)
   DATA_VERSION: '2025-11-10',
 
-  // Cloud Functions base URL (no trailing slash)
+  // Cloud Functions URLs (2nd gen — use the .run.app URLs from `firebase deploy --only functions`)
+  MAGIC_LINK_URLS: {
+    verifyMagicLink: 'https://verifymagiclink-znvnlre55a-uc.a.run.app',
+    updateUnavailableDates: 'https://updateunavailabledates-znvnlre55a-uc.a.run.app',
+    sendMagicLinkBatch: 'https://sendmagiclinkbatch-znvnlre55a-uc.a.run.app',
+  },
+
+  // Legacy base URL fallback (1st gen only)
   CLOUD_FUNCTIONS_BASE_URL: 'https://us-central1-tsp-host-finder-tool.cloudfunctions.net',
 
   // Default magic-link automation config (Firestore: settings/magic_link_config)

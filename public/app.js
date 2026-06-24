@@ -574,6 +574,9 @@ const HostAvailabilityApp = () => {
   const getWednesdaysInUpcomingMonth = helperRefs.getWednesdaysInUpcomingMonth || (() => []);
   const getWednesdaysInMonth = helperRefs.getWednesdaysInMonth || (() => []);
   const CLOUD_FUNCTIONS_BASE_URL = window.CONFIG?.CLOUD_FUNCTIONS_BASE_URL || '';
+  const MAGIC_LINK_URLS = window.CONFIG?.MAGIC_LINK_URLS || {};
+  const getMagicLinkUrl = (name) =>
+    MAGIC_LINK_URLS[name] || `${CLOUD_FUNCTIONS_BASE_URL}/${name}`;
   const MAGIC_LINK_DEFAULTS = window.CONFIG?.MAGIC_LINK_DEFAULTS || {
     is_enabled: false,
     audience: 'test_only',
@@ -1015,7 +1018,7 @@ const HostAvailabilityApp = () => {
 
     setMagicLinkSending(true);
     try {
-      const response = await fetch(`${CLOUD_FUNCTIONS_BASE_URL}/sendMagicLinkBatch`, {
+      const response = await fetch(getMagicLinkUrl('sendMagicLinkBatch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1050,7 +1053,7 @@ const HostAvailabilityApp = () => {
     setAvailabilityError(null);
     try {
       const response = await fetch(
-        `${CLOUD_FUNCTIONS_BASE_URL}/verifyMagicLink?host=${encodeURIComponent(hostId)}&token=${encodeURIComponent(token)}`
+        `${getMagicLinkUrl('verifyMagicLink')}?host=${encodeURIComponent(hostId)}&token=${encodeURIComponent(token)}`
       );
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Invalid link');
@@ -1083,7 +1086,7 @@ const HostAvailabilityApp = () => {
 
     setAvailabilitySaving(true);
     try {
-      const response = await fetch(`${CLOUD_FUNCTIONS_BASE_URL}/updateUnavailableDates`, {
+      const response = await fetch(getMagicLinkUrl('updateUnavailableDates'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
