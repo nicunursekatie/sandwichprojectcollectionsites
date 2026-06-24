@@ -28,6 +28,34 @@
     return Array.isArray(host.unavailable_dates) && host.unavailable_dates.includes(dateStr);
   };
 
+  /** Friday immediately before a collection Wednesday (midnight local). */
+  const getFridayBeforeWednesday = (wednesdayDate) => {
+    const friday = new Date(wednesdayDate);
+    friday.setHours(0, 0, 0, 0);
+    friday.setDate(friday.getDate() - 5);
+    return friday;
+  };
+
+  /**
+   * Collection Wednesday whose unavailability applies on referenceDate.
+   * Activates on the Friday before each collection Wednesday; null before that window.
+   */
+  const getActiveCollectionWednesday = (referenceDate = new Date()) => {
+    const today = new Date(referenceDate);
+    today.setHours(0, 0, 0, 0);
+    const upcomingWed = getUpcomingWednesday(today);
+    const fridayBefore = getFridayBeforeWednesday(upcomingWed);
+    if (today < fridayBefore) {
+      return null;
+    }
+    return upcomingWed;
+  };
+
+  const getActiveCollectionWednesdayStr = (referenceDate = new Date()) => {
+    const wed = getActiveCollectionWednesday(referenceDate);
+    return wed ? formatDateYYYYMMDD(wed) : null;
+  };
+
   /** All Wednesdays from the 1st through the last day of the month containing referenceDate. */
   const getWednesdaysInMonth = (referenceDate = new Date()) => {
     const year = referenceDate.getFullYear();
@@ -190,6 +218,9 @@
     getDateWithTime,
     getNextWednesday,
     getUpcomingWednesday,
+    getFridayBeforeWednesday,
+    getActiveCollectionWednesday,
+    getActiveCollectionWednesdayStr,
     getWednesdaysInMonth,
     getWednesdaysInUpcomingMonth,
     isHostUnavailableOnDate

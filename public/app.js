@@ -571,6 +571,16 @@ const HostAvailabilityApp = () => {
   const isHostUnavailableOnDate = helperRefs.isHostUnavailableOnDate || ((host, dateStr) =>
     Array.isArray(host?.unavailable_dates) && host.unavailable_dates.includes(dateStr)
   );
+  const getActiveCollectionWednesdayStr = helperRefs.getActiveCollectionWednesdayStr || ((referenceDate = new Date()) => {
+    const today = new Date(referenceDate);
+    today.setHours(0, 0, 0, 0);
+    const upcoming = getUpcomingWednesday(today);
+    const friday = new Date(upcoming);
+    friday.setHours(0, 0, 0, 0);
+    friday.setDate(friday.getDate() - 5);
+    if (today < friday) return null;
+    return formatDateYYYYMMDD(upcoming);
+  });
   const getWednesdaysInUpcomingMonth = helperRefs.getWednesdaysInUpcomingMonth || (() => []);
   const getWednesdaysInMonth = helperRefs.getWednesdaysInMonth || (() => []);
   const CLOUD_FUNCTIONS_BASE_URL = window.CONFIG?.CLOUD_FUNCTIONS_BASE_URL || '';
@@ -585,8 +595,7 @@ const HostAvailabilityApp = () => {
   };
 
   const nextWednesday = getNextWednesday();
-  const upcomingWednesday = getUpcomingWednesday();
-  const upcomingWednesdayStr = formatDateYYYYMMDD(upcomingWednesday);
+  const activeCollectionWednesdayStr = getActiveCollectionWednesdayStr();
   const adminWednesdayOptions = getWednesdaysInMonth(new Date()).concat(getWednesdaysInUpcomingMonth(new Date()));
   const uniqueAdminWednesdayOptions = [...new Set(adminWednesdayOptions)].sort();
   const dropOffDate = nextWednesday.toLocaleDateString('en-US', {
@@ -1456,7 +1465,7 @@ const HostAvailabilityApp = () => {
         host = { ...host, available: false };
       }
     }
-    if (host.available && isHostUnavailableOnDate(host, upcomingWednesdayStr)) {
+    if (host.available && activeCollectionWednesdayStr && isHostUnavailableOnDate(host, activeCollectionWednesdayStr)) {
       host = { ...host, available: false, unavailableThisWeek: true };
     }
     return host;
@@ -6212,7 +6221,7 @@ const HostAvailabilityApp = () => {
                             return (
                               <div className="mb-2">
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold" style={{backgroundColor: '#E0F2FE', color: '#1E40AF'}}>
-                                  🔄 {isAlternate ? `Alternate for ${partner.name}` : `Alternate: ${partner.name}`}
+                                  🔄 {isAlternate ? `Substitute host for ${partner.name}` : `Primary host — substitute: ${partner.name}`}
                                 </span>
                                 {host.available && partner.available && (
                                   <p className="text-sm font-bold mt-1" style={{color: '#A31C41'}}>
@@ -6581,7 +6590,7 @@ const HostAvailabilityApp = () => {
                     </div>
                     
                     <div>
-                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Alternate For (optional)</label>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Substitute host for (optional)</label>
                       <select
                         name="alternateFor"
                         defaultValue={editingHost.alternateFor || ''}
@@ -6597,7 +6606,7 @@ const HostAvailabilityApp = () => {
                         }
                       </select>
                       <p className="text-sm mt-1" style={{color: '#007E8C'}}>
-                        If set, enabling this host will automatically disable their primary (and vice versa).
+                        If set, this host is a substitute for the primary (e.g. covers when they are unavailable). Enabling both will auto-disable one.
                       </p>
                     </div>
 

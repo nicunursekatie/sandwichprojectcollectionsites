@@ -3,6 +3,8 @@ const {
   formatTime,
   getNextWednesday,
   getUpcomingWednesday,
+  getActiveCollectionWednesday,
+  getActiveCollectionWednesdayStr,
   formatDateYYYYMMDD,
   isHostUnavailableOnDate,
   getWednesdaysInMonth,
@@ -37,6 +39,28 @@ describe('App helpers', () => {
       const thursday = new Date(2025, 5, 12); // Thu Jun 12, 2025
       const result = getUpcomingWednesday(thursday);
       expect(result.getDate()).toBe(18);
+    });
+  });
+
+  describe('getActiveCollectionWednesday', () => {
+    it('returns null before the Friday prior to the collection Wednesday', () => {
+      const thursday = new Date(2026, 6, 2); // Thu Jul 2 — Fri before Jul 8 is Jul 3
+      expect(getActiveCollectionWednesday(thursday)).toBeNull();
+      expect(getActiveCollectionWednesdayStr(thursday)).toBeNull();
+    });
+
+    it('returns the collection Wednesday starting on the prior Friday', () => {
+      const friday = new Date(2026, 6, 3); // Fri Jul 3
+      const result = getActiveCollectionWednesday(friday);
+      expect(result.getFullYear()).toBe(2026);
+      expect(result.getMonth()).toBe(6);
+      expect(result.getDate()).toBe(8);
+      expect(getActiveCollectionWednesdayStr(friday)).toBe('2026-07-08');
+    });
+
+    it('returns null after collection day until the next Friday window', () => {
+      const thursdayAfter = new Date(2026, 6, 9); // Thu Jul 9 — next Wed Jul 15, Fri window Jul 10
+      expect(getActiveCollectionWednesday(thursdayAfter)).toBeNull();
     });
   });
 
