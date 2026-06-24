@@ -66,6 +66,17 @@ const CONFIG = {
 
   // Data Version (increment when host data changes to force cache refresh)
   DATA_VERSION: '2025-11-10',
+
+  // Cloud Functions base URL (no trailing slash)
+  CLOUD_FUNCTIONS_BASE_URL: 'https://us-central1-tsp-host-finder-tool.cloudfunctions.net',
+
+  // Default magic-link automation config (Firestore: settings/magic_link_config)
+  MAGIC_LINK_DEFAULTS: {
+    is_enabled: false,
+    audience: 'test_only',
+    test_emails: [],
+    send_day_of_month: 25,
+  },
 };
 
 // Make config available globally

@@ -7,6 +7,48 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   const MS_IN_MINUTE = 60 * 1000;
 
+  /** Always returns the upcoming Wednesday (today if today is Wednesday). */
+  const getUpcomingWednesday = (referenceDate = new Date()) => {
+    const today = new Date(referenceDate);
+    today.setHours(0, 0, 0, 0);
+    const dayOfWeek = today.getDay();
+    const daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
+    const upcoming = new Date(today);
+    upcoming.setDate(today.getDate() + daysUntilWednesday);
+    return upcoming;
+  };
+
+  const formatDateYYYYMMDD = (date) => {
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  };
+
+  const isHostUnavailableOnDate = (host, dateStr) => {
+    if (!host || !dateStr) return false;
+    return Array.isArray(host.unavailable_dates) && host.unavailable_dates.includes(dateStr);
+  };
+
+  /** All Wednesdays from the 1st through the last day of the month containing referenceDate. */
+  const getWednesdaysInMonth = (referenceDate = new Date()) => {
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth();
+    const wednesdays = [];
+    const cursor = new Date(year, month, 1);
+    while (cursor.getMonth() === month) {
+      if (cursor.getDay() === 3) {
+        wednesdays.push(formatDateYYYYMMDD(cursor));
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return wednesdays;
+  };
+
+  /** Wednesdays in the upcoming calendar month (used for magic-link emails). */
+  const getWednesdaysInUpcomingMonth = (referenceDate = new Date()) => {
+    const nextMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1);
+    return getWednesdaysInMonth(nextMonth);
+  };
+
   const getNextWednesday = (referenceDate = new Date()) => {
     const today = new Date(referenceDate);
     const dayOfWeek = today.getDay(); // Sunday = 0, Tuesday = 2, Wednesday = 3
@@ -143,9 +185,14 @@
     escapeICSValue,
     formatDateForICS,
     formatDateForICSUtc,
+    formatDateYYYYMMDD,
     formatTime,
     getDateWithTime,
-    getNextWednesday
+    getNextWednesday,
+    getUpcomingWednesday,
+    getWednesdaysInMonth,
+    getWednesdaysInUpcomingMonth,
+    isHostUnavailableOnDate
   };
 }));
 

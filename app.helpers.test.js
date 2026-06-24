@@ -1,7 +1,12 @@
 const {
   buildCalendarEvent,
   formatTime,
-  getNextWednesday
+  getNextWednesday,
+  getUpcomingWednesday,
+  formatDateYYYYMMDD,
+  isHostUnavailableOnDate,
+  getWednesdaysInMonth,
+  getWednesdaysInUpcomingMonth,
 } = require('./app.helpers.js');
 
 describe('App helpers', () => {
@@ -18,6 +23,38 @@ describe('App helpers', () => {
       const monday = new Date(2025, 1, 10); // Monday Feb 10, 2025
       const result = getNextWednesday(monday);
       expect(result.getDate()).toBe(12);
+    });
+  });
+
+  describe('getUpcomingWednesday', () => {
+    it('returns today when today is Wednesday', () => {
+      const wednesday = new Date(2025, 5, 11); // Wed Jun 11, 2025
+      const result = getUpcomingWednesday(wednesday);
+      expect(result.getDate()).toBe(11);
+    });
+
+    it('returns the next Wednesday when today is Thursday', () => {
+      const thursday = new Date(2025, 5, 12); // Thu Jun 12, 2025
+      const result = getUpcomingWednesday(thursday);
+      expect(result.getDate()).toBe(18);
+    });
+  });
+
+  describe('isHostUnavailableOnDate', () => {
+    it('returns true when date is in unavailable_dates', () => {
+      expect(isHostUnavailableOnDate({ unavailable_dates: ['2025-06-11'] }, '2025-06-11')).toBe(true);
+    });
+
+    it('handles missing unavailable_dates gracefully', () => {
+      expect(isHostUnavailableOnDate({}, '2025-06-11')).toBe(false);
+    });
+  });
+
+  describe('getWednesdaysInUpcomingMonth', () => {
+    it('returns all Wednesdays in the next calendar month', () => {
+      const reference = new Date(2025, 4, 15); // May 2025
+      const wednesdays = getWednesdaysInUpcomingMonth(reference);
+      expect(wednesdays).toEqual(['2025-06-04', '2025-06-11', '2025-06-18', '2025-06-25']);
     });
   });
 
