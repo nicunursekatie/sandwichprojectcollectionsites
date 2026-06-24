@@ -1018,19 +1018,50 @@ const HostAvailabilityApp = () => {
 
     setMagicLinkSending(true);
     try {
+      const testEmails = testEmailsInput
+        .split(',')
+        .map(email => email.trim())
+        .filter(Boolean);
+
+      if (testEmails.length === 0) {
+        alert('Add at least one test recipient email before sending.');
+        return;
+      }
+
+      // Persist current form values so the backend reads the same recipients
+      const configPayload = {
+        ...magicLinkConfig,
+        test_emails: testEmails,
+        audience: magicLinkConfig?.audience || 'test_only',
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      await db.collection('settings').doc('magic_link_config').set(configPayload, { merge: true });
+      setMagicLinkConfig(configPayload);
+
       const response = await fetch(getMagicLinkUrl('sendMagicLinkBatch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${adminSecret}`,
         },
-        body: JSON.stringify({ manual_override: true }),
+        body: JSON.stringify({ manual_override: true, test_emails: testEmails }),
       });
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Send failed');
 
-      alert(`Test batch complete.\nSent: ${result.sent}\nHosts: ${result.hostCount || 0}\nMode: ${result.config?.audience || 'unknown'}`);
+      if (result.skipped) {
+        alert(`Test batch did not send.\nReason: ${result.reason || 'unknown'}\nCheck test recipients and try again.`);
+        return;
+      }
+
+      if (result.sent === 0) {
+        const errorDetail = (result.errors || []).join('\n') || 'No emails were dispatched.';
+        alert(`Test batch finished but sent 0 emails.\n\n${errorDetail}`);
+        return;
+      }
+
+      alert(`Test batch complete.\nSent: ${result.sent}\nHosts: ${result.hostCount || 0}\nMode: ${result.config?.audience || 'unknown'}\n\nCheck your inbox and spam folder.`);
       await loadMagicLinkConfig();
     } catch (error) {
       console.error('Error sending magic link batch:', error);

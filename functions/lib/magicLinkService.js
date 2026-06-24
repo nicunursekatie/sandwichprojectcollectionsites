@@ -48,7 +48,7 @@ function buildHostPayload(host, baseUrl, secret) {
   return { ...host, token, magicLinkUrl };
 }
 
-async function dispatchMagicLinkEmails(db, { manualOverride = false } = {}) {
+async function dispatchMagicLinkEmails(db, { manualOverride = false, testEmailsOverride = null } = {}) {
   const config = await getMagicLinkConfig(db);
   const gate = await shouldRunScheduledBatch(config, new Date(), manualOverride);
   if (!gate.proceed) {
@@ -58,7 +58,7 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false } = {}) {
   const apiKey = getEnv('SENDGRID_API_KEY');
   const fromEmail = getEnv('EMAIL_FROM', 'noreply@thesandwichproject.org');
   const fromName = getEnv('EMAIL_FROM_NAME', 'The Sandwich Project');
-  const baseUrl = getEnv('HOST_FINDER_BASE_URL', 'https://tsp-host-finder-tool.web.app');
+  const baseUrl = getEnv('HOST_FINDER_BASE_URL', 'https://tsp-host-finder-tool.web.app').replace(/\/$/, '');
   const secret = getEnv('MAGIC_LINK_SECRET');
 
   if (!apiKey) throw new Error('SENDGRID_API_KEY is not configured');
@@ -71,9 +71,12 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false } = {}) {
 
   let sent = 0;
   const errors = [];
+  const audience = manualOverride && testEmailsOverride?.length ? 'test_only' : config.audience;
 
-  if (config.audience === 'test_only') {
-    const testEmails = (config.test_emails || []).map((e) => e.trim()).filter(Boolean);
+  if (audience === 'test_only') {
+    const testEmails = (testEmailsOverride || config.test_emails || [])
+      .map((e) => e.trim())
+      .filter(Boolean);
     if (testEmails.length === 0) {
       return { sent: 0, skipped: true, reason: 'no_test_emails', config };
     }
@@ -97,6 +100,7 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false } = {}) {
       sent = testEmails.length;
     } catch (error) {
       errors.push(error.message);
+      throw error;
     }
   } else {
     for (const host of hostPayloads) {

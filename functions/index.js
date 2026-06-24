@@ -126,6 +126,7 @@ exports.sendMagicLinkBatch = onRequest(httpOptions, async (req, res) => {
     const body = parseJsonBody(req);
     const result = await dispatchMagicLinkEmails(db, {
       manualOverride: Boolean(body.manual_override ?? true),
+      testEmailsOverride: Array.isArray(body.test_emails) ? body.test_emails : null,
     });
     res.status(200).json(result);
   } catch (error) {
