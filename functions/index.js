@@ -15,7 +15,8 @@ const db = admin.firestore();
 
 const magicLinkSecret = defineSecret('MAGIC_LINK_SECRET');
 const adminApiSecret = defineSecret('ADMIN_API_SECRET');
-const sendgridApiKey = defineSecret('SENDGRID_API_KEY');
+const twilioAccountSid = defineSecret('TWILIO_ACCOUNT_SID');
+const twilioAuthToken = defineSecret('TWILIO_AUTH_TOKEN');
 const emailFrom = defineString('EMAIL_FROM', { default: 'noreply@thesandwichproject.org' });
 const emailFromName = defineString('EMAIL_FROM_NAME', { default: 'The Sandwich Project' });
 const hostFinderBaseUrl = defineString('HOST_FINDER_BASE_URL', {
@@ -25,7 +26,8 @@ const hostFinderBaseUrl = defineString('HOST_FINDER_BASE_URL', {
 function bindRuntimeEnv() {
   process.env.MAGIC_LINK_SECRET = magicLinkSecret.value();
   process.env.ADMIN_API_SECRET = adminApiSecret.value();
-  process.env.SENDGRID_API_KEY = sendgridApiKey.value();
+  process.env.TWILIO_ACCOUNT_SID = twilioAccountSid.value();
+  process.env.TWILIO_AUTH_TOKEN = twilioAuthToken.value();
   process.env.EMAIL_FROM = emailFrom.value();
   process.env.EMAIL_FROM_NAME = emailFromName.value();
   process.env.HOST_FINDER_BASE_URL = hostFinderBaseUrl.value();
@@ -36,7 +38,7 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-const functionSecrets = [magicLinkSecret, adminApiSecret, sendgridApiKey];
+const functionSecrets = [magicLinkSecret, adminApiSecret, twilioAccountSid, twilioAuthToken];
 
 const httpOptions = {
   secrets: functionSecrets,

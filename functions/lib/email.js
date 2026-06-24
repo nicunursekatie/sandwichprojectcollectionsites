@@ -114,28 +114,30 @@ function buildTestDigestEmail({ hosts, monthLabel, testModeNote }) {
   };
 }
 
-async function sendEmailViaSendGrid({ to, subject, html, text, fromEmail, fromName, apiKey }) {
-  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+async function sendEmailViaTwilio({ to, subject, html, text, fromEmail, fromName, accountSid, authToken }) {
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+  const response = await fetch('https://comms.twilio.com/v1/Emails', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Basic ${credentials}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      personalizations: [{ to: to.map((email) => ({ email })) }],
-      from: { email: fromEmail, name: fromName || 'The Sandwich Project' },
-      subject,
-      content: [
-        { type: 'text/plain', value: text },
-        { type: 'text/html', value: html },
-      ],
+      from: { address: fromEmail, name: fromName || 'The Sandwich Project' },
+      to: to.map((address) => ({ address })),
+      content: { subject, html, text },
     }),
   });
 
-  if (!response.ok) {
+  if (response.status !== 202 && !response.ok) {
     const body = await response.text();
-    throw new Error(`SendGrid error (${response.status}): ${body}`);
+    throw new Error(`Twilio Email error (${response.status}): ${body}`);
   }
+}
+
+/** @deprecated Use sendEmailViaTwilio */
+async function sendEmailViaSendGrid() {
+  throw new Error('SendGrid is no longer configured. Use Twilio Email API.');
 }
 
 module.exports = {
@@ -143,5 +145,6 @@ module.exports = {
   buildHostMagicLinkEmail,
   buildTestDigestEmail,
   getMonthLabel,
+  sendEmailViaTwilio,
   sendEmailViaSendGrid,
 };

@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 const { getWednesdaysInUpcomingMonth, getMonthLabel } = require('./dates');
-const { buildHostMagicLinkEmail, buildTestDigestEmail, sendEmailViaSendGrid } = require('./email');
+const { buildHostMagicLinkEmail, buildTestDigestEmail, sendEmailViaTwilio } = require('./email');
 const { buildMagicLinkUrl, generateMagicLinkToken } = require('./tokens');
 
 const DEFAULT_CONFIG = {
@@ -55,13 +55,16 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false, testEmailsO
     return { sent: 0, skipped: true, reason: gate.reason, config };
   }
 
-  const apiKey = getEnv('SENDGRID_API_KEY');
+  const accountSid = getEnv('TWILIO_ACCOUNT_SID');
+  const authToken = getEnv('TWILIO_AUTH_TOKEN');
   const fromEmail = getEnv('EMAIL_FROM', 'noreply@thesandwichproject.org');
   const fromName = getEnv('EMAIL_FROM_NAME', 'The Sandwich Project');
   const baseUrl = getEnv('HOST_FINDER_BASE_URL', 'https://tsp-host-finder-tool.web.app').replace(/\/$/, '');
   const secret = getEnv('MAGIC_LINK_SECRET');
 
-  if (!apiKey) throw new Error('SENDGRID_API_KEY is not configured');
+  if (!accountSid || !authToken) {
+    throw new Error('TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must be configured');
+  }
   if (!secret) throw new Error('MAGIC_LINK_SECRET is not configured');
 
   const hosts = await fetchActiveHosts(db);
@@ -88,14 +91,15 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false, testEmailsO
     });
 
     try {
-      await sendEmailViaSendGrid({
+      await sendEmailViaTwilio({
         to: testEmails,
         subject: digest.subject,
         html: digest.html,
         text: digest.text,
         fromEmail,
         fromName,
-        apiKey,
+        accountSid,
+        authToken,
       });
       sent = testEmails.length;
     } catch (error) {
@@ -118,14 +122,15 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false, testEmailsO
       });
 
       try {
-        await sendEmailViaSendGrid({
+        await sendEmailViaTwilio({
           to: [recipient],
           subject: email.subject,
           html: email.html,
           text: email.text,
           fromEmail,
           fromName,
-          apiKey,
+          accountSid,
+          authToken,
         });
         sent += 1;
       } catch (error) {
