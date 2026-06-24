@@ -1013,9 +1013,6 @@ const HostAvailabilityApp = () => {
       return;
     }
 
-    const adminSecret = prompt('Enter admin API secret to send test batch:');
-    if (!adminSecret) return;
-
     setMagicLinkSending(true);
     try {
       const testEmails = testEmailsInput
@@ -1042,7 +1039,6 @@ const HostAvailabilityApp = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminSecret}`,
         },
         body: JSON.stringify({ manual_override: true, test_emails: testEmails }),
       });

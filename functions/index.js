@@ -14,7 +14,6 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const magicLinkSecret = defineSecret('MAGIC_LINK_SECRET');
-const adminApiSecret = defineSecret('ADMIN_API_SECRET');
 const twilioAccountSid = defineSecret('TWILIO_ACCOUNT_SID');
 const twilioAuthToken = defineSecret('TWILIO_AUTH_TOKEN');
 const emailFrom = defineString('EMAIL_FROM', { default: 'noreply@thesandwichproject.org' });
@@ -25,7 +24,6 @@ const hostFinderBaseUrl = defineString('HOST_FINDER_BASE_URL', {
 
 function bindRuntimeEnv() {
   process.env.MAGIC_LINK_SECRET = magicLinkSecret.value();
-  process.env.ADMIN_API_SECRET = adminApiSecret.value();
   process.env.TWILIO_ACCOUNT_SID = twilioAccountSid.value();
   process.env.TWILIO_AUTH_TOKEN = twilioAuthToken.value();
   process.env.EMAIL_FROM = emailFrom.value();
@@ -38,7 +36,7 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-const functionSecrets = [magicLinkSecret, adminApiSecret, twilioAccountSid, twilioAuthToken];
+const functionSecrets = [magicLinkSecret, twilioAccountSid, twilioAuthToken];
 
 const httpOptions = {
   secrets: functionSecrets,
@@ -55,13 +53,26 @@ function parseJsonBody(req) {
   }
 }
 
-function requireAdminSecret(req) {
-  const expected = process.env.ADMIN_API_SECRET;
-  if (!expected) throw new Error('ADMIN_API_SECRET is not configured');
-  const provided = req.get('Authorization')?.replace(/^Bearer\s+/i, '') || req.get('x-admin-secret');
-  if (provided !== expected) throw new Error('Unauthorized');
-}
+/** POST — manual test batch (triggered from Admin UI) */
+exports.sendMagicLinkBatch = onRequest(httpOptions, async (req, res) => {
+  bindRuntimeEnv();
 
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  try {
+    const body = parseJsonBody(req);
+    const result = await dispatchMagicLinkEmails(db, {
+      manualOverride: Boolean(body.manual_override ?? true),
+      testEmailsOverride: Array.isArray(body.test_emails) ? body.test_emails : null,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 /** GET /verifyMagicLink?host=1&token=abc */
 exports.verifyMagicLink = onRequest(httpOptions, async (req, res) => {
   bindRuntimeEnv();
@@ -110,29 +121,6 @@ exports.updateUnavailableDates = onRequest(httpOptions, async (req, res) => {
     res.status(200).json(result);
   } catch (error) {
     const status = error.message.includes('Invalid') ? 401 : 400;
-    res.status(status).json({ error: error.message });
-  }
-});
-
-/** POST with Authorization: Bearer <ADMIN_API_SECRET> — manual test batch */
-exports.sendMagicLinkBatch = onRequest(httpOptions, async (req, res) => {
-  bindRuntimeEnv();
-
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  try {
-    requireAdminSecret(req);
-    const body = parseJsonBody(req);
-    const result = await dispatchMagicLinkEmails(db, {
-      manualOverride: Boolean(body.manual_override ?? true),
-      testEmailsOverride: Array.isArray(body.test_emails) ? body.test_emails : null,
-    });
-    res.status(200).json(result);
-  } catch (error) {
-    const status = error.message === 'Unauthorized' ? 401 : 500;
     res.status(status).json({ error: error.message });
   }
 });
