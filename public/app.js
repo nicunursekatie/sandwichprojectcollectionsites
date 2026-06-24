@@ -940,11 +940,28 @@ const HostAvailabilityApp = () => {
   };
 
   const toggleHostUnavailableDate = async (hostId, dateStr) => {
+    if (userRole === 'viewer') {
+      setShowReadOnlyModal(true);
+      return;
+    }
+
     const host = (allHosts || []).find(h => h.id === hostId);
     if (!host) return;
 
     const currentDates = Array.isArray(host.unavailable_dates) ? host.unavailable_dates : [];
     const hasDate = currentDates.includes(dateStr);
+    const formattedDate = new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const confirmMessage = hasDate
+      ? `Mark ${host.name} as available on ${formattedDate}?\n\nThey will be eligible to appear on the Host Finder for that collection week.`
+      : `Mark ${host.name} as unavailable on ${formattedDate}?\n\nThey will be hidden on the Host Finder for that week (starting the Friday before).`;
+
+    if (!confirm(confirmMessage)) return;
+
     const docRef = db.collection('hosts').doc(String(hostId));
 
     try {
@@ -6637,6 +6654,20 @@ const HostAvailabilityApp = () => {
                                 key={`edit-${editingHost.id}-${dateStr}`}
                                 type="button"
                                 onClick={() => {
+                                  if (userRole === 'viewer') {
+                                    setShowReadOnlyModal(true);
+                                    return;
+                                  }
+                                  const formattedDate = new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-US', {
+                                    weekday: 'long',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  });
+                                  const confirmMessage = isMarked
+                                    ? `Mark ${editingHost.name} as available on ${formattedDate}?\n\nSave the host to apply this change.`
+                                    : `Mark ${editingHost.name} as unavailable on ${formattedDate}?\n\nSave the host to apply this change.`;
+                                  if (!confirm(confirmMessage)) return;
                                   const nextDates = isMarked
                                     ? currentDates.filter(d => d !== dateStr)
                                     : [...currentDates, dateStr];
