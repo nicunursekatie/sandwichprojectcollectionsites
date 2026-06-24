@@ -9,11 +9,7 @@ const BRAND = {
   logoUrl: 'https://tsp-host-finder-tool.web.app/LOGOS/CMYK_PRINT_TSP-01-01.jpg',
 };
 
-function buildHostMagicLinkEmail({ hostName, magicLinkUrl, wednesdays, monthLabel }) {
-  const wednesdayList = wednesdays
-    .map((dateStr) => `<li style="margin:8px 0;color:#444;">${formatDisplayDate(dateStr)}</li>`)
-    .join('');
-
+function buildHostMagicLinkEmail({ hostName, magicLinkUrl, monthLabel }) {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,19 +26,22 @@ function buildHostMagicLinkEmail({ hostName, magicLinkUrl, wednesdays, monthLabe
     <div style="padding:32px 24px;color:#333;line-height:1.7;">
       <p style="font-size:16px;margin:0 0 16px;">Hi ${hostName || 'there'},</p>
       <p style="font-size:16px;margin:0 0 16px;">
-        Please let us know which <strong>Wednesdays in ${monthLabel}</strong> you will <em>not</em> be available to receive sandwich drop-offs.
+        This is a link to a short form where you can let us know your availability for <strong>${monthLabel}</strong>.
+        Click below to open the form, tap any weeks you are unavailable, and submit your response.
       </p>
-      <div style="margin:24px 0;padding:20px;background:#f9f9f9;border-left:4px solid ${BRAND.accent};border-radius:8px;">
-        <h2 style="margin:0 0 12px;color:${BRAND.secondary};font-size:18px;">Collection Wednesdays</h2>
-        <ul style="margin:0;padding-left:20px;">${wednesdayList}</ul>
-      </div>
       <div style="text-align:center;margin:28px 0;">
         <a href="${magicLinkUrl}" style="display:inline-block;background:${BRAND.accent};color:#333;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;">
-          Update My Availability
+          Open Availability Form
         </a>
       </div>
+      <p style="font-size:14px;color:#666;margin:0 0 16px;">
+        This secure link is unique to you.
+      </p>
       <p style="font-size:14px;color:#666;margin:0;">
-        This secure link is unique to you. Tap the button on your phone to toggle off any weeks you cannot host.
+        Available every Wednesday this month? No action needed — you can ignore this email.
+      </p>
+      <p style="font-size:14px;color:#666;margin:16px 0 0;">
+        Questions? Email <a href="mailto:brenda@thesandwichproject.org" style="color:${BRAND.primary};">brenda@thesandwichproject.org</a>.
       </p>
     </div>
     <div style="background:${BRAND.secondary};color:#ffffff;padding:24px;text-align:center;font-size:14px;">
@@ -56,17 +55,22 @@ function buildHostMagicLinkEmail({ hostName, magicLinkUrl, wednesdays, monthLabe
   const text = [
     `Hi ${hostName || 'there'},`,
     '',
-    `Please mark which Wednesdays in ${monthLabel} you will NOT be available to receive sandwich drop-offs.`,
+    `This is a link to a short form where you can let us know your availability for ${monthLabel}.`,
+    'Open the form, tap any weeks you are unavailable, and submit your response.',
     '',
-    ...wednesdays.map((d) => `- ${formatDisplayDate(d)}`),
+    `Open availability form: ${magicLinkUrl}`,
     '',
-    `Update your availability: ${magicLinkUrl}`,
+    'This secure link is unique to you.',
+    '',
+    'Available every Wednesday this month? No action needed.',
+    '',
+    'Questions? Email brenda@thesandwichproject.org',
     '',
     'The Sandwich Project',
   ].join('\n');
 
   return {
-    subject: `Action needed: Mark your unavailable Wednesdays (${monthLabel})`,
+    subject: 'New Monthly Host Vacation Form- Link inside to report your upcoming availability',
     html,
     text,
   };
