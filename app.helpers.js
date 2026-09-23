@@ -144,6 +144,120 @@
     return cleaned.length > 0 ? cleaned.replace(/\s+/g, '-') : 'event';
   };
 
+  const getHostNavigationDestination = (host = {}) => {
+    const address = typeof host.address === 'string' ? host.address.trim() : '';
+    if (address) return address;
+
+    const lat = Number(host.lat);
+    const lng = Number(host.lng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return `${lat},${lng}`;
+    }
+
+    return '';
+  };
+
+  const getGoogleMapsDirectionsUrl = (host, userCoords = null) => {
+    const destination = getHostNavigationDestination(host);
+    if (!destination) return '';
+
+    const encodedDestination = encodeURIComponent(destination);
+    if (userCoords && Number.isFinite(userCoords.lat) && Number.isFinite(userCoords.lng)) {
+      return `https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${encodedDestination}&travelmode=driving`;
+    }
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodedDestination}`;
+  };
+
+  const getAppleMapsDirectionsUrl = (host, userCoords = null) => {
+    const destination = getHostNavigationDestination(host);
+    if (!destination) return '';
+
+    const encodedDestination = encodeURIComponent(destination);
+    if (userCoords && Number.isFinite(userCoords.lat) && Number.isFinite(userCoords.lng)) {
+      return `https://maps.apple.com/?saddr=${userCoords.lat},${userCoords.lng}&daddr=${encodedDestination}&dirflg=d`;
+    }
+
+    return `https://maps.apple.com/?daddr=${encodedDestination}&dirflg=d`;
+  };
+
+  const ATLANTA_AREA_TO_REGION = {
+    'buckhead': 'North Atlanta',
+    'chastain park': 'North Atlanta',
+    'dunwoody': 'North Atlanta',
+    'sandy springs': 'North Atlanta',
+    'westminster/milmar neighborhood': 'North Atlanta',
+    'chamblee/brookhaven': 'Northeast Atlanta',
+    'johns creek': 'Northeast Atlanta',
+    'milton': 'Northeast Atlanta',
+    'peachtree corners': 'Northeast Atlanta',
+    'roswell': 'Northeast Atlanta',
+    'suwanee/johns creek': 'Northeast Atlanta',
+    'decatur': 'East Atlanta',
+    'east atlanta': 'East Atlanta',
+    'east cobb': 'East Atlanta',
+    'intown (candler park)': 'East Atlanta',
+    'oak grove/druid hills': 'East Atlanta',
+    'virginia highland': 'East Atlanta',
+    'college park': 'South Atlanta',
+    'southwest atlanta': 'South Atlanta',
+    'dacula': 'Outside Metro Atlanta',
+    'flowery branch': 'Outside Metro Atlanta'
+  };
+
+  const ATLANTA_REGION_ORDER = [
+    'North Atlanta',
+    'Northeast Atlanta',
+    'East Atlanta',
+    'South Atlanta',
+    'Outside Metro Atlanta',
+    'Other Metro Atlanta'
+  ];
+
+  const getAtlantaRegionLabel = (host = {}) => {
+    const areaKey = String(host.area || '').trim().toLowerCase();
+    if (ATLANTA_AREA_TO_REGION[areaKey]) {
+      return ATLANTA_AREA_TO_REGION[areaKey];
+    }
+
+    const lat = Number(host.lat);
+    const lng = Number(host.lng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      if (lat < 33.74) return 'South Atlanta';
+      if (lat > 34.08) return 'Outside Metro Atlanta';
+      if (lng > -84.29) return 'East Atlanta';
+      if (lng < -84.43) return 'North Atlanta';
+    }
+
+    return 'Other Metro Atlanta';
+  };
+
+  const groupHostsByAtlantaRegion = (hosts = []) => {
+    const grouped = new Map();
+
+    hosts.forEach((host) => {
+      const region = getAtlantaRegionLabel(host);
+      if (!grouped.has(region)) {
+        grouped.set(region, []);
+      }
+      grouped.get(region).push(host);
+    });
+
+    const sortHosts = (left, right) =>
+      String(left.area || '').localeCompare(String(right.area || '')) ||
+      String(left.name || '').localeCompare(String(right.name || ''));
+
+    const orderedRegions = ATLANTA_REGION_ORDER.filter((region) => grouped.has(region));
+    const extraRegions = [...grouped.keys()]
+      .filter((region) => !ATLANTA_REGION_ORDER.includes(region))
+      .sort((left, right) => left.localeCompare(right));
+
+    return [...orderedRegions, ...extraRegions].map((region) => ({
+      region,
+      hosts: grouped.get(region).slice().sort(sortHosts)
+    }));
+  };
+
   const buildCalendarEvent = (host, {
     baseDate = getNextWednesday(),
     timezone = 'America/New_York',
@@ -209,21 +323,26 @@
   };
 
   return {
+    ATLANTA_REGION_ORDER,
     buildCalendarEvent,
     escapeICSValue,
     formatDateForICS,
     formatDateForICSUtc,
     formatDateYYYYMMDD,
     formatTime,
+    getAppleMapsDirectionsUrl,
+    getAtlantaRegionLabel,
     getDateWithTime,
+    getGoogleMapsDirectionsUrl,
+    getHostNavigationDestination,
     getNextWednesday,
     getUpcomingWednesday,
     getFridayBeforeWednesday,
     getActiveCollectionWednesday,
     getActiveCollectionWednesdayStr,
+    groupHostsByAtlantaRegion,
     getWednesdaysInMonth,
     getWednesdaysInUpcomingMonth,
     isHostUnavailableOnDate
   };
 }));
-
