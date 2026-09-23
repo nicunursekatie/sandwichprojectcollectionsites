@@ -144,13 +144,26 @@
     return cleaned.length > 0 ? cleaned.replace(/\s+/g, '-') : 'event';
   };
 
+  const toFiniteCoordinate = (value) => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
   const getHostNavigationDestination = (host = {}) => {
     const address = typeof host.address === 'string' ? host.address.trim() : '';
     if (address) return address;
 
-    const lat = Number(host.lat);
-    const lng = Number(host.lng);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    const lat = toFiniteCoordinate(host.lat);
+    const lng = toFiniteCoordinate(host.lng);
+    if (lat !== null && lng !== null) {
       return `${lat},${lng}`;
     }
 
@@ -166,7 +179,7 @@
       return `https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${encodedDestination}&travelmode=driving`;
     }
 
-    return `https://www.google.com/maps/search/?api=1&query=${encodedDestination}`;
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodedDestination}&travelmode=driving`;
   };
 
   const getAppleMapsDirectionsUrl = (host, userCoords = null) => {
@@ -220,9 +233,9 @@
       return ATLANTA_AREA_TO_REGION[areaKey];
     }
 
-    const lat = Number(host.lat);
-    const lng = Number(host.lng);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    const lat = toFiniteCoordinate(host.lat);
+    const lng = toFiniteCoordinate(host.lng);
+    if (lat !== null && lng !== null) {
       if (lat < 33.74) return 'South Atlanta';
       if (lat > 34.08) return 'Outside Metro Atlanta';
       if (lng > -84.29) return 'East Atlanta';
