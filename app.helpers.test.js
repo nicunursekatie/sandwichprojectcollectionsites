@@ -9,6 +9,11 @@ const {
   isHostUnavailableOnDate,
   getWednesdaysInMonth,
   getWednesdaysInUpcomingMonth,
+  getHostNavigationDestination,
+  getGoogleMapsDirectionsUrl,
+  getAppleMapsDirectionsUrl,
+  getAtlantaRegionLabel,
+  groupHostsByAtlantaRegion,
 } = require('./app.helpers.js');
 
 describe('App helpers', () => {
@@ -79,6 +84,114 @@ describe('App helpers', () => {
       const reference = new Date(2025, 4, 15); // May 2025
       const wednesdays = getWednesdaysInUpcomingMonth(reference);
       expect(wednesdays).toEqual(['2025-06-04', '2025-06-11', '2025-06-18', '2025-06-25']);
+    });
+  });
+
+  describe('host navigation destinations', () => {
+    it('prefers a street address over coordinates', () => {
+      expect(getHostNavigationDestination({
+        address: '  123 Peachtree St NE  ',
+        lat: 33.75,
+        lng: -84.39
+      })).toBe('123 Peachtree St NE');
+    });
+
+    it('falls back to coordinates when no street address is present', () => {
+      expect(getHostNavigationDestination({
+        address: '   ',
+        lat: '33.75',
+        lng: -84.39
+      })).toBe('33.75,-84.39');
+    });
+
+    it('returns an empty destination for blank or missing coordinates', () => {
+      expect(getHostNavigationDestination({ address: '', lat: '', lng: '' })).toBe('');
+      expect(getHostNavigationDestination({ lat: null, lng: null })).toBe('');
+      expect(getHostNavigationDestination({ lat: '  ', lng: 'nope' })).toBe('');
+      expect(getHostNavigationDestination({})).toBe('');
+    });
+
+    it('encodes destinations and builds directions URLs with and without an origin', () => {
+      const host = { address: '123 Peachtree St NE, Atlanta' };
+      const origin = { lat: 33.8, lng: -84.4 };
+
+      const googleWithOrigin = getGoogleMapsDirectionsUrl(host, origin);
+      const googleWithoutOrigin = getGoogleMapsDirectionsUrl(host);
+      const appleWithOrigin = getAppleMapsDirectionsUrl(host, origin);
+      const appleWithoutOrigin = getAppleMapsDirectionsUrl(host);
+
+      expect(googleWithOrigin).toBe(
+        'https://www.google.com/maps/dir/?api=1&origin=33.8,-84.4&destination=123%20Peachtree%20St%20NE%2C%20Atlanta&travelmode=driving'
+      );
+      expect(googleWithoutOrigin).toBe(
+        'https://www.google.com/maps/dir/?api=1&destination=123%20Peachtree%20St%20NE%2C%20Atlanta&travelmode=driving'
+      );
+      expect(googleWithoutOrigin).not.toContain('/maps/search/');
+      expect(appleWithOrigin).toContain('saddr=33.8,-84.4');
+      expect(appleWithOrigin).toContain('daddr=123%20Peachtree%20St%20NE%2C%20Atlanta');
+      expect(appleWithoutOrigin).toBe(
+        'https://maps.apple.com/?daddr=123%20Peachtree%20St%20NE%2C%20Atlanta&dirflg=d'
+      );
+      expect(getGoogleMapsDirectionsUrl({ lat: '', lng: null })).toBe('');
+      expect(getAppleMapsDirectionsUrl({ lat: '', lng: null })).toBe('');
+    });
+  });
+
+  describe('Atlanta region grouping', () => {
+    it('normalizes mapped area names', () => {
+      expect(getAtlantaRegionLabel({ area: '  Dunwoody  ' })).toBe('North Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'CHAMBLEE/BROOKHAVEN' })).toBe('Northeast Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'College Park' })).toBe('South Atlanta');
+    });
+
+    it('classifies unmapped hosts at coordinate thresholds', () => {
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.739, lng: -84.39 })).toBe('South Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.74, lng: -84.39 })).toBe('Other Metro Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 34.081, lng: -84.39 })).toBe('Outside Metro Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 34.08, lng: -84.289 })).toBe('East Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 34.08, lng: -84.29 })).toBe('Other Metro Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.9, lng: -84.431 })).toBe('North Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.9, lng: -84.43 })).toBe('Other Metro Atlanta');
+    });
+
+    it('does not classify blank coordinates as South Atlanta', () => {
+      expect(getAtlantaRegionLabel({ area: 'Unmapped', lat: '', lng: '' })).toBe('Other Metro Atlanta');
+      expect(getAtlantaRegionLabel({ lat: null, lng: null })).toBe('Other Metro Atlanta');
+      expect(getAtlantaRegionLabel({})).toBe('Other Metro Atlanta');
+    });
+
+    it('orders regions and sorts hosts within a region without mutating the input', () => {
+      const hosts = [
+        { name: 'Zeta', area: 'Decatur' },
+        { name: 'Alpha', area: 'College Park' },
+        { name: 'Beta', area: 'Dunwoody' },
+        { name: 'Gamma', area: 'Decatur' },
+        { name: 'Mystery', area: 'Somewhere Else', lat: '', lng: '' }
+      ];
+      const snapshot = JSON.parse(JSON.stringify(hosts));
+
+      expect(groupHostsByAtlantaRegion(hosts)).toEqual([
+        {
+          region: 'North Atlanta',
+          hosts: [{ name: 'Beta', area: 'Dunwoody' }]
+        },
+        {
+          region: 'East Atlanta',
+          hosts: [
+            { name: 'Gamma', area: 'Decatur' },
+            { name: 'Zeta', area: 'Decatur' }
+          ]
+        },
+        {
+          region: 'South Atlanta',
+          hosts: [{ name: 'Alpha', area: 'College Park' }]
+        },
+        {
+          region: 'Other Metro Atlanta',
+          hosts: [{ name: 'Mystery', area: 'Somewhere Else', lat: '', lng: '' }]
+        }
+      ]);
+      expect(hosts).toEqual(snapshot);
     });
   });
 
