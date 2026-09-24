@@ -72,6 +72,9 @@ const CONFIG = {
     verifyMagicLink: 'https://verifymagiclink-znvnlre55a-uc.a.run.app',
     updateUnavailableDates: 'https://updateunavailabledates-znvnlre55a-uc.a.run.app',
     sendMagicLinkBatch: 'https://sendmagiclinkbatch-znvnlre55a-uc.a.run.app',
+    adminSetUnavailableDates: 'https://us-central1-tsp-host-finder-tool.cloudfunctions.net/adminSetUnavailableDates',
+    adminSaveMagicLinkConfig: 'https://us-central1-tsp-host-finder-tool.cloudfunctions.net/adminSaveMagicLinkConfig',
+    adminHostWrite: 'https://us-central1-tsp-host-finder-tool.cloudfunctions.net/adminHostWrite',
   },
 
   // Legacy base URL fallback (1st gen only)
