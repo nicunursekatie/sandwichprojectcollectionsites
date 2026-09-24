@@ -97,7 +97,7 @@ const HostAvailabilityApp = () => {
   const [feedbackRating, setFeedbackRating] = React.useState(0);
   const [feedbackText, setFeedbackText] = React.useState('');
   const [feedbackEmail, setFeedbackEmail] = React.useState('');
-  const [simpleView, setSimpleView] = React.useState(false);
+  const [simpleView, setSimpleView] = React.useState(true);
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
@@ -583,6 +583,24 @@ const HostAvailabilityApp = () => {
   });
   const getWednesdaysInUpcomingMonth = helperRefs.getWednesdaysInUpcomingMonth || (() => []);
   const getWednesdaysInMonth = helperRefs.getWednesdaysInMonth || (() => []);
+  const getGoogleMapsDirectionsUrl = helperRefs.getGoogleMapsDirectionsUrl || ((host, coords = null) => {
+    const destination = typeof host?.address === 'string' ? host.address.trim() : '';
+    if (!destination) return '';
+    const encodedDestination = encodeURIComponent(destination);
+    if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
+      return `https://www.google.com/maps/dir/?api=1&origin=${coords.lat},${coords.lng}&destination=${encodedDestination}&travelmode=driving`;
+    }
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodedDestination}&travelmode=driving`;
+  });
+  const getAppleMapsDirectionsUrl = helperRefs.getAppleMapsDirectionsUrl || ((host, coords = null) => {
+    const destination = typeof host?.address === 'string' ? host.address.trim() : '';
+    if (!destination) return '';
+    const encodedDestination = encodeURIComponent(destination);
+    if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
+      return `https://maps.apple.com/?saddr=${coords.lat},${coords.lng}&daddr=${encodedDestination}&dirflg=d`;
+    }
+    return `https://maps.apple.com/?daddr=${encodedDestination}&dirflg=d`;
+  });
   const CLOUD_FUNCTIONS_BASE_URL = window.CONFIG?.CLOUD_FUNCTIONS_BASE_URL || '';
   const MAGIC_LINK_URLS = window.CONFIG?.MAGIC_LINK_URLS || {};
   const getMagicLinkUrl = (name) =>
@@ -2643,7 +2661,7 @@ const HostAvailabilityApp = () => {
           duration: leg.duration.text,
           distance: leg.distance.text,
           hostName: host.name,
-          hostAddress: `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`,
+          hostAddress: (typeof host.address === 'string' && host.address.trim()) || `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`,
           hostPhone: host.phone,
           hours: host.hours,
           openTime: openTime,
@@ -2706,13 +2724,12 @@ const HostAvailabilityApp = () => {
       host_area: host.area
     });
     
-    if (userCoords) {
-      const url = `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}`;
-      window.open(url, '_blank');
-    } else {
-      const url = `https://www.google.com/maps/search/?api=1&query=${host.lat},${host.lng}`;
-      window.open(url, '_blank');
+    const url = getGoogleMapsDirectionsUrl(host, userCoords);
+    if (!url) {
+      alert('This host does not have a street address yet.');
+      return;
     }
+    window.open(url, '_blank');
     setDirectionsMenuOpen(null);
   };
 
@@ -2729,7 +2746,11 @@ const HostAvailabilityApp = () => {
       host_area: host.area
     });
     
-    const url = `https://maps.apple.com/?daddr=${host.lat},${host.lng}`;
+    const url = getAppleMapsDirectionsUrl(host, userCoords);
+    if (!url) {
+      alert('This host does not have a street address yet.');
+      return;
+    }
     window.open(url, '_blank');
     setDirectionsMenuOpen(null);
   };
@@ -2757,7 +2778,10 @@ const HostAvailabilityApp = () => {
     text += `Drop-off Date: ${dropOffDate}\n`;
     text += `Host Hours: ${routeInfo.hours}\n`;
     text += `\nView full turn-by-turn directions on Google Maps:\n`;
-    text += `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}\n`;
+    const mapsUrl = host ? getGoogleMapsDirectionsUrl(host, userCoords) : '';
+    if (mapsUrl) {
+      text += `${mapsUrl}\n`;
+    }
 
     navigator.clipboard.writeText(text).then(() => {
       alert('✓ Directions copied to clipboard! You can now paste them into an email or text message.');
@@ -3062,23 +3086,35 @@ const HostAvailabilityApp = () => {
                                 currentInfoWindow.close();
                               }
 
+                              const escapeMapText = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+                                '&': '&amp;',
+                                '<': '&lt;',
+                                '>': '&gt;',
+                                '"': '&quot;',
+                                "'": '&#39;'
+                              }[char]));
+                              const addressLabel = escapeMapText(
+                                (typeof host.address === 'string' && host.address.trim())
+                                  || `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`
+                              );
+
                               const infoWindow = new window.google.maps.InfoWindow({
                                 content: `<div style="padding: 8px 12px 12px 12px; min-width: 260px; max-width: 300px; font-family: system-ui, -apple-system, sans-serif;">
                                   <div style="margin-bottom: 10px;">
-                                    <div style="font-size: 17px; font-weight: 700; color: #236383; margin-bottom: 3px;">${host.name}</div>
-                                    <div style="font-size: 14px; color: #666; margin-bottom: 8px;">${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}</div>
+                                    <div style="font-size: 17px; font-weight: 700; color: #236383; margin-bottom: 3px;">${escapeMapText(host.name)}</div>
+                                    <div style="font-size: 14px; color: #666; margin-bottom: 8px;">${addressLabel}</div>
                                     <div style="display: inline-block; background: #007E8C; color: white; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600;">
                                       ${formatTime(host.openTime)} - ${formatTime(host.closeTime)}
                                     </div>
                                   </div>
                                   ${host.phone ? '<div style="font-size: 14px; color: #666; margin-bottom: 12px;">📞 ' + host.phone + '</div>' : ''}
                                   <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    <a href="https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}"
+                                    <a href="${getGoogleMapsDirectionsUrl(host) || '#'}"
                                        target="_blank"
                                        style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #FBAD3F; color: white; padding: 12px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
                                       <span>🗺️</span> Google Maps Directions
                                     </a>
-                                    <a href="https://maps.apple.com/?daddr=${host.lat},${host.lng}"
+                                    <a href="${getAppleMapsDirectionsUrl(host) || '#'}"
                                        target="_blank"
                                        style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #007E8C; color: white; padding: 12px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
                                       <span>🍎</span> Apple Maps Directions
@@ -3257,7 +3293,7 @@ const HostAvailabilityApp = () => {
                           <div className="flex-1">
                             <h4 className="font-bold text-lg mb-1" style={{color: '#236383'}}>{host.name}</h4>
                             <p className="text-sm mb-2" style={{color: '#666'}}>
-                              {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
+                              {host.address || `${host.area}${host.neighborhood ? ` - ${host.neighborhood}` : ''}`}
                             </p>
                             {host.driveTimeText && (
                               <p className="text-sm font-semibold mb-2" style={{color: '#A31C41'}}>
@@ -3354,9 +3390,9 @@ const HostAvailabilityApp = () => {
                             </a>
                           )}
                         </div>
-                        {host.lat && host.lng && (
+                        {getGoogleMapsDirectionsUrl(host, window.specialCollectionUserCoords) && (
                           <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}${window.specialCollectionUserCoords ? `&origin=${window.specialCollectionUserCoords.lat},${window.specialCollectionUserCoords.lng}` : ''}`}
+                            href={getGoogleMapsDirectionsUrl(host, window.specialCollectionUserCoords)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-block text-sm font-medium px-4 py-2.5 rounded-lg"
@@ -4149,7 +4185,7 @@ const HostAvailabilityApp = () => {
                 minWidth: '280px'
               }}
             >
-              {simpleView ? '← Back to Interactive Map View' : '📋 Switch to Simple List View'}
+              {simpleView ? '🗺️ Switch to Map View' : '📋 Switch to Simple List View'}
             </button>
             {!simpleView && (
               <p className="text-sm text-center" style={{color: '#666'}}>
@@ -4204,9 +4240,11 @@ const HostAvailabilityApp = () => {
 
                   {/* Details - stacked for clarity */}
                   <div className="space-y-3 mb-4">
-                    <div className="flex items-center gap-2 text-base" style={{color: '#236383'}}>
+                    <div className="flex items-start gap-2 text-base" style={{color: '#236383'}}>
                       <i className="lucide-map-pin w-5 h-5 flex-shrink-0" style={{color: '#007E8C'}}></i>
-                      <span className="font-medium">{favoriteHost.area}{favoriteHost.neighborhood ? ` • ${favoriteHost.neighborhood}` : ''}</span>
+                      <span className="font-medium">
+                        {favoriteHost.address || `${favoriteHost.area}${favoriteHost.neighborhood ? ` • ${favoriteHost.neighborhood}` : ''}`}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-base" style={{color: '#236383'}}>
                       <i className="lucide-clock w-5 h-5 flex-shrink-0" style={{color: '#007E8C'}}></i>
@@ -4279,6 +4317,7 @@ const HostAvailabilityApp = () => {
                     availableHosts = availableHosts.filter(h =>
                       h.name.toLowerCase().includes(searchLower) ||
                       h.area.toLowerCase().includes(searchLower) ||
+                      (h.address && h.address.toLowerCase().includes(searchLower)) ||
                       (aliasedArea && h.area === aliasedArea) ||
                       (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
                     );
@@ -4305,6 +4344,9 @@ const HostAvailabilityApp = () => {
                               <div className="flex-1">
                                 <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
                                 {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
+                                {host.address && (
+                                  <div className="text-base mt-1" style={{color: '#236383'}}>{host.address}</div>
+                                )}
                                 <div className="text-base mt-1" style={{color: '#555'}}>
                                   {formatCondensedHours(host)}
                                   {timeAvail.warning && (
@@ -4351,6 +4393,8 @@ const HostAvailabilityApp = () => {
           )}
 
           {/* View Toggle */}
+          {!simpleView && (
+          <div>
           <div className="flex flex-wrap justify-center gap-3">
             <button
               onClick={() => {
@@ -4426,10 +4470,13 @@ const HostAvailabilityApp = () => {
             {viewMode === 'proximity' && 'Showing map and host list side-by-side'}
             {viewMode === 'map' && 'Showing hosts on the map — click a pin for details'}
           </p>
+          </div>
+          )}
 
         </div>
 
         {/* Map and/or List */}
+        {!simpleView && (
         <div className={`grid grid-cols-1 ${viewMode === 'proximity' ? 'lg:grid-cols-2 lg:items-start' : ''} gap-6`}>
           {/* Map View */}
           {viewMode !== 'list' && (
@@ -4601,7 +4648,7 @@ const HostAvailabilityApp = () => {
                           {mapTooltip.name}
                         </h4>
                         <p className="text-sm font-medium" style={{color: '#007E8C'}}>
-                          {mapTooltip.neighborhood ? mapTooltip.neighborhood : mapTooltip.area}
+                          {mapTooltip.address || (mapTooltip.neighborhood ? mapTooltip.neighborhood : mapTooltip.area)}
                         </p>
                       </div>
                       <button
@@ -5131,6 +5178,12 @@ const HostAvailabilityApp = () => {
                           </span>
                         )}
                       </div>
+                      {host.address && (
+                        <p className="text-base font-medium mb-4" style={{color: '#236383'}}>
+                          <i className="lucide-map-pin w-4 h-4 inline mr-1.5" style={{verticalAlign: 'text-bottom'}}></i>
+                          {host.address}
+                        </p>
+                      )}
 
                       {/* Current timing status - secondary info */}
                       {host.available && availability && (
@@ -5615,7 +5668,7 @@ const HostAvailabilityApp = () => {
                       </div>
 
                       <p className="text-lg font-medium mb-4" style={{color: '#236383'}}>
-                        📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
+                        📍 {host.address || `${host.area}${host.neighborhood ? ` - ${host.neighborhood}` : ''}`}
                       </p>
 
                       <div className="space-y-4 text-base">
@@ -5777,6 +5830,7 @@ const HostAvailabilityApp = () => {
               </div>
             )}
         </div>
+        )}
 
         {/* Resources Section - Moved to bottom for better UX */}
         <div id="resources-section" className="max-w-4xl mx-auto mt-8 px-4">
