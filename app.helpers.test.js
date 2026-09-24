@@ -14,6 +14,7 @@ const {
   getAppleMapsDirectionsUrl,
   getAtlantaRegionLabel,
   groupHostsByAtlantaRegion,
+  groupAreasByAtlantaRegion,
   hasFiniteDistance,
   applyCollectionAvailability,
 } = require('./app.helpers.js');
@@ -144,6 +145,7 @@ describe('App helpers', () => {
       expect(getAtlantaRegionLabel({ area: '  Dunwoody  ' })).toBe('North Atlanta');
       expect(getAtlantaRegionLabel({ area: 'CHAMBLEE/BROOKHAVEN' })).toBe('Northeast Atlanta');
       expect(getAtlantaRegionLabel({ area: 'College Park' })).toBe('South Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Intown' })).toBe('East Atlanta');
     });
 
     it('classifies unmapped hosts at coordinate thresholds', () => {
@@ -194,6 +196,26 @@ describe('App helpers', () => {
         }
       ]);
       expect(hosts).toEqual(snapshot);
+    });
+  });
+
+  describe('groupAreasByAtlantaRegion', () => {
+    it('orders area names by region instead of alphabetically', () => {
+      const hosts = [
+        { area: 'Decatur' },
+        { area: 'Buckhead' },
+        { area: 'College Park' },
+        { area: 'Chamblee/Brookhaven' }
+      ];
+      expect(groupAreasByAtlantaRegion(
+        ['College Park', 'Chamblee/Brookhaven', 'Decatur', 'Buckhead'],
+        hosts
+      )).toEqual([
+        { region: 'North Atlanta', areas: ['Buckhead'] },
+        { region: 'Northeast Atlanta', areas: ['Chamblee/Brookhaven'] },
+        { region: 'East Atlanta', areas: ['Decatur'] },
+        { region: 'South Atlanta', areas: ['College Park'] }
+      ]);
     });
   });
 

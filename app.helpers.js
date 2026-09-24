@@ -236,6 +236,7 @@
     'decatur': 'East Atlanta',
     'east atlanta': 'East Atlanta',
     'east cobb': 'East Atlanta',
+    'intown': 'East Atlanta',
     'intown (candler park)': 'East Atlanta',
     'oak grove/druid hills': 'East Atlanta',
     'virginia highland': 'East Atlanta',
@@ -296,6 +297,39 @@
       region,
       hosts: grouped.get(region).slice().sort(sortHosts)
     }));
+  };
+
+  const regionSortIndex = (region) => {
+    const index = ATLANTA_REGION_ORDER.indexOf(region);
+    return index === -1 ? ATLANTA_REGION_ORDER.length : index;
+  };
+
+  /** Area names ordered north-to-south by Atlanta region, then alphabetically within a region. */
+  const groupAreasByAtlantaRegion = (areaNames = [], hosts = []) => {
+    const sampleForArea = new Map();
+    hosts.forEach((host) => {
+      if (host && !sampleForArea.has(host.area)) sampleForArea.set(host.area, host);
+    });
+
+    const orderedAreas = [...areaNames].sort((left, right) => {
+      const leftHost = sampleForArea.get(left) || { area: left };
+      const rightHost = sampleForArea.get(right) || { area: right };
+      const byRegion = regionSortIndex(getAtlantaRegionLabel(leftHost)) - regionSortIndex(getAtlantaRegionLabel(rightHost));
+      if (byRegion !== 0) return byRegion;
+      return String(left || '').localeCompare(String(right || ''));
+    });
+
+    const groups = [];
+    orderedAreas.forEach((area) => {
+      const region = getAtlantaRegionLabel(sampleForArea.get(area) || { area });
+      const current = groups[groups.length - 1];
+      if (!current || current.region !== region) {
+        groups.push({ region, areas: [area] });
+      } else {
+        current.areas.push(area);
+      }
+    });
+    return groups;
   };
 
   const buildCalendarEvent = (host, {
@@ -381,6 +415,7 @@
     getActiveCollectionWednesday,
     getActiveCollectionWednesdayStr,
     groupHostsByAtlantaRegion,
+    groupAreasByAtlantaRegion,
     getWednesdaysInMonth,
     getWednesdaysInUpcomingMonth,
     hasFiniteDistance,

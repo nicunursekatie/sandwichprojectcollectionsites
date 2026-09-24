@@ -574,6 +574,10 @@ const HostAvailabilityApp = () => {
   const hasFiniteDistance = helperRefs.hasFiniteDistance || ((value) =>
     value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value))
   );
+  const groupAreasByAtlantaRegion = helperRefs.groupAreasByAtlantaRegion || ((areaNames) => [{
+    region: '',
+    areas: [...areaNames].sort()
+  }]);
   const applyCollectionAvailability = helperRefs.applyCollectionAvailability || ((hosts, dateStr) => {
     const list = Array.isArray(hosts) ? hosts : [];
     const isCollecting = (host) =>
@@ -4334,12 +4338,12 @@ const HostAvailabilityApp = () => {
           })()}
 
 
-          {/* Simple View - Plain list grouped by area */}
+          {/* Simple View - Plain list grouped by region, then area */}
           {simpleView && (
             <div className="p-4">
               <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
                 <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center" style={{color: '#236383'}}>
-                  {userCoords ? 'Closest Hosts' : 'All Hosts by Area'}
+                  {userCoords ? 'Closest Hosts' : 'All Hosts by Region'}
                 </h2>
                 <p className="text-base mb-6 text-center" style={{color: '#666'}}>
                   {userCoords
@@ -4381,9 +4385,12 @@ const HostAvailabilityApp = () => {
                       }))
                       .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
                   }
-                  const areas = userCoords
-                    ? ['__closest__']
-                    : [...new Set(availableHosts.map(h => h.area))].sort();
+                  const areaGroups = userCoords
+                    ? [{ region: '', areas: ['__closest__'] }]
+                    : groupAreasByAtlantaRegion(
+                      [...new Set(availableHosts.map(h => h.area))],
+                      availableHosts
+                    );
 
                   if (availableHosts.length === 0) {
                     return (
@@ -4393,10 +4400,15 @@ const HostAvailabilityApp = () => {
                     );
                   }
 
-                  return areas.map(area => (
+                  return areaGroups.map(group => (
+                    <div key={group.region || '__closest__'} className="mb-10">
+                      {group.region && (
+                        <h3 className="font-bold text-sm uppercase tracking-wide mb-4" style={{color: '#236383'}}>{group.region}</h3>
+                      )}
+                      {group.areas.map(area => (
                     <div key={area} className="mb-8">
                       {area !== '__closest__' && (
-                        <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
+                        <h4 className="font-bold text-xl sm:text-2xl mb-4 pb-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h4>
                       )}
                       <div className="space-y-4">
                         {(area === '__closest__' ? availableHosts : availableHosts.filter(h => h.area === area)).map(host => {
@@ -4451,6 +4463,8 @@ const HostAvailabilityApp = () => {
                           </div>
                         );})}
                       </div>
+                    </div>
+                      ))}
                     </div>
                   ));
                 })()}
