@@ -598,10 +598,10 @@ const HostAvailabilityApp = () => {
     const today = new Date(referenceDate);
     today.setHours(0, 0, 0, 0);
     const upcoming = getUpcomingWednesday(today);
-    const friday = new Date(upcoming);
-    friday.setHours(0, 0, 0, 0);
-    friday.setDate(friday.getDate() - 5);
-    if (today < friday) return null;
+    const thursday = new Date(upcoming);
+    thursday.setHours(0, 0, 0, 0);
+    thursday.setDate(thursday.getDate() - 6);
+    if (today < thursday) return null;
     return formatDateYYYYMMDD(upcoming);
   });
   const getWednesdaysInUpcomingMonth = helperRefs.getWednesdaysInUpcomingMonth || (() => []);
@@ -1012,7 +1012,7 @@ const HostAvailabilityApp = () => {
     });
     const confirmMessage = hasDate
       ? `Mark ${host.name} as available on ${formattedDate}?\n\nThey will be eligible to appear on the Host Finder for that collection week.`
-      : `Mark ${host.name} as unavailable on ${formattedDate}?\n\nThey will be hidden on the Host Finder for that week (starting the Friday before).`;
+      : `Mark ${host.name} as unavailable on ${formattedDate}?\n\nThey will be hidden on the Host Finder for that week (starting Thursday).`;
 
     if (!confirm(confirmMessage)) return;
 
