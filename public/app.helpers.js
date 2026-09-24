@@ -28,6 +28,33 @@
     return Array.isArray(host.unavailable_dates) && host.unavailable_dates.includes(dateStr);
   };
 
+  const hasFiniteDistance = (value) =>
+    value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value));
+
+  /**
+   * Mark hosts unavailable for a collection date, then hide a substitute only
+   * when its primary is still collecting that week.
+   */
+  const applyCollectionAvailability = (hosts, dateStr) => {
+    const list = Array.isArray(hosts) ? hosts : [];
+    const isCollecting = (host) =>
+      Boolean(host?.available) && !(dateStr && isHostUnavailableOnDate(host, dateStr));
+
+    return list.map((host) => {
+      let next = host;
+      if (host?.available && dateStr && isHostUnavailableOnDate(host, dateStr)) {
+        next = { ...host, available: false, unavailableThisWeek: true };
+      }
+      if (next?.available && next.alternateFor) {
+        const primary = list.find((candidate) => candidate.id === next.alternateFor);
+        if (primary && isCollecting(primary)) {
+          next = { ...next, available: false };
+        }
+      }
+      return next;
+    });
+  };
+
   /** Friday immediately before a collection Wednesday (midnight local). */
   const getFridayBeforeWednesday = (wednesdayDate) => {
     const friday = new Date(wednesdayDate);
@@ -356,6 +383,8 @@
     groupHostsByAtlantaRegion,
     getWednesdaysInMonth,
     getWednesdaysInUpcomingMonth,
-    isHostUnavailableOnDate
+    hasFiniteDistance,
+    isHostUnavailableOnDate,
+    applyCollectionAvailability
   };
 }));

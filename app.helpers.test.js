@@ -14,6 +14,8 @@ const {
   getAppleMapsDirectionsUrl,
   getAtlantaRegionLabel,
   groupHostsByAtlantaRegion,
+  hasFiniteDistance,
+  applyCollectionAvailability,
 } = require('./app.helpers.js');
 
 describe('App helpers', () => {
@@ -258,6 +260,43 @@ describe('App helpers', () => {
 
       const durationMinutes = (event.end.getTime() - event.start.getTime()) / (1000 * 60);
       expect(durationMinutes).toBeGreaterThan(0);
+    });
+  });
+
+  describe('hasFiniteDistance', () => {
+    it('treats zero miles as a real distance', () => {
+      expect(hasFiniteDistance(0)).toBe(true);
+      expect(hasFiniteDistance('0')).toBe(true);
+    });
+
+    it('rejects missing distances', () => {
+      expect(hasFiniteDistance(null)).toBe(false);
+      expect(hasFiniteDistance(undefined)).toBe(false);
+      expect(hasFiniteDistance('')).toBe(false);
+    });
+  });
+
+  describe('applyCollectionAvailability', () => {
+    const wednesday = '2026-09-23';
+
+    it('keeps a substitute available when the primary is out on that date', () => {
+      const hosts = applyCollectionAvailability([
+        { id: 1, available: true, unavailable_dates: [wednesday] },
+        { id: 2, available: true, alternateFor: 1, unavailable_dates: [] },
+      ], wednesday);
+
+      expect(hosts.find((host) => host.id === 1).available).toBe(false);
+      expect(hosts.find((host) => host.id === 2).available).toBe(true);
+    });
+
+    it('hides a substitute when the primary is still collecting', () => {
+      const hosts = applyCollectionAvailability([
+        { id: 1, available: true, unavailable_dates: [] },
+        { id: 2, available: true, alternateFor: 1, unavailable_dates: [] },
+      ], wednesday);
+
+      expect(hosts.find((host) => host.id === 1).available).toBe(true);
+      expect(hosts.find((host) => host.id === 2).available).toBe(false);
     });
   });
 });
