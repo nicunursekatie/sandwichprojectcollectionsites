@@ -2382,31 +2382,49 @@ const HostAvailabilityApp = () => {
     prevHostsCount.current = currentCount;
   }, [allHostsForDisplay, updateMarkers]);
 
-  // Create map when API is loaded AND map div exists — only once
+  // Create the map once the API and map element are available. The map stays
+  // mounted while the simple list is showing, so returning to it resizes the
+  // existing instance instead of attaching to a removed element.
   React.useEffect(() => {
-    if (viewMode === 'list') return;
+    if (simpleView || viewMode === 'list') return;
 
-    if (mapLoaded && !mapInstanceRef.current && allHostsForDisplay?.length > 0) {
-      const checkAndInit = () => {
-        const mapElement = document.getElementById('map');
-        if (mapElement && !mapInstanceRef.current) {
-          createMap();
-          // After map is created, populate markers
-          setTimeout(() => updateMarkers(), 50);
-        } else if (!mapElement) {
-          setTimeout(checkAndInit, 100);
-        }
-      };
-      const timeoutId = setTimeout(checkAndInit, 100);
-      return () => clearTimeout(timeoutId);
-    }
+    let cancelled = false;
+    let timeoutId;
 
-    // When switching back to map view, trigger resize and update markers
-    if (mapInstanceRef.current && viewMode !== 'list') {
+    const resizeExistingMap = () => {
+      if (!mapInstanceRef.current || !window.google?.maps?.event) return;
       google.maps.event.trigger(mapInstanceRef.current, 'resize');
       updateMarkers();
+    };
+
+    if (mapInstanceRef.current) {
+      resizeExistingMap();
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [mapLoaded, viewMode, createMap, updateMarkers, allHostsForDisplay]);
+
+    if (mapLoaded && allHostsForDisplay?.length > 0) {
+      const checkAndInit = () => {
+        if (cancelled || mapInstanceRef.current) return;
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+          createMap();
+          timeoutId = setTimeout(() => {
+            if (!cancelled) updateMarkers();
+          }, 50);
+        } else {
+          timeoutId = setTimeout(checkAndInit, 100);
+        }
+      };
+      timeoutId = setTimeout(checkAndInit, 100);
+    }
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [mapLoaded, viewMode, simpleView, createMap, updateMarkers, allHostsForDisplay]);
 
   // Auto-focus map on favorite host when page loads
   React.useEffect(() => {
@@ -4291,9 +4309,13 @@ const HostAvailabilityApp = () => {
           {simpleView && (
             <div className="p-4">
               <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center" style={{color: '#236383'}}>All Hosts by Area</h2>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center" style={{color: '#236383'}}>
+                  {userCoords ? 'Closest Hosts' : 'All Hosts by Area'}
+                </h2>
                 <p className="text-base mb-6 text-center" style={{color: '#666'}}>
-                  Showing hosts collecting this week. Tap phone to call, or tap Directions.
+                  {userCoords
+                    ? `Showing hosts collecting this week, closest to ${userAddress || 'your location'} first.`
+                    : 'Showing hosts collecting this week. Tap phone to call, or tap Directions.'}
                 </p>
 
                 {/* Search bar for simple view */}
@@ -4309,7 +4331,7 @@ const HostAvailabilityApp = () => {
                 </div>
 
                 {(() => {
-                  let availableHosts = allHosts.filter(h => h.available);
+                  let availableHosts = allHostsForDisplay.filter(h => h.available);
                   // Apply search filter (including area aliases)
                   if (nameSearch.trim()) {
                     const searchLower = nameSearch.toLowerCase();
@@ -4322,7 +4344,17 @@ const HostAvailabilityApp = () => {
                       (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
                     );
                   }
-                  const areas = [...new Set(availableHosts.map(h => h.area))].sort();
+                  if (userCoords) {
+                    availableHosts = availableHosts
+                      .map(host => ({
+                        ...host,
+                        distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
+                      }))
+                      .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+                  }
+                  const areas = userCoords
+                    ? ['__closest__']
+                    : [...new Set(availableHosts.map(h => h.area))].sort();
 
                   if (availableHosts.length === 0) {
                     return (
@@ -4334,9 +4366,11 @@ const HostAvailabilityApp = () => {
 
                   return areas.map(area => (
                     <div key={area} className="mb-8">
-                      <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
+                      {area !== '__closest__' && (
+                        <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
+                      )}
                       <div className="space-y-4">
-                        {availableHosts.filter(h => h.area === area).map(host => {
+                        {(area === '__closest__' ? availableHosts : availableHosts.filter(h => h.area === area)).map(host => {
                           const timeAvail = checkHostTimeAvailability(host, dropOffTime);
                           return (
                           <div key={host.id} className="flex flex-col gap-3 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
@@ -4346,6 +4380,9 @@ const HostAvailabilityApp = () => {
                                 {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
                                 {host.address && (
                                   <div className="text-base mt-1" style={{color: '#236383'}}>{host.address}</div>
+                                )}
+                                {host.distance && (
+                                  <div className="text-base mt-1 font-semibold" style={{color: '#007E8C'}}>{host.distance} miles away</div>
                                 )}
                                 <div className="text-base mt-1" style={{color: '#555'}}>
                                   {formatCondensedHours(host)}
@@ -4475,9 +4512,11 @@ const HostAvailabilityApp = () => {
 
         </div>
 
-        {/* Map and/or List */}
-        {!simpleView && (
-        <div className={`grid grid-cols-1 ${viewMode === 'proximity' ? 'lg:grid-cols-2 lg:items-start' : ''} gap-6`}>
+        {/* Map and/or List. Kept mounted so Google Maps can be shown again. */}
+        <div
+          className={`grid grid-cols-1 ${viewMode === 'proximity' ? 'lg:grid-cols-2 lg:items-start' : ''} gap-6`}
+          style={simpleView ? { display: 'none' } : undefined}
+        >
           {/* Map View */}
           {viewMode !== 'list' && (
             <div className="bg-white rounded-2xl premium-card overflow-hidden">
@@ -5830,7 +5869,6 @@ const HostAvailabilityApp = () => {
               </div>
             )}
         </div>
-        )}
 
         {/* Resources Section - Moved to bottom for better UX */}
         <div id="resources-section" className="max-w-4xl mx-auto mt-8 px-4">
