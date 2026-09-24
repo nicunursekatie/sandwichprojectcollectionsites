@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
@@ -14,6 +15,7 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const magicLinkSecret = defineSecret('MAGIC_LINK_SECRET');
+const adminApiSecret = defineSecret('ADMIN_API_SECRET');
 const twilioAccountSid = defineSecret('TWILIO_ACCOUNT_SID');
 const twilioAuthToken = defineSecret('TWILIO_AUTH_TOKEN');
 const emailFrom = defineString('EMAIL_FROM', { default: 'noreply@thesandwichproject.org' });
@@ -44,6 +46,23 @@ const httpOptions = {
   invoker: 'public',
 };
 
+function secretsMatch(provided, expected) {
+  const left = crypto.createHash('sha256').update(String(provided)).digest();
+  const right = crypto.createHash('sha256').update(String(expected)).digest();
+  return crypto.timingSafeEqual(left, right);
+}
+
+function requireAdminSecret(req, res) {
+  const header = req.get('Authorization') || '';
+  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : '';
+  const expected = adminApiSecret.value();
+  if (!token || !expected || !secretsMatch(token, expected)) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return false;
+  }
+  return true;
+}
+
 function parseJsonBody(req) {
   if (req.body && typeof req.body === 'object') return req.body;
   try {
@@ -54,7 +73,10 @@ function parseJsonBody(req) {
 }
 
 /** POST — manual test batch (triggered from Admin UI) */
-exports.sendMagicLinkBatch = onRequest(httpOptions, async (req, res) => {
+exports.sendMagicLinkBatch = onRequest({
+  ...httpOptions,
+  secrets: [...functionSecrets, adminApiSecret],
+}, async (req, res) => {
   bindRuntimeEnv();
 
   if (req.method !== 'POST') {
@@ -62,10 +84,12 @@ exports.sendMagicLinkBatch = onRequest(httpOptions, async (req, res) => {
     return;
   }
 
+  if (!requireAdminSecret(req, res)) return;
+
   try {
     const body = parseJsonBody(req);
     const result = await dispatchMagicLinkEmails(db, {
-      manualOverride: Boolean(body.manual_override ?? true),
+      manualOverride: body.manual_override === true,
       testEmailsOverride: Array.isArray(body.test_emails) ? body.test_emails : null,
     });
     res.status(200).json(result);

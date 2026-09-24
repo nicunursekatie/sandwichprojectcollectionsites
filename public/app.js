@@ -583,8 +583,21 @@ const HostAvailabilityApp = () => {
   });
   const getWednesdaysInUpcomingMonth = helperRefs.getWednesdaysInUpcomingMonth || (() => []);
   const getWednesdaysInMonth = helperRefs.getWednesdaysInMonth || (() => []);
+  const fallbackNavigationDestination = (host = {}) => {
+    const address = typeof host.address === 'string' ? host.address.trim() : '';
+    if (address) return address;
+    const toFiniteCoordinate = (value) => {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+      if (typeof value !== 'string' || !value.trim()) return null;
+      const parsed = Number(value.trim());
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+    const lat = toFiniteCoordinate(host.lat);
+    const lng = toFiniteCoordinate(host.lng);
+    return lat !== null && lng !== null ? `${lat},${lng}` : '';
+  };
   const getGoogleMapsDirectionsUrl = helperRefs.getGoogleMapsDirectionsUrl || ((host, coords = null) => {
-    const destination = typeof host?.address === 'string' ? host.address.trim() : '';
+    const destination = fallbackNavigationDestination(host);
     if (!destination) return '';
     const encodedDestination = encodeURIComponent(destination);
     if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
@@ -593,7 +606,7 @@ const HostAvailabilityApp = () => {
     return `https://www.google.com/maps/dir/?api=1&destination=${encodedDestination}&travelmode=driving`;
   });
   const getAppleMapsDirectionsUrl = helperRefs.getAppleMapsDirectionsUrl || ((host, coords = null) => {
-    const destination = typeof host?.address === 'string' ? host.address.trim() : '';
+    const destination = fallbackNavigationDestination(host);
     if (!destination) return '';
     const encodedDestination = encodeURIComponent(destination);
     if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
@@ -1079,10 +1092,17 @@ const HostAvailabilityApp = () => {
       await db.collection('settings').doc('magic_link_config').set(configPayload, { merge: true });
       setMagicLinkConfig(configPayload);
 
+      const adminSecret = prompt('Enter the admin API secret to send this batch:');
+      if (!adminSecret || !adminSecret.trim()) {
+        alert('Send cancelled. The admin API secret is required.');
+        return;
+      }
+
       const response = await fetch(getMagicLinkUrl('sendMagicLinkBatch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminSecret.trim()}`,
         },
         body: JSON.stringify({ manual_override: true, test_emails: testEmails }),
       });
@@ -2398,10 +2418,14 @@ const HostAvailabilityApp = () => {
     };
 
     if (mapInstanceRef.current) {
-      resizeExistingMap();
-      return () => {
-        cancelled = true;
-      };
+      const attachedDiv = mapInstanceRef.current.getDiv?.();
+      if (attachedDiv && document.body.contains(attachedDiv)) {
+        resizeExistingMap();
+        return () => {
+          cancelled = true;
+        };
+      }
+      mapInstanceRef.current = null;
     }
 
     if (mapLoaded && allHostsForDisplay?.length > 0) {
@@ -4195,7 +4219,14 @@ const HostAvailabilityApp = () => {
           {/* Simple View Toggle - Prominent */}
           <div className="flex flex-col items-center gap-3 mb-6 px-3">
             <button
-              onClick={() => setSimpleView(!simpleView)}
+              onClick={() => {
+                if (simpleView) {
+                  setViewMode('proximity');
+                  setSimpleView(false);
+                } else {
+                  setSimpleView(true);
+                }
+              }}
               className="px-6 py-3 rounded-xl font-bold text-lg transition-all hover:shadow-lg"
               style={{
                 backgroundColor: simpleView ? '#007E8C' : '#FBAD3F',
@@ -4517,9 +4548,11 @@ const HostAvailabilityApp = () => {
           className={`grid grid-cols-1 ${viewMode === 'proximity' ? 'lg:grid-cols-2 lg:items-start' : ''} gap-6`}
           style={simpleView ? { display: 'none' } : undefined}
         >
-          {/* Map View */}
-          {viewMode !== 'list' && (
-            <div className="bg-white rounded-2xl premium-card overflow-hidden">
+          {/* Map View. Kept mounted in list mode so Google Maps is not destroyed. */}
+            <div
+              className="bg-white rounded-2xl premium-card overflow-hidden"
+              style={viewMode === 'list' ? { display: 'none' } : undefined}
+            >
             <div className="p-4 sm:p-6 border-b" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}}>
               <h2 className="text-xl font-bold mb-3" style={{color: '#236383'}}>
                 🗺️ Drop-Off Locations Map
@@ -4996,7 +5029,6 @@ const HostAvailabilityApp = () => {
                 </div>
               )}
             </div>
-          )}
 
             {/* Host List */}
             {viewMode !== 'map' && (
