@@ -97,7 +97,7 @@ const HostAvailabilityApp = () => {
   const [feedbackRating, setFeedbackRating] = React.useState(0);
   const [feedbackText, setFeedbackText] = React.useState('');
   const [feedbackEmail, setFeedbackEmail] = React.useState('');
-  const [simpleView, setSimpleView] = React.useState(true);
+  const [simpleView, setSimpleView] = React.useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false);
   const [favoriteHostId, setFavoriteHostId] = React.useState(null);
   const [includeUnavailableHosts, setIncludeUnavailableHosts] = React.useState(false);
@@ -109,27 +109,12 @@ const HostAvailabilityApp = () => {
   const [editingSpecialHost, setEditingSpecialHost] = React.useState(null);
   // URL-based page routing
   const [currentPage, setCurrentPage] = React.useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('host') && params.get('token')) return 'availability';
     const path = window.location.pathname.toLowerCase();
-    if (path.includes('availability')) return 'availability';
     if (path.includes('specialcollections') || path.includes('special-collections')) {
       return 'specialcollections';
     }
     return 'main';
   });
-  // Magic link availability page state
-  const [availabilityData, setAvailabilityData] = React.useState(null);
-  const [availabilityLoading, setAvailabilityLoading] = React.useState(false);
-  const [availabilityError, setAvailabilityError] = React.useState(null);
-  const [availabilitySaving, setAvailabilitySaving] = React.useState(false);
-  const [selectedUnavailableDates, setSelectedUnavailableDates] = React.useState(new Set());
-  // Magic link admin config
-  const [magicLinkConfig, setMagicLinkConfig] = React.useState(null);
-  const [magicLinkConfigLoading, setMagicLinkConfigLoading] = React.useState(false);
-  const [magicLinkSaving, setMagicLinkSaving] = React.useState(false);
-  const [magicLinkSending, setMagicLinkSending] = React.useState(false);
-  const [testEmailsInput, setTestEmailsInput] = React.useState('');
 
   // Handle browser back/forward navigation
   React.useEffect(() => {
@@ -556,126 +541,8 @@ const HostAvailabilityApp = () => {
       .replace(/;/g, '\\;')
   );
   const buildCalendarEvent = helperRefs.buildCalendarEvent;
-  const getUpcomingWednesday = helperRefs.getUpcomingWednesday || ((referenceDate = new Date()) => {
-    const today = new Date(referenceDate);
-    today.setHours(0, 0, 0, 0);
-    const daysUntilWednesday = (3 - today.getDay() + 7) % 7;
-    const upcoming = new Date(today);
-    upcoming.setDate(today.getDate() + daysUntilWednesday);
-    return upcoming;
-  });
-  const formatDateYYYYMMDD = helperRefs.formatDateYYYYMMDD || ((date) => {
-    const pad = (value) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  });
-  const isHostUnavailableOnDate = helperRefs.isHostUnavailableOnDate || ((host, dateStr) =>
-    Array.isArray(host?.unavailable_dates) && host.unavailable_dates.includes(dateStr)
-  );
-  const hasFiniteDistance = helperRefs.hasFiniteDistance || ((value) =>
-    value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value))
-  );
-  const applyCollectionAvailability = helperRefs.applyCollectionAvailability || ((hosts, dateStr) => {
-    const list = Array.isArray(hosts) ? hosts : [];
-    const isCollecting = (host) =>
-      Boolean(host?.available) && !(dateStr && isHostUnavailableOnDate(host, dateStr));
-    return list.map((host) => {
-      let next = host;
-      if (host?.available && dateStr && isHostUnavailableOnDate(host, dateStr)) {
-        next = { ...host, available: false, unavailableThisWeek: true };
-      }
-      if (next?.available && next.alternateFor) {
-        const primary = list.find((candidate) => candidate.id === next.alternateFor);
-        if (primary && isCollecting(primary)) next = { ...next, available: false };
-      }
-      return next;
-    });
-  });
-  const getActiveCollectionWednesdayStr = helperRefs.getActiveCollectionWednesdayStr || ((referenceDate = new Date()) => {
-    const today = new Date(referenceDate);
-    today.setHours(0, 0, 0, 0);
-    const upcoming = getUpcomingWednesday(today);
-    const friday = new Date(upcoming);
-    friday.setHours(0, 0, 0, 0);
-    friday.setDate(friday.getDate() - 5);
-    if (today < friday) return null;
-    return formatDateYYYYMMDD(upcoming);
-  });
-  const getWednesdaysInUpcomingMonth = helperRefs.getWednesdaysInUpcomingMonth || (() => []);
-  const getWednesdaysInMonth = helperRefs.getWednesdaysInMonth || (() => []);
-  const fallbackNavigationDestination = (host = {}) => {
-    const address = typeof host.address === 'string' ? host.address.trim() : '';
-    if (address) return address;
-    const toFiniteCoordinate = (value) => {
-      if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-      if (typeof value !== 'string' || !value.trim()) return null;
-      const parsed = Number(value.trim());
-      return Number.isFinite(parsed) ? parsed : null;
-    };
-    const lat = toFiniteCoordinate(host.lat);
-    const lng = toFiniteCoordinate(host.lng);
-    return lat !== null && lng !== null ? `${lat},${lng}` : '';
-  };
-  const getGoogleMapsDirectionsUrl = helperRefs.getGoogleMapsDirectionsUrl || ((host, coords = null) => {
-    const destination = fallbackNavigationDestination(host);
-    if (!destination) return '';
-    const encodedDestination = encodeURIComponent(destination);
-    if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
-      return `https://www.google.com/maps/dir/?api=1&origin=${coords.lat},${coords.lng}&destination=${encodedDestination}&travelmode=driving`;
-    }
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodedDestination}&travelmode=driving`;
-  });
-  const getAppleMapsDirectionsUrl = helperRefs.getAppleMapsDirectionsUrl || ((host, coords = null) => {
-    const destination = fallbackNavigationDestination(host);
-    if (!destination) return '';
-    const encodedDestination = encodeURIComponent(destination);
-    if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
-      return `https://maps.apple.com/?saddr=${coords.lat},${coords.lng}&daddr=${encodedDestination}&dirflg=d`;
-    }
-    return `https://maps.apple.com/?daddr=${encodedDestination}&dirflg=d`;
-  });
-  const CLOUD_FUNCTIONS_BASE_URL = window.CONFIG?.CLOUD_FUNCTIONS_BASE_URL || '';
-  const MAGIC_LINK_URLS = window.CONFIG?.MAGIC_LINK_URLS || {};
-  const getMagicLinkUrl = (name) =>
-    MAGIC_LINK_URLS[name] || `${CLOUD_FUNCTIONS_BASE_URL}/${name}`;
-  const adminApiSecretRef = React.useRef('');
-  const promptForAdminSecret = () => {
-    if (adminApiSecretRef.current) return adminApiSecretRef.current;
-    const entered = prompt('Enter the admin API secret:');
-    if (!entered || !entered.trim()) return '';
-    adminApiSecretRef.current = entered.trim();
-    return adminApiSecretRef.current;
-  };
-  const adminFetch = async (name, body) => {
-    const secret = promptForAdminSecret();
-    if (!secret) {
-      const error = new Error('Admin API secret is required.');
-      error.code = 'cancelled';
-      throw error;
-    }
-    const response = await fetch(getMagicLinkUrl(name), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${secret}`,
-      },
-      body: JSON.stringify(body),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (response.status === 401) adminApiSecretRef.current = '';
-    if (!response.ok) throw new Error(result.error || 'Request failed');
-    return result;
-  };
-  const MAGIC_LINK_DEFAULTS = window.CONFIG?.MAGIC_LINK_DEFAULTS || {
-    is_enabled: false,
-    audience: 'test_only',
-    test_emails: [],
-    send_day_of_month: 25,
-  };
 
   const nextWednesday = getNextWednesday();
-  const activeCollectionWednesdayStr = getActiveCollectionWednesdayStr();
-  const adminWednesdayOptions = getWednesdaysInMonth(new Date()).concat(getWednesdaysInUpcomingMonth(new Date()));
-  const uniqueAdminWednesdayOptions = [...new Set(adminWednesdayOptions)].sort();
   const dropOffDate = nextWednesday.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -989,36 +856,19 @@ const HostAvailabilityApp = () => {
   };
 
   const updateHost = async (hostId, hostData) => {
-    const existing = (allHosts || []).find(host => host.id === hostId);
-    const previousDates = Array.isArray(existing?.unavailable_dates) ? existing.unavailable_dates : [];
-    const nextDates = Array.isArray(hostData.unavailable_dates) ? hostData.unavailable_dates : previousDates;
-    const datesChanged = [...previousDates].sort().join('|') !== [...nextDates].sort().join('|');
     const updatedHost = {
       ...hostData,
       id: hostId,
       lat: parseFloat(hostData.lat),
-      lng: parseFloat(hostData.lng),
+      lng: parseFloat(hostData.lng)
     };
-    if (Array.isArray(existing?.unavailable_dates)) {
-      updatedHost.unavailable_dates = existing.unavailable_dates;
-    } else {
-      delete updatedHost.unavailable_dates;
-    }
 
     try {
       await db.collection('hosts').doc(String(hostId)).set(updatedHost);
-      if (datesChanged) {
-        const result = await adminFetch('adminSetUnavailableDates', {
-          host_id: hostId,
-          unavailable_dates: nextDates,
-        });
-        updatedHost.unavailable_dates = result.unavailable_dates || nextDates;
-      }
       setAllHosts((allHosts || []).map(host =>
         host.id === hostId ? updatedHost : host
       ));
     } catch (error) {
-      if (error.code === 'cancelled') return;
       console.error('Error updating host:', error);
       alert('Error updating host. Please try again.');
     }
@@ -1033,236 +883,6 @@ const HostAvailabilityApp = () => {
       alert('Error deleting host. Please try again.');
     }
   };
-
-  const toggleHostUnavailableDate = async (hostId, dateStr) => {
-    if (userRole === 'viewer') {
-      setShowReadOnlyModal(true);
-      return;
-    }
-
-    const host = (allHosts || []).find(h => h.id === hostId);
-    if (!host) return;
-
-    const currentDates = Array.isArray(host.unavailable_dates) ? host.unavailable_dates : [];
-    const hasDate = currentDates.includes(dateStr);
-    const formattedDate = new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    const confirmMessage = hasDate
-      ? `Mark ${host.name} as available on ${formattedDate}?\n\nThey will be eligible to appear on the Host Finder for that collection week.`
-      : `Mark ${host.name} as unavailable on ${formattedDate}?\n\nThey will be hidden on the Host Finder for that week (starting the Friday before).`;
-
-    if (!confirm(confirmMessage)) return;
-
-    const updatedDates = hasDate
-      ? currentDates.filter(d => d !== dateStr)
-      : [...currentDates, dateStr];
-
-    try {
-      const result = await adminFetch('adminSetUnavailableDates', {
-        host_id: hostId,
-        unavailable_dates: updatedDates,
-      });
-      const savedDates = result.unavailable_dates || updatedDates;
-
-      setAllHosts((allHosts || []).map(h =>
-        h.id === hostId ? { ...h, unavailable_dates: savedDates } : h
-      ));
-    } catch (error) {
-      if (error.code === 'cancelled') return;
-      console.error('Error updating unavailable date:', error);
-      alert('Error updating unavailable date. Please try again.');
-    }
-  };
-
-  const loadMagicLinkConfig = async () => {
-    setMagicLinkConfigLoading(true);
-    try {
-      const doc = await db.collection('settings').doc('magic_link_config').get();
-      const data = doc.exists ? { ...MAGIC_LINK_DEFAULTS, ...doc.data() } : { ...MAGIC_LINK_DEFAULTS };
-      setMagicLinkConfig(data);
-      setTestEmailsInput((data.test_emails || []).join(', '));
-    } catch (error) {
-      console.error('Error loading magic link config:', error);
-      setMagicLinkConfig({ ...MAGIC_LINK_DEFAULTS });
-    } finally {
-      setMagicLinkConfigLoading(false);
-    }
-  };
-
-  const saveMagicLinkConfig = async () => {
-    if (userRole !== 'admin') {
-      setShowReadOnlyModal(true);
-      return;
-    }
-
-    setMagicLinkSaving(true);
-    try {
-      const testEmails = testEmailsInput
-        .split(',')
-        .map(email => email.trim())
-        .filter(Boolean);
-
-      const { updated_at, ...configWithoutTimestamp } = magicLinkConfig || {};
-      const payload = {
-        ...configWithoutTimestamp,
-        test_emails: testEmails,
-      };
-
-      const saved = await adminFetch('adminSaveMagicLinkConfig', payload);
-      setMagicLinkConfig({ ...payload, ...saved });
-      alert('Magic link settings saved.');
-    } catch (error) {
-      if (error.code === 'cancelled') return;
-      console.error('Error saving magic link config:', error);
-      alert('Error saving magic link settings.');
-    } finally {
-      setMagicLinkSaving(false);
-    }
-  };
-
-  const sendMagicLinkTestBatch = async () => {
-    if (userRole !== 'admin') {
-      setShowReadOnlyModal(true);
-      return;
-    }
-
-    setMagicLinkSending(true);
-    try {
-      const testEmails = testEmailsInput
-        .split(',')
-        .map(email => email.trim())
-        .filter(Boolean);
-
-      if (testEmails.length === 0) {
-        alert('Add at least one test recipient email before sending.');
-        return;
-      }
-
-      // Persist current form values so the backend reads the same recipients
-      const { updated_at, ...configWithoutTimestamp } = magicLinkConfig || {};
-      const configPayload = {
-        ...configWithoutTimestamp,
-        test_emails: testEmails,
-        audience: magicLinkConfig?.audience || 'test_only',
-      };
-      const saved = await adminFetch('adminSaveMagicLinkConfig', configPayload);
-      setMagicLinkConfig({ ...configPayload, ...saved });
-
-      const result = await adminFetch('sendMagicLinkBatch', {
-        manual_override: true,
-        test_emails: testEmails,
-      });
-
-      if (result.skipped) {
-        alert(`Test batch did not send.\nReason: ${result.reason || 'unknown'}\nCheck test recipients and try again.`);
-        return;
-      }
-
-      if (result.sent === 0) {
-        const errorDetail = (result.errors || []).join('\n') || 'No emails were dispatched.';
-        alert(`Test batch finished but sent 0 emails.\n\n${errorDetail}`);
-        return;
-      }
-
-      alert(`Test batch complete.\nSent: ${result.sent}\nHosts: ${result.hostCount || 0}\nMode: ${result.config?.audience || 'unknown'}\n\nCheck your inbox and spam folder.`);
-      await loadMagicLinkConfig();
-    } catch (error) {
-      if (error.code === 'cancelled') return;
-      console.error('Error sending magic link batch:', error);
-      alert(`Error sending test batch: ${error.message}`);
-    } finally {
-      setMagicLinkSending(false);
-    }
-  };
-
-  const loadAvailabilityPage = async () => {
-    const params = new URLSearchParams(window.location.search);
-    const hostId = params.get('host');
-    const token = params.get('token');
-    if (!hostId || !token) {
-      setAvailabilityError('This link is missing required information.');
-      return;
-    }
-
-    setAvailabilityLoading(true);
-    setAvailabilityError(null);
-    try {
-      const response = await fetch(
-        `${getMagicLinkUrl('verifyMagicLink')}?host=${encodeURIComponent(hostId)}&token=${encodeURIComponent(token)}`
-      );
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Invalid link');
-
-      setAvailabilityData(data);
-      setSelectedUnavailableDates(new Set(data.host?.unavailable_dates || []));
-    } catch (error) {
-      console.error('Error loading availability page:', error);
-      setAvailabilityError(error.message);
-    } finally {
-      setAvailabilityLoading(false);
-    }
-  };
-
-  const saveAvailabilitySelections = async () => {
-    const params = new URLSearchParams(window.location.search);
-    const hostId = params.get('host');
-    const token = params.get('token');
-    if (!hostId || !token || !availabilityData) return;
-
-    const previousDates = availabilityData.host?.unavailable_dates || [];
-    const nextDates = [...selectedUnavailableDates];
-    const addDates = nextDates.filter(d => !previousDates.includes(d));
-    const removeDates = previousDates.filter(d => !nextDates.includes(d));
-
-    if (addDates.length === 0 && removeDates.length === 0) {
-      alert('No changes to save.');
-      return;
-    }
-
-    setAvailabilitySaving(true);
-    try {
-      const response = await fetch(getMagicLinkUrl('updateUnavailableDates'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          host_id: hostId,
-          token,
-          add_dates: addDates,
-          remove_dates: removeDates,
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Save failed');
-
-      setAvailabilityData({
-        ...availabilityData,
-        host: {
-          ...availabilityData.host,
-          unavailable_dates: result.unavailable_dates || nextDates,
-        },
-      });
-      alert('Thank you! Your availability has been updated.');
-    } catch (error) {
-      console.error('Error saving availability:', error);
-      alert(`Error saving: ${error.message}`);
-    } finally {
-      setAvailabilitySaving(false);
-    }
-  };
-
-  React.useEffect(() => {
-    if (currentPage !== 'availability') return;
-    loadAvailabilityPage();
-  }, [currentPage]);
-
-  React.useEffect(() => {
-    if (!showAdmin || userRole !== 'admin') return;
-    loadMagicLinkConfig();
-  }, [showAdmin, userRole]);
 
   // Geocode an address and verify coordinates via Google Maps API
   const verifyAddress = async (address) => {
@@ -1558,7 +1178,17 @@ const HostAvailabilityApp = () => {
   // Only show available hosts
   // Show ALL hosts for planning purposes, not just available ones
   const rawHosts = allHosts || [];
-  const allHostsForDisplay = applyCollectionAvailability(rawHosts, activeCollectionWednesdayStr);
+  // Enforce alternate rule: if an alternate's primary partner is currently available,
+  // the alternate must not display as available — only one of the pair collects per week.
+  const allHostsForDisplay = rawHosts.map(h => {
+    if (h.available && h.alternateFor) {
+      const primary = rawHosts.find(p => p.id === h.alternateFor);
+      if (primary && primary.available) {
+        return { ...h, available: false };
+      }
+    }
+    return h;
+  });
   const availableHosts = allHostsForDisplay.filter(h => h.available);
   const areas = [...new Set(allHostsForDisplay.map(h => h.area))].sort();
 
@@ -2436,53 +2066,31 @@ const HostAvailabilityApp = () => {
     prevHostsCount.current = currentCount;
   }, [allHostsForDisplay, updateMarkers]);
 
-  // Create the map once the API and map element are available. The map stays
-  // mounted while the simple list is showing, so returning to it resizes the
-  // existing instance instead of attaching to a removed element.
+  // Create map when API is loaded AND map div exists — only once
   React.useEffect(() => {
-    if (simpleView || viewMode === 'list') return;
+    if (viewMode === 'list') return;
 
-    let cancelled = false;
-    let timeoutId;
-
-    const resizeExistingMap = () => {
-      if (!mapInstanceRef.current || !window.google?.maps?.event) return;
-      google.maps.event.trigger(mapInstanceRef.current, 'resize');
-      updateMarkers();
-    };
-
-    if (mapInstanceRef.current) {
-      const attachedDiv = mapInstanceRef.current.getDiv?.();
-      if (attachedDiv && document.body.contains(attachedDiv)) {
-        resizeExistingMap();
-        return () => {
-          cancelled = true;
-        };
-      }
-      mapInstanceRef.current = null;
-    }
-
-    if (mapLoaded && allHostsForDisplay?.length > 0) {
+    if (mapLoaded && !mapInstanceRef.current && allHostsForDisplay?.length > 0) {
       const checkAndInit = () => {
-        if (cancelled || mapInstanceRef.current) return;
         const mapElement = document.getElementById('map');
-        if (mapElement) {
+        if (mapElement && !mapInstanceRef.current) {
           createMap();
-          timeoutId = setTimeout(() => {
-            if (!cancelled) updateMarkers();
-          }, 50);
-        } else {
-          timeoutId = setTimeout(checkAndInit, 100);
+          // After map is created, populate markers
+          setTimeout(() => updateMarkers(), 50);
+        } else if (!mapElement) {
+          setTimeout(checkAndInit, 100);
         }
       };
-      timeoutId = setTimeout(checkAndInit, 100);
+      const timeoutId = setTimeout(checkAndInit, 100);
+      return () => clearTimeout(timeoutId);
     }
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, [mapLoaded, viewMode, simpleView, createMap, updateMarkers, allHostsForDisplay]);
+    // When switching back to map view, trigger resize and update markers
+    if (mapInstanceRef.current && viewMode !== 'list') {
+      google.maps.event.trigger(mapInstanceRef.current, 'resize');
+      updateMarkers();
+    }
+  }, [mapLoaded, viewMode, createMap, updateMarkers, allHostsForDisplay]);
 
   // Auto-focus map on favorite host when page loads
   React.useEffect(() => {
@@ -2737,7 +2345,7 @@ const HostAvailabilityApp = () => {
           duration: leg.duration.text,
           distance: leg.distance.text,
           hostName: host.name,
-          hostAddress: (typeof host.address === 'string' && host.address.trim()) || `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`,
+          hostAddress: `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`,
           hostPhone: host.phone,
           hours: host.hours,
           openTime: openTime,
@@ -2800,12 +2408,13 @@ const HostAvailabilityApp = () => {
       host_area: host.area
     });
     
-    const url = getGoogleMapsDirectionsUrl(host, userCoords);
-    if (!url) {
-      alert('This host does not have a street address yet.');
-      return;
+    if (userCoords) {
+      const url = `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}`;
+      window.open(url, '_blank');
+    } else {
+      const url = `https://www.google.com/maps/search/?api=1&query=${host.lat},${host.lng}`;
+      window.open(url, '_blank');
     }
-    window.open(url, '_blank');
     setDirectionsMenuOpen(null);
   };
 
@@ -2822,11 +2431,7 @@ const HostAvailabilityApp = () => {
       host_area: host.area
     });
     
-    const url = getAppleMapsDirectionsUrl(host, userCoords);
-    if (!url) {
-      alert('This host does not have a street address yet.');
-      return;
-    }
+    const url = `https://maps.apple.com/?daddr=${host.lat},${host.lng}`;
     window.open(url, '_blank');
     setDirectionsMenuOpen(null);
   };
@@ -2854,10 +2459,7 @@ const HostAvailabilityApp = () => {
     text += `Drop-off Date: ${dropOffDate}\n`;
     text += `Host Hours: ${routeInfo.hours}\n`;
     text += `\nView full turn-by-turn directions on Google Maps:\n`;
-    const mapsUrl = host ? getGoogleMapsDirectionsUrl(host, userCoords) : '';
-    if (mapsUrl) {
-      text += `${mapsUrl}\n`;
-    }
+    text += `https://www.google.com/maps/dir/${userCoords.lat},${userCoords.lng}/${host.lat},${host.lng}\n`;
 
     navigator.clipboard.writeText(text).then(() => {
       alert('✓ Directions copied to clipboard! You can now paste them into an email or text message.');
@@ -2873,110 +2475,6 @@ const HostAvailabilityApp = () => {
         <div className="text-center">
           <div className="text-6xl mb-4">🥪</div>
           <p className="text-xl font-bold" style={{color: '#007E8C'}}>Loading hosts...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Magic Link availability page for hosts
-  if (currentPage === 'availability') {
-    const formatAvailabilityDate = (dateStr) => {
-      const [year, month, day] = dateStr.split('-').map(Number);
-      return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-      });
-    };
-
-    return (
-      <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8" style={{ backgroundColor: 'rgba(71, 179, 203, 0.08)' }}>
-        <div className="max-w-xl mx-auto">
-          <div className="bg-white rounded-2xl premium-card-header p-4 sm:p-6 mb-4">
-            <div className="flex flex-col items-center text-center gap-3">
-              <img
-                src="LOGOS/CMYK_PRINT_TSP-01-01.jpg"
-                alt="The Sandwich Project Logo"
-                className="h-16 sm:h-20 w-auto object-contain"
-              />
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold" style={{ color: '#236383' }}>
-                  Mark Your Unavailable Wednesdays
-                </h1>
-                <p className="text-sm sm:text-base mt-2" style={{ color: '#666' }}>
-                  Toggle off any {availabilityData?.monthLabel || 'upcoming'} Wednesdays you cannot receive sandwich drop-offs.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl premium-card-header p-4 sm:p-6">
-            {availabilityLoading && (
-              <div className="text-center py-8">
-                <div className="text-5xl mb-3">🥪</div>
-                <p className="font-semibold" style={{ color: '#007E8C' }}>Loading your link...</p>
-              </div>
-            )}
-
-            {!availabilityLoading && availabilityError && (
-              <div className="rounded-xl p-4 text-center" style={{ backgroundColor: '#FEE2E2', border: '2px solid #A31C41' }}>
-                <p className="font-bold mb-2" style={{ color: '#A31C41' }}>Link Not Valid</p>
-                <p className="text-sm" style={{ color: '#666' }}>{availabilityError}</p>
-              </div>
-            )}
-
-            {!availabilityLoading && !availabilityError && availabilityData && (
-              <>
-                <div className="mb-5 p-4 rounded-xl" style={{ backgroundColor: 'rgba(0, 126, 140, 0.08)', border: '2px solid #007E8C' }}>
-                  <p className="font-bold text-lg" style={{ color: '#236383' }}>{availabilityData.host.name}</p>
-                  <p className="text-sm" style={{ color: '#666' }}>{availabilityData.host.area}</p>
-                </div>
-
-                <div className="space-y-3 mb-6">
-                  {(availabilityData.wednesdays || []).map(dateStr => {
-                    const isUnavailable = selectedUnavailableDates.has(dateStr);
-                    return (
-                      <button
-                        key={dateStr}
-                        type="button"
-                        onClick={() => {
-                          setSelectedUnavailableDates(prev => {
-                            const next = new Set(prev);
-                            if (next.has(dateStr)) next.delete(dateStr);
-                            else next.add(dateStr);
-                            return next;
-                          });
-                        }}
-                        className="w-full flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all"
-                        style={{
-                          borderColor: isUnavailable ? '#A31C41' : '#22c55e',
-                          backgroundColor: isUnavailable ? '#FEF2F2' : '#F0FDF4',
-                        }}
-                      >
-                        <span className="font-semibold" style={{ color: '#236383' }}>
-                          {formatAvailabilityDate(dateStr)}
-                        </span>
-                        <span className="text-sm font-bold px-3 py-1 rounded-full text-white"
-                          style={{ backgroundColor: isUnavailable ? '#A31C41' : '#007E8C' }}>
-                          {isUnavailable ? 'Unavailable' : 'Available'}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={saveAvailabilitySelections}
-                  disabled={availabilitySaving}
-                  className="w-full py-3 rounded-xl font-bold text-white text-lg"
-                  style={{ backgroundColor: '#FBAD3F', color: '#333', opacity: availabilitySaving ? 0.7 : 1 }}
-                >
-                  {availabilitySaving ? 'Saving...' : 'Save My Availability'}
-                </button>
-              </>
-            )}
-          </div>
         </div>
       </div>
     );
@@ -3162,35 +2660,23 @@ const HostAvailabilityApp = () => {
                                 currentInfoWindow.close();
                               }
 
-                              const escapeMapText = (value) => String(value).replace(/[&<>"']/g, (char) => ({
-                                '&': '&amp;',
-                                '<': '&lt;',
-                                '>': '&gt;',
-                                '"': '&quot;',
-                                "'": '&#39;'
-                              }[char]));
-                              const addressLabel = escapeMapText(
-                                (typeof host.address === 'string' && host.address.trim())
-                                  || `${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}`
-                              );
-
                               const infoWindow = new window.google.maps.InfoWindow({
                                 content: `<div style="padding: 8px 12px 12px 12px; min-width: 260px; max-width: 300px; font-family: system-ui, -apple-system, sans-serif;">
                                   <div style="margin-bottom: 10px;">
-                                    <div style="font-size: 17px; font-weight: 700; color: #236383; margin-bottom: 3px;">${escapeMapText(host.name)}</div>
-                                    <div style="font-size: 14px; color: #666; margin-bottom: 8px;">${addressLabel}</div>
+                                    <div style="font-size: 17px; font-weight: 700; color: #236383; margin-bottom: 3px;">${host.name}</div>
+                                    <div style="font-size: 14px; color: #666; margin-bottom: 8px;">${host.area}${host.neighborhood ? ' - ' + host.neighborhood : ''}</div>
                                     <div style="display: inline-block; background: #007E8C; color: white; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600;">
                                       ${formatTime(host.openTime)} - ${formatTime(host.closeTime)}
                                     </div>
                                   </div>
                                   ${host.phone ? '<div style="font-size: 14px; color: #666; margin-bottom: 12px;">📞 ' + host.phone + '</div>' : ''}
                                   <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    <a href="${getGoogleMapsDirectionsUrl(host) || '#'}"
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}"
                                        target="_blank"
                                        style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #FBAD3F; color: white; padding: 12px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
                                       <span>🗺️</span> Google Maps Directions
                                     </a>
-                                    <a href="${getAppleMapsDirectionsUrl(host) || '#'}"
+                                    <a href="https://maps.apple.com/?daddr=${host.lat},${host.lng}"
                                        target="_blank"
                                        style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #007E8C; color: white; padding: 12px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
                                       <span>🍎</span> Apple Maps Directions
@@ -3369,7 +2855,7 @@ const HostAvailabilityApp = () => {
                           <div className="flex-1">
                             <h4 className="font-bold text-lg mb-1" style={{color: '#236383'}}>{host.name}</h4>
                             <p className="text-sm mb-2" style={{color: '#666'}}>
-                              {host.address || `${host.area}${host.neighborhood ? ` - ${host.neighborhood}` : ''}`}
+                              {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
                             </p>
                             {host.driveTimeText && (
                               <p className="text-sm font-semibold mb-2" style={{color: '#A31C41'}}>
@@ -3466,9 +2952,9 @@ const HostAvailabilityApp = () => {
                             </a>
                           )}
                         </div>
-                        {getGoogleMapsDirectionsUrl(host, window.specialCollectionUserCoords) && (
+                        {host.lat && host.lng && (
                           <a
-                            href={getGoogleMapsDirectionsUrl(host, window.specialCollectionUserCoords)}
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${host.lat},${host.lng}${window.specialCollectionUserCoords ? `&origin=${window.specialCollectionUserCoords.lat},${window.specialCollectionUserCoords.lng}` : ''}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-block text-sm font-medium px-4 py-2.5 rounded-lg"
@@ -4253,14 +3739,7 @@ const HostAvailabilityApp = () => {
           {/* Simple View Toggle - Prominent */}
           <div className="flex flex-col items-center gap-3 mb-6 px-3">
             <button
-              onClick={() => {
-                if (simpleView) {
-                  setViewMode('proximity');
-                  setSimpleView(false);
-                } else {
-                  setSimpleView(true);
-                }
-              }}
+              onClick={() => setSimpleView(!simpleView)}
               className="px-6 py-3 rounded-xl font-bold text-lg transition-all hover:shadow-lg"
               style={{
                 backgroundColor: simpleView ? '#007E8C' : '#FBAD3F',
@@ -4268,7 +3747,7 @@ const HostAvailabilityApp = () => {
                 minWidth: '280px'
               }}
             >
-              {simpleView ? '🗺️ Switch to Map View' : '📋 Switch to Simple List View'}
+              {simpleView ? '← Back to Interactive Map View' : '📋 Switch to Simple List View'}
             </button>
             {!simpleView && (
               <p className="text-sm text-center" style={{color: '#666'}}>
@@ -4323,11 +3802,9 @@ const HostAvailabilityApp = () => {
 
                   {/* Details - stacked for clarity */}
                   <div className="space-y-3 mb-4">
-                    <div className="flex items-start gap-2 text-base" style={{color: '#236383'}}>
+                    <div className="flex items-center gap-2 text-base" style={{color: '#236383'}}>
                       <i className="lucide-map-pin w-5 h-5 flex-shrink-0" style={{color: '#007E8C'}}></i>
-                      <span className="font-medium">
-                        {favoriteHost.address || `${favoriteHost.area}${favoriteHost.neighborhood ? ` • ${favoriteHost.neighborhood}` : ''}`}
-                      </span>
+                      <span className="font-medium">{favoriteHost.area}{favoriteHost.neighborhood ? ` • ${favoriteHost.neighborhood}` : ''}</span>
                     </div>
                     <div className="flex items-center gap-2 text-base" style={{color: '#236383'}}>
                       <i className="lucide-clock w-5 h-5 flex-shrink-0" style={{color: '#007E8C'}}></i>
@@ -4374,13 +3851,9 @@ const HostAvailabilityApp = () => {
           {simpleView && (
             <div className="p-4">
               <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center" style={{color: '#236383'}}>
-                  {userCoords ? 'Closest Hosts' : 'All Hosts by Area'}
-                </h2>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center" style={{color: '#236383'}}>All Hosts by Area</h2>
                 <p className="text-base mb-6 text-center" style={{color: '#666'}}>
-                  {userCoords
-                    ? `Showing hosts collecting this week, closest to ${userAddress || 'your location'} first.`
-                    : 'Showing hosts collecting this week. Tap phone to call, or tap Directions.'}
+                  Showing hosts collecting this week. Tap phone to call, or tap Directions.
                 </p>
 
                 {/* Search bar for simple view */}
@@ -4396,7 +3869,7 @@ const HostAvailabilityApp = () => {
                 </div>
 
                 {(() => {
-                  let availableHosts = allHostsForDisplay.filter(h => h.available);
+                  let availableHosts = allHosts.filter(h => h.available);
                   // Apply search filter (including area aliases)
                   if (nameSearch.trim()) {
                     const searchLower = nameSearch.toLowerCase();
@@ -4404,22 +3877,11 @@ const HostAvailabilityApp = () => {
                     availableHosts = availableHosts.filter(h =>
                       h.name.toLowerCase().includes(searchLower) ||
                       h.area.toLowerCase().includes(searchLower) ||
-                      (h.address && h.address.toLowerCase().includes(searchLower)) ||
                       (aliasedArea && h.area === aliasedArea) ||
                       (h.neighborhood && h.neighborhood.toLowerCase().includes(searchLower))
                     );
                   }
-                  if (userCoords) {
-                    availableHosts = availableHosts
-                      .map(host => ({
-                        ...host,
-                        distance: calculateDistance(userCoords.lat, userCoords.lng, host.lat, host.lng)
-                      }))
-                      .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-                  }
-                  const areas = userCoords
-                    ? ['__closest__']
-                    : [...new Set(availableHosts.map(h => h.area))].sort();
+                  const areas = [...new Set(availableHosts.map(h => h.area))].sort();
 
                   if (availableHosts.length === 0) {
                     return (
@@ -4431,11 +3893,9 @@ const HostAvailabilityApp = () => {
 
                   return areas.map(area => (
                     <div key={area} className="mb-8">
-                      {area !== '__closest__' && (
-                        <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
-                      )}
+                      <h3 className="font-bold text-xl sm:text-2xl mb-4 pb-3 border-b-3" style={{color: '#007E8C', borderBottom: '3px solid #007E8C'}}>{area}</h3>
                       <div className="space-y-4">
-                        {(area === '__closest__' ? availableHosts : availableHosts.filter(h => h.area === area)).map(host => {
+                        {availableHosts.filter(h => h.area === area).map(host => {
                           const timeAvail = checkHostTimeAvailability(host, dropOffTime);
                           return (
                           <div key={host.id} className="flex flex-col gap-3 p-4 rounded-xl hover:bg-gray-50 border border-gray-200">
@@ -4443,12 +3903,6 @@ const HostAvailabilityApp = () => {
                               <div className="flex-1">
                                 <span className="font-bold text-lg" style={{color: '#236383'}}>{host.name}</span>
                                 {host.neighborhood && <span className="text-base text-gray-500 ml-2">({host.neighborhood})</span>}
-                                {host.address && (
-                                  <div className="text-base mt-1" style={{color: '#236383'}}>{host.address}</div>
-                                )}
-                                {hasFiniteDistance(host.distance) && (
-                                  <div className="text-base mt-1 font-semibold" style={{color: '#007E8C'}}>{host.distance} miles away</div>
-                                )}
                                 <div className="text-base mt-1" style={{color: '#555'}}>
                                   {formatCondensedHours(host)}
                                   {timeAvail.warning && (
@@ -4495,8 +3949,6 @@ const HostAvailabilityApp = () => {
           )}
 
           {/* View Toggle */}
-          {!simpleView && (
-          <div>
           <div className="flex flex-wrap justify-center gap-3">
             <button
               onClick={() => {
@@ -4572,21 +4024,14 @@ const HostAvailabilityApp = () => {
             {viewMode === 'proximity' && 'Showing map and host list side-by-side'}
             {viewMode === 'map' && 'Showing hosts on the map — click a pin for details'}
           </p>
-          </div>
-          )}
 
         </div>
 
-        {/* Map and/or List. Kept mounted so Google Maps can be shown again. */}
-        <div
-          className={`grid grid-cols-1 ${viewMode === 'proximity' ? 'lg:grid-cols-2 lg:items-start' : ''} gap-6`}
-          style={simpleView ? { display: 'none' } : undefined}
-        >
-          {/* Map View. Kept mounted in list mode so Google Maps is not destroyed. */}
-            <div
-              className="bg-white rounded-2xl premium-card overflow-hidden"
-              style={viewMode === 'list' ? { display: 'none' } : undefined}
-            >
+        {/* Map and/or List */}
+        <div className={`grid grid-cols-1 ${viewMode === 'proximity' ? 'lg:grid-cols-2 lg:items-start' : ''} gap-6`}>
+          {/* Map View */}
+          {viewMode !== 'list' && (
+            <div className="bg-white rounded-2xl premium-card overflow-hidden">
             <div className="p-4 sm:p-6 border-b" style={{borderColor: 'rgba(71, 179, 203, 0.15)'}}>
               <h2 className="text-xl font-bold mb-3" style={{color: '#236383'}}>
                 🗺️ Drop-Off Locations Map
@@ -4754,7 +4199,7 @@ const HostAvailabilityApp = () => {
                           {mapTooltip.name}
                         </h4>
                         <p className="text-sm font-medium" style={{color: '#007E8C'}}>
-                          {mapTooltip.address || (mapTooltip.neighborhood ? mapTooltip.neighborhood : mapTooltip.area)}
+                          {mapTooltip.neighborhood ? mapTooltip.neighborhood : mapTooltip.area}
                         </p>
                       </div>
                       <button
@@ -5063,6 +4508,7 @@ const HostAvailabilityApp = () => {
                 </div>
               )}
             </div>
+          )}
 
             {/* Host List */}
             {viewMode !== 'map' && (
@@ -5283,12 +4729,6 @@ const HostAvailabilityApp = () => {
                           </span>
                         )}
                       </div>
-                      {host.address && (
-                        <p className="text-base font-medium mb-4" style={{color: '#236383'}}>
-                          <i className="lucide-map-pin w-4 h-4 inline mr-1.5" style={{verticalAlign: 'text-bottom'}}></i>
-                          {host.address}
-                        </p>
-                      )}
 
                       {/* Current timing status - secondary info */}
                       {host.available && availability && (
@@ -5343,7 +4783,7 @@ const HostAvailabilityApp = () => {
                       </div>
 
                       {/* Distance + Drive time - separate line */}
-                      {userCoords && hasFiniteDistance(host.distance) && (
+                      {userCoords && host.distance && (
                         <div className="text-base mb-3">
                           <span className="font-semibold" style={{color: '#236383'}}>
                             <i className="lucide-car w-4 h-4 inline mr-1.5" style={{verticalAlign: 'text-bottom'}}></i>
@@ -5773,7 +5213,7 @@ const HostAvailabilityApp = () => {
                       </div>
 
                       <p className="text-lg font-medium mb-4" style={{color: '#236383'}}>
-                        📍 {host.address || `${host.area}${host.neighborhood ? ` - ${host.neighborhood}` : ''}`}
+                        📍 {host.area}{host.neighborhood ? ` - ${host.neighborhood}` : ''}
                       </p>
 
                       <div className="space-y-4 text-base">
@@ -5867,7 +5307,7 @@ const HostAvailabilityApp = () => {
                           </div>
                         </div>
 
-                        {hasFiniteDistance(host.distance) && (
+                        {host.distance && (
                           <div className="info-box p-4">
                             <div className="flex items-center">
                               <i className="lucide-car w-5 h-5 mr-2" style={{color: '#007E8C'}}></i>
@@ -6163,116 +5603,6 @@ const HostAvailabilityApp = () => {
                   </button>
                 </div>
 
-                {/* Magic Link Unavailability Automation */}
-                {userRole === 'admin' && (
-                  <div className="rounded-xl p-4 mb-6 border-2" style={{ backgroundColor: '#F0FDFA', borderColor: '#007E8C' }}>
-                    <h3 className="font-semibold mb-2" style={{ color: '#236383' }}>🔗 Magic Link Unavailability Tracker</h3>
-                    <p className="text-sm mb-4" style={{ color: '#666' }}>
-                      Master kill switch for monthly host emails. Keep disabled until you are ready to go live.
-                    </p>
-
-                    {magicLinkConfigLoading || !magicLinkConfig ? (
-                      <p className="text-sm" style={{ color: '#007E8C' }}>Loading settings...</p>
-                    ) : (
-                      <div className="space-y-4">
-                        <label className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white border-2" style={{ borderColor: magicLinkConfig.is_enabled ? '#22c55e' : '#A31C41' }}>
-                          <div>
-                            <span className="font-bold block" style={{ color: '#236383' }}>Master Kill Switch</span>
-                            <span className="text-sm" style={{ color: '#666' }}>
-                              {magicLinkConfig.is_enabled ? 'Automation ENABLED — cron can send on schedule' : 'Automation DISABLED — safe for UI testing'}
-                            </span>
-                          </div>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(magicLinkConfig.is_enabled)}
-                            onChange={(e) => setMagicLinkConfig({ ...magicLinkConfig, is_enabled: e.target.checked })}
-                            className="w-6 h-6"
-                          />
-                        </label>
-
-                        <div className="p-3 rounded-lg bg-white">
-                          <p className="font-semibold mb-2" style={{ color: '#236383' }}>Audience</p>
-                          <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="magicLinkAudience"
-                              checked={magicLinkConfig.audience === 'test_only'}
-                              onChange={() => setMagicLinkConfig({ ...magicLinkConfig, audience: 'test_only' })}
-                            />
-                            <span>Test Mode (Admins Only)</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="magicLinkAudience"
-                              checked={magicLinkConfig.audience === 'all_active_hosts'}
-                              onChange={() => setMagicLinkConfig({ ...magicLinkConfig, audience: 'all_active_hosts' })}
-                            />
-                            <span>Live (All Active Hosts)</span>
-                          </label>
-                        </div>
-
-                        <div>
-                          <label className="block font-semibold mb-2" style={{ color: '#236383' }}>Test Recipients</label>
-                          <input
-                            type="text"
-                            value={testEmailsInput}
-                            onChange={(e) => setTestEmailsInput(e.target.value)}
-                            placeholder="admin@example.com, backup@example.com"
-                            className="w-full px-4 py-3 premium-input rounded-xl"
-                          />
-                          <p className="text-xs mt-1" style={{ color: '#666' }}>Comma-separated. Used when audience is Test Mode.</p>
-                        </div>
-
-                        <div>
-                          <label className="block font-semibold mb-2" style={{ color: '#236383' }}>Send Day of Month</label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="28"
-                            value={magicLinkConfig.send_day_of_month ?? 25}
-                            onChange={(e) => setMagicLinkConfig({
-                              ...magicLinkConfig,
-                              send_day_of_month: parseInt(e.target.value, 10) || 25,
-                            })}
-                            className="w-32 px-4 py-3 premium-input rounded-xl"
-                          />
-                        </div>
-
-                        {magicLinkConfig.last_run_at && (
-                          <p className="text-xs" style={{ color: '#666' }}>
-                            Last run: {magicLinkConfig.last_run_at?.toDate
-                              ? magicLinkConfig.last_run_at.toDate().toLocaleString()
-                              : '—'}
-                            {' '}• Sent: {magicLinkConfig.last_run_sent_count ?? 0}
-                          </p>
-                        )}
-
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <button
-                            type="button"
-                            onClick={saveMagicLinkConfig}
-                            disabled={magicLinkSaving}
-                            className="px-4 py-2 rounded-lg font-medium text-white"
-                            style={{ backgroundColor: '#007E8C', opacity: magicLinkSaving ? 0.7 : 1 }}
-                          >
-                            {magicLinkSaving ? 'Saving...' : '💾 Save Settings'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={sendMagicLinkTestBatch}
-                            disabled={magicLinkSending}
-                            className="px-4 py-2 rounded-lg font-medium text-white"
-                            style={{ backgroundColor: '#FBAD3F', color: '#333', opacity: magicLinkSending ? 0.7 : 1 }}
-                          >
-                            {magicLinkSending ? 'Sending...' : '📧 Send Test Batch Now'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* One-time Coordinate Fix Button */}
                 {userRole === 'admin' && (
                   <div className="bg-yellow-50 rounded-xl p-4 mb-6 border-2 border-yellow-300">
@@ -6360,7 +5690,7 @@ const HostAvailabilityApp = () => {
                 {/* Add New Host Button */}
                 <div className="mb-6">
                   <button
-                    onClick={() => { if (userRole === 'viewer') { setShowReadOnlyModal(true); return; } setVerifiedCoords(null); setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', address: '', phone: '', email: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true, alternateFor: null, unavailable_dates: [] }); }}
+                    onClick={() => { if (userRole === 'viewer') { setShowReadOnlyModal(true); return; } setVerifiedCoords(null); setEditingHost({ id: 'new', name: '', area: '', neighborhood: '', lat: '', lng: '', address: '', phone: '', hours: '', tuesdayOpenTime: '', tuesdayCloseTime: '', wednesdayOpenTime: '08:00', wednesdayCloseTime: '20:00', openTime: '08:00', closeTime: '20:00', notes: '', available: true, alternateFor: null }); }}
                     className="px-6 py-3 rounded-xl font-semibold text-white"
                     style={{backgroundColor: '#007E8C', opacity: userRole === 'viewer' ? 0.7 : 1}}
                     title={userRole === 'viewer' ? 'Available to full admins. This reviewer account is read-only.' : 'Add a new host'}
@@ -6396,7 +5726,7 @@ const HostAvailabilityApp = () => {
                             return (
                               <div className="mb-2">
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold" style={{backgroundColor: '#E0F2FE', color: '#1E40AF'}}>
-                                  🔄 {isAlternate ? `Substitute host for ${partner.name}` : `Primary host — substitute: ${partner.name}`}
+                                  🔄 {isAlternate ? `Alternate for ${partner.name}` : `Alternate: ${partner.name}`}
                                 </span>
                                 {host.available && partner.available && (
                                   <p className="text-sm font-bold mt-1" style={{color: '#A31C41'}}>
@@ -6416,34 +5746,6 @@ const HostAvailabilityApp = () => {
                             </p>
                             {host.notes && <p><strong>Notes:</strong> {host.notes}</p>}
                           </div>
-                          {uniqueAdminWednesdayOptions.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <p className="text-sm font-semibold mb-2" style={{ color: '#236383' }}>
-                                Unavailable Wednesdays (manual override)
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {uniqueAdminWednesdayOptions.map(dateStr => {
-                                  const isMarked = Array.isArray(host.unavailable_dates) && host.unavailable_dates.includes(dateStr);
-                                  return (
-                                    <button
-                                      key={`${host.id}-${dateStr}`}
-                                      type="button"
-                                      onClick={() => toggleHostUnavailableDate(host.id, dateStr)}
-                                      className="px-2 py-1 rounded-lg text-xs font-semibold"
-                                      style={{
-                                        backgroundColor: isMarked ? '#FEE2E2' : '#ECFDF5',
-                                        color: isMarked ? '#A31C41' : '#007E8C',
-                                        border: `1px solid ${isMarked ? '#A31C41' : '#007E8C'}`,
-                                      }}
-                                      title={isMarked ? 'Click to mark available' : 'Click to mark unavailable'}
-                                    >
-                                      {dateStr} {isMarked ? '✕' : '✓'}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
                         </div>
                         <div className="flex flex-wrap gap-2 sm:justify-end">
                           <button
@@ -6521,7 +5823,6 @@ const HostAvailabilityApp = () => {
                     lng: lng,
                     address: address,
                     phone: formData.get('phone'),
-                    email: formData.get('email') || '',
                     hours: formData.get('hours'),
                     tuesdayOpenTime: formData.get('tuesdayOpenTime'),
                     tuesdayCloseTime: formData.get('tuesdayCloseTime'),
@@ -6534,8 +5835,7 @@ const HostAvailabilityApp = () => {
                     thursdayCloseTime: formData.get('thursdayCloseTime') || '',
                     notes: formData.get('notes') || '',
                     alternateFor: formData.get('alternateFor') ? parseInt(formData.get('alternateFor'), 10) : null,
-                    available: formData.get('available') === 'on',
-                    unavailable_dates: Array.isArray(editingHost.unavailable_dates) ? editingHost.unavailable_dates : []
+                    available: formData.get('available') === 'on'
                   };
 
                   if (editingHost.id === 'new') {
@@ -6651,17 +5951,6 @@ const HostAvailabilityApp = () => {
                         placeholder="404.451.7942"
                       />
                     </div>
-
-                    <div>
-                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Email (for magic link emails)</label>
-                      <input
-                        type="email"
-                        name="email"
-                        defaultValue={editingHost.email || ''}
-                        className="w-full px-4 py-3 premium-input rounded-xl"
-                        placeholder="host@example.com"
-                      />
-                    </div>
                     
                     <div>
                       <label className="block font-semibold mb-2" style={{color: '#236383'}}>Drop-off Hours (Display Text)</label>
@@ -6765,7 +6054,7 @@ const HostAvailabilityApp = () => {
                     </div>
                     
                     <div>
-                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Substitute host for (optional)</label>
+                      <label className="block font-semibold mb-2" style={{color: '#236383'}}>Alternate For (optional)</label>
                       <select
                         name="alternateFor"
                         defaultValue={editingHost.alternateFor || ''}
@@ -6781,7 +6070,7 @@ const HostAvailabilityApp = () => {
                         }
                       </select>
                       <p className="text-sm mt-1" style={{color: '#007E8C'}}>
-                        If set, this host is a substitute for the primary (e.g. covers when they are unavailable). Enabling both will auto-disable one.
+                        If set, enabling this host will automatically disable their primary (and vice versa).
                       </p>
                     </div>
 
@@ -6794,57 +6083,6 @@ const HostAvailabilityApp = () => {
                       />
                       <label className="font-semibold" style={{color: '#236383'}}>Available this week</label>
                     </div>
-
-                    {editingHost.id !== 'new' && uniqueAdminWednesdayOptions.length > 0 && (
-                      <div className="mt-4 p-4 rounded-xl" style={{ backgroundColor: '#F9FAFB', border: '1px solid #e5e7eb' }}>
-                        <label className="block font-semibold mb-2" style={{color: '#236383'}}>
-                          Unavailable Wednesdays
-                        </label>
-                        <p className="text-xs mb-3" style={{ color: '#666' }}>
-                          Toggle dates off when this host cannot receive drop-offs.
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {uniqueAdminWednesdayOptions.map(dateStr => {
-                            const currentDates = Array.isArray(editingHost.unavailable_dates) ? editingHost.unavailable_dates : [];
-                            const isMarked = currentDates.includes(dateStr);
-                            return (
-                              <button
-                                key={`edit-${editingHost.id}-${dateStr}`}
-                                type="button"
-                                onClick={() => {
-                                  if (userRole === 'viewer') {
-                                    setShowReadOnlyModal(true);
-                                    return;
-                                  }
-                                  const formattedDate = new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-US', {
-                                    weekday: 'long',
-                                    month: 'long',
-                                    day: 'numeric',
-                                    year: 'numeric',
-                                  });
-                                  const confirmMessage = isMarked
-                                    ? `Mark ${editingHost.name} as available on ${formattedDate}?\n\nSave the host to apply this change.`
-                                    : `Mark ${editingHost.name} as unavailable on ${formattedDate}?\n\nSave the host to apply this change.`;
-                                  if (!confirm(confirmMessage)) return;
-                                  const nextDates = isMarked
-                                    ? currentDates.filter(d => d !== dateStr)
-                                    : [...currentDates, dateStr];
-                                  setEditingHost({ ...editingHost, unavailable_dates: nextDates });
-                                }}
-                                className="px-2 py-1 rounded-lg text-xs font-semibold"
-                                style={{
-                                  backgroundColor: isMarked ? '#FEE2E2' : '#ECFDF5',
-                                  color: isMarked ? '#A31C41' : '#007E8C',
-                                  border: `1px solid ${isMarked ? '#A31C41' : '#007E8C'}`,
-                                }}
-                              >
-                                {dateStr} {isMarked ? '✕' : '✓'}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
                   </div>
                   
                   <div className="flex flex-col sm:flex-row gap-3 mt-8">

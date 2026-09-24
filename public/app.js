@@ -637,34 +637,6 @@ const HostAvailabilityApp = () => {
   const MAGIC_LINK_URLS = window.CONFIG?.MAGIC_LINK_URLS || {};
   const getMagicLinkUrl = (name) =>
     MAGIC_LINK_URLS[name] || `${CLOUD_FUNCTIONS_BASE_URL}/${name}`;
-  const adminApiSecretRef = React.useRef('');
-  const promptForAdminSecret = () => {
-    if (adminApiSecretRef.current) return adminApiSecretRef.current;
-    const entered = prompt('Enter the admin API secret:');
-    if (!entered || !entered.trim()) return '';
-    adminApiSecretRef.current = entered.trim();
-    return adminApiSecretRef.current;
-  };
-  const adminFetch = async (name, body) => {
-    const secret = promptForAdminSecret();
-    if (!secret) {
-      const error = new Error('Admin API secret is required.');
-      error.code = 'cancelled';
-      throw error;
-    }
-    const response = await fetch(getMagicLinkUrl(name), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${secret}`,
-      },
-      body: JSON.stringify(body),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (response.status === 401) adminApiSecretRef.current = '';
-    if (!response.ok) throw new Error(result.error || 'Request failed');
-    return result;
-  };
   const MAGIC_LINK_DEFAULTS = window.CONFIG?.MAGIC_LINK_DEFAULTS || {
     is_enabled: false,
     audience: 'test_only',
@@ -989,36 +961,19 @@ const HostAvailabilityApp = () => {
   };
 
   const updateHost = async (hostId, hostData) => {
-    const existing = (allHosts || []).find(host => host.id === hostId);
-    const previousDates = Array.isArray(existing?.unavailable_dates) ? existing.unavailable_dates : [];
-    const nextDates = Array.isArray(hostData.unavailable_dates) ? hostData.unavailable_dates : previousDates;
-    const datesChanged = [...previousDates].sort().join('|') !== [...nextDates].sort().join('|');
     const updatedHost = {
       ...hostData,
       id: hostId,
       lat: parseFloat(hostData.lat),
-      lng: parseFloat(hostData.lng),
+      lng: parseFloat(hostData.lng)
     };
-    if (Array.isArray(existing?.unavailable_dates)) {
-      updatedHost.unavailable_dates = existing.unavailable_dates;
-    } else {
-      delete updatedHost.unavailable_dates;
-    }
 
     try {
       await db.collection('hosts').doc(String(hostId)).set(updatedHost);
-      if (datesChanged) {
-        const result = await adminFetch('adminSetUnavailableDates', {
-          host_id: hostId,
-          unavailable_dates: nextDates,
-        });
-        updatedHost.unavailable_dates = result.unavailable_dates || nextDates;
-      }
       setAllHosts((allHosts || []).map(host =>
         host.id === hostId ? updatedHost : host
       ));
     } catch (error) {
-      if (error.code === 'cancelled') return;
       console.error('Error updating host:', error);
       alert('Error updating host. Please try again.');
     }
@@ -1057,22 +1012,27 @@ const HostAvailabilityApp = () => {
 
     if (!confirm(confirmMessage)) return;
 
-    const updatedDates = hasDate
-      ? currentDates.filter(d => d !== dateStr)
-      : [...currentDates, dateStr];
+    const docRef = db.collection('hosts').doc(String(hostId));
 
     try {
-      const result = await adminFetch('adminSetUnavailableDates', {
-        host_id: hostId,
-        unavailable_dates: updatedDates,
-      });
-      const savedDates = result.unavailable_dates || updatedDates;
+      if (hasDate) {
+        await docRef.update({
+          unavailable_dates: firebase.firestore.FieldValue.arrayRemove(dateStr)
+        });
+      } else {
+        await docRef.update({
+          unavailable_dates: firebase.firestore.FieldValue.arrayUnion(dateStr)
+        });
+      }
+
+      const updatedDates = hasDate
+        ? currentDates.filter(d => d !== dateStr)
+        : [...currentDates, dateStr];
 
       setAllHosts((allHosts || []).map(h =>
-        h.id === hostId ? { ...h, unavailable_dates: savedDates } : h
+        h.id === hostId ? { ...h, unavailable_dates: updatedDates } : h
       ));
     } catch (error) {
-      if (error.code === 'cancelled') return;
       console.error('Error updating unavailable date:', error);
       alert('Error updating unavailable date. Please try again.');
     }
@@ -1106,17 +1066,16 @@ const HostAvailabilityApp = () => {
         .map(email => email.trim())
         .filter(Boolean);
 
-      const { updated_at, ...configWithoutTimestamp } = magicLinkConfig || {};
       const payload = {
-        ...configWithoutTimestamp,
+        ...magicLinkConfig,
         test_emails: testEmails,
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
       };
 
-      const saved = await adminFetch('adminSaveMagicLinkConfig', payload);
-      setMagicLinkConfig({ ...payload, ...saved });
+      await db.collection('settings').doc('magic_link_config').set(payload, { merge: true });
+      setMagicLinkConfig(payload);
       alert('Magic link settings saved.');
     } catch (error) {
-      if (error.code === 'cancelled') return;
       console.error('Error saving magic link config:', error);
       alert('Error saving magic link settings.');
     } finally {
@@ -1143,19 +1102,25 @@ const HostAvailabilityApp = () => {
       }
 
       // Persist current form values so the backend reads the same recipients
-      const { updated_at, ...configWithoutTimestamp } = magicLinkConfig || {};
       const configPayload = {
-        ...configWithoutTimestamp,
+        ...magicLinkConfig,
         test_emails: testEmails,
         audience: magicLinkConfig?.audience || 'test_only',
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
       };
-      const saved = await adminFetch('adminSaveMagicLinkConfig', configPayload);
-      setMagicLinkConfig({ ...configPayload, ...saved });
+      await db.collection('settings').doc('magic_link_config').set(configPayload, { merge: true });
+      setMagicLinkConfig(configPayload);
 
-      const result = await adminFetch('sendMagicLinkBatch', {
-        manual_override: true,
-        test_emails: testEmails,
+      const response = await fetch(getMagicLinkUrl('sendMagicLinkBatch'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ manual_override: true, test_emails: testEmails }),
       });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Send failed');
 
       if (result.skipped) {
         alert(`Test batch did not send.\nReason: ${result.reason || 'unknown'}\nCheck test recipients and try again.`);
@@ -1171,7 +1136,6 @@ const HostAvailabilityApp = () => {
       alert(`Test batch complete.\nSent: ${result.sent}\nHosts: ${result.hostCount || 0}\nMode: ${result.config?.audience || 'unknown'}\n\nCheck your inbox and spam folder.`);
       await loadMagicLinkConfig();
     } catch (error) {
-      if (error.code === 'cancelled') return;
       console.error('Error sending magic link batch:', error);
       alert(`Error sending test batch: ${error.message}`);
     } finally {
