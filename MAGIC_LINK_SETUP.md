@@ -73,6 +73,16 @@ Deployed endpoints (default region `us-central1`):
 - `GET  /verifyMagicLink?host=ID&token=HASH`
 - `POST /updateUnavailableDates`
 - `POST /sendMagicLinkBatch` (requires `Authorization: Bearer <ADMIN_API_SECRET>`)
+- `POST /adminSetUnavailableDates` (same admin secret; replaces a host's `unavailable_dates`)
+- `POST /adminSaveMagicLinkConfig` (same admin secret)
+
+Firestore rules let the public read hosts, but only these functions can change `unavailable_dates` or `settings`. A manual batch also requires at least one test email and always stays in test mode, even if the saved audience is all active hosts.
+
+Deploy rules after the functions:
+
+```bash
+firebase deploy --only firestore:rules,functions
+```
 
 ---
 

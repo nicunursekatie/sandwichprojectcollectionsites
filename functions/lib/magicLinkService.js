@@ -74,7 +74,7 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false, testEmailsO
 
   let sent = 0;
   const errors = [];
-  const audience = manualOverride && testEmailsOverride?.length ? 'test_only' : config.audience;
+  const audience = manualOverride ? 'test_only' : config.audience;
 
   if (audience === 'test_only') {
     const testEmails = (testEmailsOverride || config.test_emails || [])
@@ -203,6 +203,37 @@ async function updateHostUnavailableDates(db, { hostId, token, addDates = [], re
   };
 }
 
+function sanitizeUnavailableDates(dates) {
+  return [...new Set((dates || []).filter((dateStr) => /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))))].sort();
+}
+
+async function replaceHostUnavailableDates(db, hostId, dates) {
+  const nextDates = sanitizeUnavailableDates(dates);
+  const docRef = db.collection('hosts').doc(String(hostId));
+  const doc = await docRef.get();
+  if (!doc.exists) throw new Error('Host not found');
+  await docRef.update({ unavailable_dates: nextDates });
+  return { unavailable_dates: nextDates };
+}
+
+async function saveMagicLinkConfig(db, config = {}) {
+  const testEmails = Array.isArray(config.test_emails)
+    ? config.test_emails.map((email) => String(email).trim()).filter(Boolean)
+    : [];
+  const sendDay = Number(config.send_day_of_month);
+  const payload = {
+    is_enabled: config.is_enabled === true,
+    audience: config.audience === 'all_active_hosts' ? 'all_active_hosts' : 'test_only',
+    test_emails: testEmails,
+    send_day_of_month: Number.isInteger(sendDay) && sendDay >= 1 && sendDay <= 28 ? sendDay : 25,
+  };
+  await db.collection('settings').doc('magic_link_config').set({
+    ...payload,
+    updated_at: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return payload;
+}
+
 module.exports = {
   DEFAULT_CONFIG,
   dispatchMagicLinkEmails,
@@ -210,5 +241,7 @@ module.exports = {
   getEnv,
   shouldRunScheduledBatch,
   updateHostUnavailableDates,
+  replaceHostUnavailableDates,
+  saveMagicLinkConfig,
   verifyMagicLinkRequest,
 };

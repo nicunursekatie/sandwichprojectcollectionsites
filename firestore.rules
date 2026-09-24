@@ -18,9 +18,15 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Hosts collection - allow full access for now (we can add authentication later)
+    // Hosts collection. Public reads stay open. Clients may edit host records,
+    // but unavailable_dates is written only by Cloud Functions (admin secret or magic link).
     match /hosts/{hostId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if !('unavailable_dates' in request.resource.data)
+                    || (request.resource.data.unavailable_dates is list
+                        && request.resource.data.unavailable_dates.size() == 0);
+      allow update: if !request.resource.data.diff(resource.data).affectedKeys().hasAny(['unavailable_dates']);
+      allow delete: if true;
     }
 
     // Special Collections - allow full access for now (we can add authentication later)
@@ -28,9 +34,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Magic link automation settings (admin-managed kill switch)
+    // Magic link settings are readable in the admin UI. Writes go through
+    // the admin Cloud Function, which checks the admin API secret.
     match /settings/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

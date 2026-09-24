@@ -8,8 +8,11 @@ const { getWednesdaysInUpcomingMonth, getMonthLabel } = require('./lib/dates');
 const {
   dispatchMagicLinkEmails,
   updateHostUnavailableDates,
+  replaceHostUnavailableDates,
+  saveMagicLinkConfig,
   verifyMagicLinkRequest,
 } = require('./lib/magicLinkService');
+const { resolveManualBatchRequest } = require('./lib/manualBatch');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -88,9 +91,14 @@ exports.sendMagicLinkBatch = onRequest({
 
   try {
     const body = parseJsonBody(req);
+    const batch = resolveManualBatchRequest(body);
+    if (!batch.ok) {
+      res.status(batch.status).json({ error: batch.error });
+      return;
+    }
     const result = await dispatchMagicLinkEmails(db, {
-      manualOverride: body.manual_override === true,
-      testEmailsOverride: Array.isArray(body.test_emails) ? body.test_emails : null,
+      manualOverride: batch.manualOverride,
+      testEmailsOverride: batch.testEmailsOverride,
     });
     res.status(200).json(result);
   } catch (error) {
@@ -146,6 +154,50 @@ exports.updateUnavailableDates = onRequest(httpOptions, async (req, res) => {
   } catch (error) {
     const status = error.message.includes('Invalid') ? 401 : 400;
     res.status(status).json({ error: error.message });
+  }
+});
+
+const adminHttpOptions = {
+  ...httpOptions,
+  secrets: [...functionSecrets, adminApiSecret],
+};
+
+/** POST { host_id, unavailable_dates[] } — admin secret required */
+exports.adminSetUnavailableDates = onRequest(adminHttpOptions, async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+  if (!requireAdminSecret(req, res)) return;
+
+  try {
+    const body = parseJsonBody(req);
+    if (!body.host_id) {
+      res.status(400).json({ error: 'host_id is required' });
+      return;
+    }
+    const result = await replaceHostUnavailableDates(db, body.host_id, body.unavailable_dates);
+    res.status(200).json(result);
+  } catch (error) {
+    const status = error.message === 'Host not found' ? 404 : 400;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+/** POST magic-link settings — admin secret required */
+exports.adminSaveMagicLinkConfig = onRequest(adminHttpOptions, async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+  if (!requireAdminSecret(req, res)) return;
+
+  try {
+    const body = parseJsonBody(req);
+    const saved = await saveMagicLinkConfig(db, body);
+    res.status(200).json(saved);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 
