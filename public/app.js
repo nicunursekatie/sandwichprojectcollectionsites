@@ -641,6 +641,35 @@ const HostAvailabilityApp = () => {
   const MAGIC_LINK_URLS = window.CONFIG?.MAGIC_LINK_URLS || {};
   const getMagicLinkUrl = (name) =>
     MAGIC_LINK_URLS[name] || `${CLOUD_FUNCTIONS_BASE_URL}/${name}`;
+  const adminApiSecretRef = React.useRef('');
+  const promptForAdminSecret = () => {
+    if (adminApiSecretRef.current) return adminApiSecretRef.current;
+    const entered = prompt('Enter the admin API secret:');
+    if (!entered || !entered.trim()) return '';
+    adminApiSecretRef.current = entered.trim();
+    return adminApiSecretRef.current;
+  };
+  const adminFetch = async (name, body) => {
+    const secret = promptForAdminSecret();
+    if (!secret) {
+      const error = new Error('Admin API secret is required.');
+      error.code = 'cancelled';
+      throw error;
+    }
+    const response = await fetch(getMagicLinkUrl(name), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${secret}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.status === 401) adminApiSecretRef.current = '';
+    if (!response.ok) throw new Error(result.error || 'Request failed');
+    return result;
+  };
+  const plainHostRecord = (host) => JSON.parse(JSON.stringify(host));
   const MAGIC_LINK_DEFAULTS = window.CONFIG?.MAGIC_LINK_DEFAULTS || {
     is_enabled: false,
     audience: 'test_only',
@@ -930,17 +959,17 @@ const HostAvailabilityApp = () => {
     if (!confirm('This will update coordinates for 8 hosts in Firestore. Continue?')) return;
 
     try {
-      const batch = db.batch();
-
-      for (const [hostId, coords] of Object.entries(CORRECTED_COORDINATES)) {
-        const docRef = db.collection('hosts').doc(String(hostId));
-        batch.update(docRef, { lat: coords.lat, lng: coords.lng });
-      }
-
-      await batch.commit();
+      await adminFetch('adminHostWrite', {
+        op: 'batchMerge',
+        writes: Object.entries(CORRECTED_COORDINATES).map(([hostId, coords]) => ({
+          host_id: hostId,
+          data: { lat: coords.lat, lng: coords.lng },
+        })),
+      });
       alert('Coordinates synced successfully! Refreshing...');
       window.location.reload();
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error syncing coordinates:', error);
       alert('Error syncing coordinates: ' + error.message);
     }
@@ -956,28 +985,45 @@ const HostAvailabilityApp = () => {
     };
 
     try {
-      await db.collection('hosts').doc(String(newHost.id)).set(newHost);
+      await adminFetch('adminHostWrite', { op: 'set', host_id: newHost.id, data: plainHostRecord(newHost) });
       setAllHosts([...(allHosts || []), newHost]);
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error adding host:', error);
       alert('Error adding host. Please try again.');
     }
   };
 
   const updateHost = async (hostId, hostData) => {
+    const { unavailable_dates: nextDatesRaw, ...hostFields } = hostData;
     const updatedHost = {
-      ...hostData,
+      ...hostFields,
       id: hostId,
       lat: parseFloat(hostData.lat),
       lng: parseFloat(hostData.lng)
     };
+    const existingDates = (allHosts || []).find((host) => host.id === hostId)?.unavailable_dates;
+    const originalDates = Array.isArray(existingDates) ? existingDates : [];
+    const nextDates = Array.isArray(nextDatesRaw) ? nextDatesRaw : originalDates;
+    const addDates = nextDates.filter((dateStr) => !originalDates.includes(dateStr));
+    const removeDates = originalDates.filter((dateStr) => !nextDates.includes(dateStr));
 
     try {
-      await db.collection('hosts').doc(String(hostId)).set(updatedHost);
+      await adminFetch('adminHostWrite', { op: 'set', host_id: hostId, data: plainHostRecord(updatedHost) });
+      let savedDates = nextDates;
+      if (addDates.length > 0 || removeDates.length > 0) {
+        const result = await adminFetch('adminSetUnavailableDates', {
+          host_id: hostId,
+          add_dates: addDates,
+          remove_dates: removeDates,
+        });
+        savedDates = result.unavailable_dates || nextDates;
+      }
       setAllHosts((allHosts || []).map(host =>
-        host.id === hostId ? updatedHost : host
+        host.id === hostId ? { ...updatedHost, unavailable_dates: savedDates } : host
       ));
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error updating host:', error);
       alert('Error updating host. Please try again.');
     }
@@ -985,9 +1031,10 @@ const HostAvailabilityApp = () => {
 
   const deleteHost = async (hostId) => {
     try {
-      await db.collection('hosts').doc(String(hostId)).delete();
+      await adminFetch('adminHostWrite', { op: 'delete', host_id: hostId });
       setAllHosts((allHosts || []).filter(host => host.id !== hostId));
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error deleting host:', error);
       alert('Error deleting host. Please try again.');
     }
@@ -1016,27 +1063,21 @@ const HostAvailabilityApp = () => {
 
     if (!confirm(confirmMessage)) return;
 
-    const docRef = db.collection('hosts').doc(String(hostId));
-
     try {
-      if (hasDate) {
-        await docRef.update({
-          unavailable_dates: firebase.firestore.FieldValue.arrayRemove(dateStr)
-        });
-      } else {
-        await docRef.update({
-          unavailable_dates: firebase.firestore.FieldValue.arrayUnion(dateStr)
-        });
-      }
-
-      const updatedDates = hasDate
+      const result = await adminFetch('adminSetUnavailableDates', {
+        host_id: hostId,
+        add_dates: hasDate ? [] : [dateStr],
+        remove_dates: hasDate ? [dateStr] : [],
+      });
+      const savedDates = result.unavailable_dates || (hasDate
         ? currentDates.filter(d => d !== dateStr)
-        : [...currentDates, dateStr];
+        : [...currentDates, dateStr]);
 
       setAllHosts((allHosts || []).map(h =>
-        h.id === hostId ? { ...h, unavailable_dates: updatedDates } : h
+        h.id === hostId ? { ...h, unavailable_dates: savedDates } : h
       ));
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error updating unavailable date:', error);
       alert('Error updating unavailable date. Please try again.');
     }
@@ -1070,16 +1111,17 @@ const HostAvailabilityApp = () => {
         .map(email => email.trim())
         .filter(Boolean);
 
+      const { updated_at, ...configWithoutTimestamp } = magicLinkConfig || {};
       const payload = {
-        ...magicLinkConfig,
+        ...configWithoutTimestamp,
         test_emails: testEmails,
-        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
       };
 
-      await db.collection('settings').doc('magic_link_config').set(payload, { merge: true });
-      setMagicLinkConfig(payload);
+      const saved = await adminFetch('adminSaveMagicLinkConfig', payload);
+      setMagicLinkConfig({ ...payload, ...saved });
       alert('Magic link settings saved.');
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error saving magic link config:', error);
       alert('Error saving magic link settings.');
     } finally {
@@ -1106,25 +1148,19 @@ const HostAvailabilityApp = () => {
       }
 
       // Persist current form values so the backend reads the same recipients
+      const { updated_at, ...configWithoutTimestamp } = magicLinkConfig || {};
       const configPayload = {
-        ...magicLinkConfig,
+        ...configWithoutTimestamp,
         test_emails: testEmails,
         audience: magicLinkConfig?.audience || 'test_only',
-        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
       };
-      await db.collection('settings').doc('magic_link_config').set(configPayload, { merge: true });
-      setMagicLinkConfig(configPayload);
+      const saved = await adminFetch('adminSaveMagicLinkConfig', configPayload);
+      setMagicLinkConfig({ ...configPayload, ...saved });
 
-      const response = await fetch(getMagicLinkUrl('sendMagicLinkBatch'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ manual_override: true, test_emails: testEmails }),
+      const result = await adminFetch('sendMagicLinkBatch', {
+        manual_override: true,
+        test_emails: testEmails,
       });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Send failed');
 
       if (result.skipped) {
         alert(`Test batch did not send.\nReason: ${result.reason || 'unknown'}\nCheck test recipients and try again.`);
@@ -1140,6 +1176,7 @@ const HostAvailabilityApp = () => {
       alert(`Test batch complete.\nSent: ${result.sent}\nHosts: ${result.hostCount || 0}\nMode: ${result.config?.audience || 'unknown'}\n\nCheck your inbox and spam folder.`);
       await loadMagicLinkConfig();
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error sending magic link batch:', error);
       alert(`Error sending test batch: ${error.message}`);
     } finally {
@@ -1333,11 +1370,12 @@ const HostAvailabilityApp = () => {
     if (!host) return;
     const updatedHost = { ...host, lat: newLat, lng: newLng };
     try {
-      await db.collection('hosts').doc(String(hostId)).set(updatedHost);
+      await adminFetch('adminHostWrite', { op: 'set', host_id: hostId, data: plainHostRecord(updatedHost) });
       setAllHosts((allHosts || []).map(h => h.id === hostId ? updatedHost : h));
       // Update audit results to reflect the fix
       setAuditResults(prev => prev ? prev.map(r => r.host.id === hostId ? { ...r, status: 'fixed', detail: 'Coordinates updated to match address.' } : r) : prev);
     } catch (error) {
+      if (error.code === 'cancelled') return;
       alert('Error fixing coordinates: ' + error.message);
     }
   };
@@ -1372,12 +1410,12 @@ const HostAvailabilityApp = () => {
     }
 
     try {
-      await db.collection('hosts').doc(String(hostId)).set(updatedHost);
+      await adminFetch('adminHostWrite', { op: 'set', host_id: hostId, data: plainHostRecord(updatedHost) });
 
       let updatedPartner = null;
       if (shouldDisablePartner) {
         updatedPartner = { ...partner, available: false };
-        await db.collection('hosts').doc(String(partner.id)).set(updatedPartner);
+        await adminFetch('adminHostWrite', { op: 'set', host_id: partner.id, data: plainHostRecord(updatedPartner) });
       }
 
       setAllHosts((allHosts || []).map(h => {
@@ -1386,6 +1424,7 @@ const HostAvailabilityApp = () => {
         return h;
       }));
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error toggling host availability:', error);
       alert('Error updating host availability. Please try again.');
     }
@@ -1409,29 +1448,23 @@ const HostAvailabilityApp = () => {
         return;
       }
 
-      const batch = db.batch();
-      let updateCount = 0;
+      const writes = [];
 
       hostsToUpdate.forEach(host => {
-        const docRef = db.collection('hosts').doc(String(host.id));
-        // Use set with merge to ensure fields are added even if they don't exist
-        // Set both open and close times, using existing openTime as fallback for open times
         const updateData = {
           tuesdayCloseTime: '18:30',
           wednesdayCloseTime: '14:00'
         };
-        // Only set open times if they don't already exist
         if (!host.tuesdayOpenTime && host.openTime) {
           updateData.tuesdayOpenTime = host.openTime;
         }
         if (!host.wednesdayOpenTime && host.openTime) {
           updateData.wednesdayOpenTime = host.openTime;
         }
-        batch.set(docRef, updateData, { merge: true });
-        updateCount++;
+        writes.push({ host_id: host.id, data: updateData });
       });
 
-      await batch.commit();
+      await adminFetch('adminHostWrite', { op: 'batchMerge', writes });
 
       // Reload hosts from Firestore to get updated data
       const updatedSnapshot = await db.collection('hosts').get();
@@ -1442,8 +1475,9 @@ const HostAvailabilityApp = () => {
       updatedHosts.sort((a, b) => a.id - b.id);
       setAllHosts(updatedHosts);
 
-      alert(`✅ Successfully updated ${updateCount} hosts!\n\nTuesday closing: 6:30 PM\nWednesday closing: 2:00 PM\n\nRefresh the page to see changes.`);
+      alert(`✅ Successfully updated ${writes.length} hosts!\n\nTuesday closing: 6:30 PM\nWednesday closing: 2:00 PM\n\nRefresh the page to see changes.`);
     } catch (error) {
+      if (error.code === 'cancelled') return;
       console.error('Error updating emergency hours:', error);
       alert('Error updating hours: ' + error.message);
     }
