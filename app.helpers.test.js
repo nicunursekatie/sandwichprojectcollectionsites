@@ -5,6 +5,7 @@ const {
   getUpcomingWednesday,
   getActiveCollectionWednesday,
   getActiveCollectionWednesdayStr,
+  resolveTimeZone,
   formatDateYYYYMMDD,
   isHostUnavailableOnDate,
   getWednesdaysInMonth,
@@ -14,6 +15,9 @@ const {
   getAppleMapsDirectionsUrl,
   getAtlantaRegionLabel,
   groupHostsByAtlantaRegion,
+  groupAreasByAtlantaRegion,
+  hasFiniteDistance,
+  applyCollectionAvailability,
 } = require('./app.helpers.js');
 
 describe('App helpers', () => {
@@ -48,24 +52,39 @@ describe('App helpers', () => {
   });
 
   describe('getActiveCollectionWednesday', () => {
-    it('returns null before the Friday prior to the collection Wednesday', () => {
-      const thursday = new Date(2026, 6, 2); // Thu Jul 2 — Fri before Jul 8 is Jul 3
-      expect(getActiveCollectionWednesday(thursday)).toBeNull();
-      expect(getActiveCollectionWednesdayStr(thursday)).toBeNull();
+    const eastern = 'America/New_York';
+
+    it('uses the visitor time zone and falls back to Eastern', () => {
+      expect(resolveTimeZone('America/Los_Angeles')).toBe('America/Los_Angeles');
+      expect(resolveTimeZone('Not/AZone')).toBe('America/New_York');
+      expect(resolveTimeZone()).toBe(
+        Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'
+      );
     });
 
-    it('returns the collection Wednesday starting on the prior Friday', () => {
-      const friday = new Date(2026, 6, 3); // Fri Jul 3
-      const result = getActiveCollectionWednesday(friday);
+    it('stays on the current week through Wednesday evening Eastern', () => {
+      const wednesdayEvening = new Date('2026-07-02T02:30:00Z'); // Wed Jul 1, 10:30pm ET
+      expect(getActiveCollectionWednesdayStr(wednesdayEvening, eastern)).toBe('2026-07-01');
+    });
+
+    it('hides the following week as soon as Thursday starts in that time zone', () => {
+      const thursdayMorning = new Date('2026-07-02T04:05:00Z'); // Thu Jul 2, 12:05am ET
+      const result = getActiveCollectionWednesday(thursdayMorning, eastern);
       expect(result.getFullYear()).toBe(2026);
       expect(result.getMonth()).toBe(6);
       expect(result.getDate()).toBe(8);
-      expect(getActiveCollectionWednesdayStr(friday)).toBe('2026-07-08');
+      expect(getActiveCollectionWednesdayStr(thursdayMorning, eastern)).toBe('2026-07-08');
     });
 
-    it('returns null after collection day until the next Friday window', () => {
-      const thursdayAfter = new Date(2026, 6, 9); // Thu Jul 9 — next Wed Jul 15, Fri window Jul 10
-      expect(getActiveCollectionWednesday(thursdayAfter)).toBeNull();
+    it('keeps the prior week for a visitor whose Thursday has not started', () => {
+      const stillWednesdayPacific = new Date('2026-07-02T05:30:00Z'); // Thu 1:30am ET, Wed 10:30pm PT
+      expect(getActiveCollectionWednesdayStr(stillWednesdayPacific, eastern)).toBe('2026-07-08');
+      expect(getActiveCollectionWednesdayStr(stillWednesdayPacific, 'America/Los_Angeles')).toBe('2026-07-01');
+    });
+
+    it('switches to the next collection week on the Thursday after collection day', () => {
+      const nextThursday = new Date('2026-07-09T04:05:00Z'); // Thu Jul 9, 12:05am ET
+      expect(getActiveCollectionWednesdayStr(nextThursday, eastern)).toBe('2026-07-15');
     });
   });
 
@@ -142,6 +161,7 @@ describe('App helpers', () => {
       expect(getAtlantaRegionLabel({ area: '  Dunwoody  ' })).toBe('North Atlanta');
       expect(getAtlantaRegionLabel({ area: 'CHAMBLEE/BROOKHAVEN' })).toBe('Northeast Atlanta');
       expect(getAtlantaRegionLabel({ area: 'College Park' })).toBe('South Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Intown' })).toBe('East Atlanta');
     });
 
     it('classifies unmapped hosts at coordinate thresholds', () => {
@@ -192,6 +212,26 @@ describe('App helpers', () => {
         }
       ]);
       expect(hosts).toEqual(snapshot);
+    });
+  });
+
+  describe('groupAreasByAtlantaRegion', () => {
+    it('orders area names by region instead of alphabetically', () => {
+      const hosts = [
+        { area: 'Decatur' },
+        { area: 'Buckhead' },
+        { area: 'College Park' },
+        { area: 'Chamblee/Brookhaven' }
+      ];
+      expect(groupAreasByAtlantaRegion(
+        ['College Park', 'Chamblee/Brookhaven', 'Decatur', 'Buckhead'],
+        hosts
+      )).toEqual([
+        { region: 'North Atlanta', areas: ['Buckhead'] },
+        { region: 'Northeast Atlanta', areas: ['Chamblee/Brookhaven'] },
+        { region: 'East Atlanta', areas: ['Decatur'] },
+        { region: 'South Atlanta', areas: ['College Park'] }
+      ]);
     });
   });
 
@@ -258,6 +298,43 @@ describe('App helpers', () => {
 
       const durationMinutes = (event.end.getTime() - event.start.getTime()) / (1000 * 60);
       expect(durationMinutes).toBeGreaterThan(0);
+    });
+  });
+
+  describe('hasFiniteDistance', () => {
+    it('treats zero miles as a real distance', () => {
+      expect(hasFiniteDistance(0)).toBe(true);
+      expect(hasFiniteDistance('0')).toBe(true);
+    });
+
+    it('rejects missing distances', () => {
+      expect(hasFiniteDistance(null)).toBe(false);
+      expect(hasFiniteDistance(undefined)).toBe(false);
+      expect(hasFiniteDistance('')).toBe(false);
+    });
+  });
+
+  describe('applyCollectionAvailability', () => {
+    const wednesday = '2026-09-23';
+
+    it('keeps a substitute available when the primary is out on that date', () => {
+      const hosts = applyCollectionAvailability([
+        { id: 1, available: true, unavailable_dates: [wednesday] },
+        { id: 2, available: true, alternateFor: 1, unavailable_dates: [] },
+      ], wednesday);
+
+      expect(hosts.find((host) => host.id === 1).available).toBe(false);
+      expect(hosts.find((host) => host.id === 2).available).toBe(true);
+    });
+
+    it('hides a substitute when the primary is still collecting', () => {
+      const hosts = applyCollectionAvailability([
+        { id: 1, available: true, unavailable_dates: [] },
+        { id: 2, available: true, alternateFor: 1, unavailable_dates: [] },
+      ], wednesday);
+
+      expect(hosts.find((host) => host.id === 1).available).toBe(true);
+      expect(hosts.find((host) => host.id === 2).available).toBe(false);
     });
   });
 });

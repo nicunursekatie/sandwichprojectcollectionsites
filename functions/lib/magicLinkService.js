@@ -75,13 +75,14 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false, testEmailsO
   let sent = 0;
   const errors = [];
   const audience = manualOverride ? 'test_only' : config.audience;
+  const effectiveConfig = { ...config, audience };
 
   if (audience === 'test_only') {
     const testEmails = (testEmailsOverride || config.test_emails || [])
       .map((e) => e.trim())
       .filter(Boolean);
     if (testEmails.length === 0) {
-      return { sent: 0, skipped: true, reason: 'no_test_emails', config };
+      return { sent: 0, skipped: true, reason: 'no_test_emails', config: effectiveConfig };
     }
 
     const digest = buildTestDigestEmail({
@@ -144,10 +145,10 @@ async function dispatchMagicLinkEmails(db, { manualOverride = false, testEmailsO
     last_run_sent_count: sent,
     last_run_errors: errors.slice(0, 20),
     last_run_mode: manualOverride ? 'manual_test' : 'scheduled',
-    last_run_audience: config.audience,
+    last_run_audience: audience,
   }, { merge: true });
 
-  return { sent, skipped: false, reason: gate.reason, errors, hostCount: hosts.length, config };
+  return { sent, skipped: false, reason: gate.reason, errors, hostCount: hosts.length, config: effectiveConfig };
 }
 
 async function verifyMagicLinkRequest(db, hostId, token, secret) {
@@ -174,46 +175,39 @@ async function updateHostUnavailableDates(db, { hostId, token, addDates = [], re
     throw new Error('Invalid or expired magic link');
   }
 
-  const docRef = db.collection('hosts').doc(String(hostId));
-  const doc = await docRef.get();
-  if (!doc.exists) throw new Error('Host not found');
-
-  const sanitizedAdd = [...new Set((addDates || []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)))];
-  const sanitizedRemove = [...new Set((removeDates || []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)))];
-
-  if (sanitizedAdd.length === 0 && sanitizedRemove.length === 0) {
-    return { updated: false, unavailable_dates: doc.data().unavailable_dates || [] };
-  }
-
-  const currentDates = Array.isArray(doc.data().unavailable_dates) ? doc.data().unavailable_dates : [];
-  let nextDates = [...currentDates];
-  sanitizedAdd.forEach((dateStr) => {
-    if (!nextDates.includes(dateStr)) nextDates.push(dateStr);
-  });
-  sanitizedRemove.forEach((dateStr) => {
-    nextDates = nextDates.filter((d) => d !== dateStr);
-  });
-  nextDates.sort();
-
-  await docRef.update({ unavailable_dates: nextDates });
-
-  return {
-    updated: true,
-    unavailable_dates: nextDates,
-  };
+  return applyUnavailableDateChanges(db, hostId, { addDates, removeDates });
 }
 
 function sanitizeUnavailableDates(dates) {
-  return [...new Set((dates || []).filter((dateStr) => /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))))].sort();
+  return [...new Set((dates || []).filter((dateStr) => /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))))];
 }
 
-async function replaceHostUnavailableDates(db, hostId, dates) {
-  const nextDates = sanitizeUnavailableDates(dates);
+async function applyUnavailableDateChanges(db, hostId, { addDates = [], removeDates = [] } = {}) {
   const docRef = db.collection('hosts').doc(String(hostId));
   const doc = await docRef.get();
   if (!doc.exists) throw new Error('Host not found');
-  await docRef.update({ unavailable_dates: nextDates });
-  return { unavailable_dates: nextDates };
+
+  const add = sanitizeUnavailableDates(addDates);
+  const remove = sanitizeUnavailableDates(removeDates).filter((dateStr) => !add.includes(dateStr));
+  if (add.length === 0 && remove.length === 0) {
+    const current = Array.isArray(doc.data().unavailable_dates) ? doc.data().unavailable_dates : [];
+    return { updated: false, unavailable_dates: [...current].sort() };
+  }
+
+  if (add.length > 0) {
+    await docRef.update({
+      unavailable_dates: admin.firestore.FieldValue.arrayUnion(...add),
+    });
+  }
+  if (remove.length > 0) {
+    await docRef.update({
+      unavailable_dates: admin.firestore.FieldValue.arrayRemove(...remove),
+    });
+  }
+
+  const updated = await docRef.get();
+  const dates = Array.isArray(updated.data().unavailable_dates) ? updated.data().unavailable_dates : [];
+  return { updated: true, unavailable_dates: [...dates].sort() };
 }
 
 async function saveMagicLinkConfig(db, config = {}) {
@@ -241,7 +235,7 @@ module.exports = {
   getEnv,
   shouldRunScheduledBatch,
   updateHostUnavailableDates,
-  replaceHostUnavailableDates,
+  applyUnavailableDateChanges,
   saveMagicLinkConfig,
   verifyMagicLinkRequest,
 };

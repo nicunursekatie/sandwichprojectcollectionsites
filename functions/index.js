@@ -8,7 +8,7 @@ const { getWednesdaysInUpcomingMonth, getMonthLabel } = require('./lib/dates');
 const {
   dispatchMagicLinkEmails,
   updateHostUnavailableDates,
-  replaceHostUnavailableDates,
+  applyUnavailableDateChanges,
   saveMagicLinkConfig,
   verifyMagicLinkRequest,
 } = require('./lib/magicLinkService');
@@ -162,7 +162,7 @@ const adminHttpOptions = {
   secrets: [...functionSecrets, adminApiSecret],
 };
 
-/** POST { host_id, unavailable_dates[] } — admin secret required */
+/** POST { host_id, add_dates[], remove_dates[] } — admin secret required */
 exports.adminSetUnavailableDates = onRequest(adminHttpOptions, async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -176,11 +176,14 @@ exports.adminSetUnavailableDates = onRequest(adminHttpOptions, async (req, res) 
       res.status(400).json({ error: 'host_id is required' });
       return;
     }
-    if (!Array.isArray(body.unavailable_dates)) {
-      res.status(400).json({ error: 'unavailable_dates must be an array' });
+    if (!Array.isArray(body.add_dates) && !Array.isArray(body.remove_dates)) {
+      res.status(400).json({ error: 'add_dates or remove_dates is required' });
       return;
     }
-    const result = await replaceHostUnavailableDates(db, body.host_id, body.unavailable_dates);
+    const result = await applyUnavailableDateChanges(db, body.host_id, {
+      addDates: body.add_dates,
+      removeDates: body.remove_dates,
+    });
     res.status(200).json(result);
   } catch (error) {
     const status = error.message === 'Host not found' ? 404 : 400;
@@ -210,7 +213,20 @@ exports.adminHostWrite = onRequest(adminHttpOptions, async (req, res) => {
       if (!body.host_id || !plainObject(body.data)) throw new Error('host_id and data are required');
       const docRef = db.collection('hosts').doc(String(body.host_id));
       if (body.op === 'merge') await docRef.set(body.data, { merge: true });
-      else await docRef.set(body.data);
+      else {
+        await db.runTransaction(async (transaction) => {
+          const existing = await transaction.get(docRef);
+          const incomingDates = body.data.unavailable_dates;
+          const data = { ...body.data };
+          delete data.unavailable_dates;
+          if (existing.exists && Array.isArray(existing.data().unavailable_dates)) {
+            data.unavailable_dates = existing.data().unavailable_dates;
+          } else if (!existing.exists && Array.isArray(incomingDates)) {
+            data.unavailable_dates = incomingDates;
+          }
+          transaction.set(docRef, data);
+        });
+      }
       res.status(200).json({ ok: true });
       return;
     }

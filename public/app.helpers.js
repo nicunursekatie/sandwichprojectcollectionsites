@@ -6,15 +6,50 @@
   }
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   const MS_IN_MINUTE = 60 * 1000;
+  const DEFAULT_TIME_ZONE = 'America/New_York';
+  const WEEKDAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
-  /** Always returns the upcoming Wednesday (today if today is Wednesday). */
-  const getUpcomingWednesday = (referenceDate = new Date()) => {
-    const today = new Date(referenceDate);
-    today.setHours(0, 0, 0, 0);
-    const dayOfWeek = today.getDay();
-    const daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
-    const upcoming = new Date(today);
-    upcoming.setDate(today.getDate() + daysUntilWednesday);
+  const resolveTimeZone = (timeZone) => {
+    const detected = timeZone || (typeof Intl !== 'undefined'
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : '');
+    const candidate = detected || DEFAULT_TIME_ZONE;
+    try {
+      Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(new Date());
+      return candidate;
+    } catch (error) {
+      return DEFAULT_TIME_ZONE;
+    }
+  };
+
+  const getZonedCalendarDate = (referenceDate = new Date(), timeZone) => {
+    const zone = resolveTimeZone(timeZone);
+    const instant = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      weekday: 'short',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(instant);
+    const value = (type) => parts.find((part) => part.type === type).value;
+    return {
+      year: Number(value('year')),
+      month: Number(value('month')),
+      day: Number(value('day')),
+      dayOfWeek: WEEKDAY_INDEX[value('weekday')],
+      timeZone: zone,
+    };
+  };
+
+  const dateFromCalendar = ({ year, month, day }) => new Date(year, month - 1, day);
+
+  /** Upcoming Wednesday on the calendar in the visitor's time zone (Eastern if unknown). */
+  const getUpcomingWednesday = (referenceDate = new Date(), timeZone) => {
+    const calendar = getZonedCalendarDate(referenceDate, timeZone);
+    const daysUntilWednesday = (3 - calendar.dayOfWeek + 7) % 7;
+    const upcoming = dateFromCalendar(calendar);
+    upcoming.setDate(upcoming.getDate() + daysUntilWednesday);
     return upcoming;
   };
 
@@ -28,31 +63,58 @@
     return Array.isArray(host.unavailable_dates) && host.unavailable_dates.includes(dateStr);
   };
 
-  /** Friday immediately before a collection Wednesday (midnight local). */
-  const getFridayBeforeWednesday = (wednesdayDate) => {
-    const friday = new Date(wednesdayDate);
-    friday.setHours(0, 0, 0, 0);
-    friday.setDate(friday.getDate() - 5);
-    return friday;
+  const hasFiniteDistance = (value) =>
+    value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value));
+
+  /**
+   * Mark hosts unavailable for a collection date, then hide a substitute only
+   * when its primary is still collecting that week.
+   */
+  const applyCollectionAvailability = (hosts, dateStr) => {
+    const list = Array.isArray(hosts) ? hosts : [];
+    const isCollecting = (host) =>
+      Boolean(host?.available) && !(dateStr && isHostUnavailableOnDate(host, dateStr));
+
+    return list.map((host) => {
+      let next = host;
+      if (host?.available && dateStr && isHostUnavailableOnDate(host, dateStr)) {
+        next = { ...host, available: false, unavailableThisWeek: true };
+      }
+      if (next?.available && next.alternateFor) {
+        const primary = list.find((candidate) => candidate.id === next.alternateFor);
+        if (primary && isCollecting(primary)) {
+          next = { ...next, available: false };
+        }
+      }
+      return next;
+    });
+  };
+
+  /** Thursday immediately before a collection Wednesday, as a calendar date. */
+  const getThursdayBeforeWednesday = (wednesdayDate) => {
+    const thursday = new Date(wednesdayDate);
+    thursday.setHours(0, 0, 0, 0);
+    thursday.setDate(thursday.getDate() - 6);
+    return thursday;
   };
 
   /**
    * Collection Wednesday whose unavailability applies on referenceDate.
-   * Activates on the Friday before each collection Wednesday; null before that window.
+   * Starts at Thursday in the visitor's time zone, or Eastern when that zone is unknown.
+   * Returns null before that Thursday.
    */
-  const getActiveCollectionWednesday = (referenceDate = new Date()) => {
-    const today = new Date(referenceDate);
-    today.setHours(0, 0, 0, 0);
-    const upcomingWed = getUpcomingWednesday(today);
-    const fridayBefore = getFridayBeforeWednesday(upcomingWed);
-    if (today < fridayBefore) {
+  const getActiveCollectionWednesday = (referenceDate = new Date(), timeZone) => {
+    const today = dateFromCalendar(getZonedCalendarDate(referenceDate, timeZone));
+    const upcomingWed = getUpcomingWednesday(referenceDate, timeZone);
+    const thursdayBefore = getThursdayBeforeWednesday(upcomingWed);
+    if (today < thursdayBefore) {
       return null;
     }
     return upcomingWed;
   };
 
-  const getActiveCollectionWednesdayStr = (referenceDate = new Date()) => {
-    const wed = getActiveCollectionWednesday(referenceDate);
+  const getActiveCollectionWednesdayStr = (referenceDate = new Date(), timeZone) => {
+    const wed = getActiveCollectionWednesday(referenceDate, timeZone);
     return wed ? formatDateYYYYMMDD(wed) : null;
   };
 
@@ -209,6 +271,7 @@
     'decatur': 'East Atlanta',
     'east atlanta': 'East Atlanta',
     'east cobb': 'East Atlanta',
+    'intown': 'East Atlanta',
     'intown (candler park)': 'East Atlanta',
     'oak grove/druid hills': 'East Atlanta',
     'virginia highland': 'East Atlanta',
@@ -269,6 +332,39 @@
       region,
       hosts: grouped.get(region).slice().sort(sortHosts)
     }));
+  };
+
+  const regionSortIndex = (region) => {
+    const index = ATLANTA_REGION_ORDER.indexOf(region);
+    return index === -1 ? ATLANTA_REGION_ORDER.length : index;
+  };
+
+  /** Area names ordered north-to-south by Atlanta region, then alphabetically within a region. */
+  const groupAreasByAtlantaRegion = (areaNames = [], hosts = []) => {
+    const sampleForArea = new Map();
+    hosts.forEach((host) => {
+      if (host && !sampleForArea.has(host.area)) sampleForArea.set(host.area, host);
+    });
+
+    const orderedAreas = [...areaNames].sort((left, right) => {
+      const leftHost = sampleForArea.get(left) || { area: left };
+      const rightHost = sampleForArea.get(right) || { area: right };
+      const byRegion = regionSortIndex(getAtlantaRegionLabel(leftHost)) - regionSortIndex(getAtlantaRegionLabel(rightHost));
+      if (byRegion !== 0) return byRegion;
+      return String(left || '').localeCompare(String(right || ''));
+    });
+
+    const groups = [];
+    orderedAreas.forEach((area) => {
+      const region = getAtlantaRegionLabel(sampleForArea.get(area) || { area });
+      const current = groups[groups.length - 1];
+      if (!current || current.region !== region) {
+        groups.push({ region, areas: [area] });
+      } else {
+        current.areas.push(area);
+      }
+    });
+    return groups;
   };
 
   const buildCalendarEvent = (host, {
@@ -350,12 +446,16 @@
     getHostNavigationDestination,
     getNextWednesday,
     getUpcomingWednesday,
-    getFridayBeforeWednesday,
+    getThursdayBeforeWednesday,
+    resolveTimeZone,
     getActiveCollectionWednesday,
     getActiveCollectionWednesdayStr,
     groupHostsByAtlantaRegion,
+    groupAreasByAtlantaRegion,
     getWednesdaysInMonth,
     getWednesdaysInUpcomingMonth,
-    isHostUnavailableOnDate
+    hasFiniteDistance,
+    isHostUnavailableOnDate,
+    applyCollectionAvailability
   };
 }));
