@@ -9,6 +9,7 @@ const {
   dispatchMagicLinkEmails,
   updateHostUnavailableDates,
   applyUnavailableDateChanges,
+  mergeUnavailableDates,
   saveMagicLinkConfig,
   verifyMagicLinkRequest,
 } = require('./lib/magicLinkService');
@@ -214,18 +215,23 @@ exports.adminHostWrite = onRequest(adminHttpOptions, async (req, res) => {
       const docRef = db.collection('hosts').doc(String(body.host_id));
       if (body.op === 'merge') await docRef.set(body.data, { merge: true });
       else {
-        await db.runTransaction(async (transaction) => {
+        const unavailableDates = await db.runTransaction(async (transaction) => {
           const existing = await transaction.get(docRef);
           const incomingDates = body.data.unavailable_dates;
           const data = { ...body.data };
           delete data.unavailable_dates;
-          if (existing.exists && Array.isArray(existing.data().unavailable_dates)) {
-            data.unavailable_dates = existing.data().unavailable_dates;
-          } else if (!existing.exists && Array.isArray(incomingDates)) {
-            data.unavailable_dates = incomingDates;
+          const currentDates = existing.exists && Array.isArray(existing.data().unavailable_dates)
+            ? existing.data().unavailable_dates
+            : (!existing.exists && Array.isArray(incomingDates) ? incomingDates : []);
+          const merged = mergeUnavailableDates(currentDates, body.add_dates, body.remove_dates);
+          if (merged.unavailable_dates.length > 0 || (existing.exists && Array.isArray(existing.data().unavailable_dates))) {
+            data.unavailable_dates = merged.unavailable_dates;
           }
           transaction.set(docRef, data);
+          return merged.unavailable_dates;
         });
+        res.status(200).json({ ok: true, unavailable_dates: unavailableDates });
+        return;
       }
       res.status(200).json({ ok: true });
       return;

@@ -182,32 +182,43 @@ function sanitizeUnavailableDates(dates) {
   return [...new Set((dates || []).filter((dateStr) => /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))))];
 }
 
+function mergeUnavailableDates(currentDates, addDates = [], removeDates = []) {
+  const add = sanitizeUnavailableDates(addDates);
+  const remove = new Set(
+    sanitizeUnavailableDates(removeDates).filter((dateStr) => !add.includes(dateStr))
+  );
+  const next = [];
+  const seen = new Set();
+  (Array.isArray(currentDates) ? currentDates : []).forEach((dateStr) => {
+    const value = String(dateStr);
+    if (remove.has(value) || seen.has(value) || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
+    seen.add(value);
+    next.push(value);
+  });
+  add.forEach((dateStr) => {
+    if (seen.has(dateStr)) return;
+    seen.add(dateStr);
+    next.push(dateStr);
+  });
+  next.sort();
+  return {
+    changed: add.length > 0 || remove.size > 0,
+    unavailable_dates: next,
+  };
+}
+
 async function applyUnavailableDateChanges(db, hostId, { addDates = [], removeDates = [] } = {}) {
   const docRef = db.collection('hosts').doc(String(hostId));
-  const doc = await docRef.get();
-  if (!doc.exists) throw new Error('Host not found');
-
-  const add = sanitizeUnavailableDates(addDates);
-  const remove = sanitizeUnavailableDates(removeDates).filter((dateStr) => !add.includes(dateStr));
-  if (add.length === 0 && remove.length === 0) {
-    const current = Array.isArray(doc.data().unavailable_dates) ? doc.data().unavailable_dates : [];
-    return { updated: false, unavailable_dates: [...current].sort() };
-  }
-
-  if (add.length > 0) {
-    await docRef.update({
-      unavailable_dates: admin.firestore.FieldValue.arrayUnion(...add),
-    });
-  }
-  if (remove.length > 0) {
-    await docRef.update({
-      unavailable_dates: admin.firestore.FieldValue.arrayRemove(...remove),
-    });
-  }
-
-  const updated = await docRef.get();
-  const dates = Array.isArray(updated.data().unavailable_dates) ? updated.data().unavailable_dates : [];
-  return { updated: true, unavailable_dates: [...dates].sort() };
+  return db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(docRef);
+    if (!doc.exists) throw new Error('Host not found');
+    const merged = mergeUnavailableDates(doc.data().unavailable_dates, addDates, removeDates);
+    if (!merged.changed) {
+      return { updated: false, unavailable_dates: merged.unavailable_dates };
+    }
+    transaction.update(docRef, { unavailable_dates: merged.unavailable_dates });
+    return { updated: true, unavailable_dates: merged.unavailable_dates };
+  });
 }
 
 async function saveMagicLinkConfig(db, config = {}) {
@@ -236,6 +247,7 @@ module.exports = {
   shouldRunScheduledBatch,
   updateHostUnavailableDates,
   applyUnavailableDateChanges,
+  mergeUnavailableDates,
   saveMagicLinkConfig,
   verifyMagicLinkRequest,
 };

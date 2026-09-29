@@ -85,6 +85,8 @@ const HostAvailabilityApp = () => {
   const [auditRunning, setAuditRunning] = React.useState(false);
   const [userRole, setUserRole] = React.useState(null);
   const [showReadOnlyModal, setShowReadOnlyModal] = React.useState(false);
+  const [adminSecretPromptOpen, setAdminSecretPromptOpen] = React.useState(false);
+  const [adminSecretDraft, setAdminSecretDraft] = React.useState('');
   const [highlightedHostId, setHighlightedHostId] = React.useState(null);
   const [directionsMenuOpen, setDirectionsMenuOpen] = React.useState(null);
   const [directionsMenuPosition, setDirectionsMenuPosition] = React.useState({ top: 0, left: 0 });
@@ -642,15 +644,34 @@ const HostAvailabilityApp = () => {
   const getMagicLinkUrl = (name) =>
     MAGIC_LINK_URLS[name] || `${CLOUD_FUNCTIONS_BASE_URL}/${name}`;
   const adminApiSecretRef = React.useRef('');
+  const adminSecretResolverRef = React.useRef(null);
+  const adminSecretPromptRef = React.useRef(null);
   const promptForAdminSecret = () => {
-    if (adminApiSecretRef.current) return adminApiSecretRef.current;
-    const entered = prompt('Enter the admin API secret:');
-    if (!entered || !entered.trim()) return '';
-    adminApiSecretRef.current = entered.trim();
-    return adminApiSecretRef.current;
+    if (adminApiSecretRef.current) return Promise.resolve(adminApiSecretRef.current);
+    if (adminSecretPromptRef.current) return adminSecretPromptRef.current;
+    const pending = new Promise((resolve) => {
+      adminSecretResolverRef.current = resolve;
+    });
+    adminSecretPromptRef.current = pending;
+    setAdminSecretDraft('');
+    setAdminSecretPromptOpen(true);
+    return pending;
+  };
+  const closeAdminSecretPrompt = (value) => {
+    const resolve = adminSecretResolverRef.current;
+    adminSecretResolverRef.current = null;
+    adminSecretPromptRef.current = null;
+    setAdminSecretPromptOpen(false);
+    setAdminSecretDraft('');
+    if (typeof value === 'string' && value.trim()) {
+      adminApiSecretRef.current = value.trim();
+      if (resolve) resolve(adminApiSecretRef.current);
+      return;
+    }
+    if (resolve) resolve('');
   };
   const adminFetch = async (name, body) => {
-    const secret = promptForAdminSecret();
+    const secret = await promptForAdminSecret();
     if (!secret) {
       const error = new Error('Admin API secret is required.');
       error.code = 'cancelled';
@@ -1009,16 +1030,14 @@ const HostAvailabilityApp = () => {
     const removeDates = originalDates.filter((dateStr) => !nextDates.includes(dateStr));
 
     try {
-      await adminFetch('adminHostWrite', { op: 'set', host_id: hostId, data: plainHostRecord(updatedHost) });
-      let savedDates = nextDates;
-      if (addDates.length > 0 || removeDates.length > 0) {
-        const result = await adminFetch('adminSetUnavailableDates', {
-          host_id: hostId,
-          add_dates: addDates,
-          remove_dates: removeDates,
-        });
-        savedDates = result.unavailable_dates || nextDates;
-      }
+      const result = await adminFetch('adminHostWrite', {
+        op: 'set',
+        host_id: hostId,
+        data: plainHostRecord(updatedHost),
+        add_dates: addDates,
+        remove_dates: removeDates,
+      });
+      const savedDates = result.unavailable_dates || nextDates;
       setAllHosts((allHosts || []).map(host =>
         host.id === hostId ? { ...updatedHost, unavailable_dates: savedDates } : host
       ));
@@ -7501,6 +7520,34 @@ const HostAvailabilityApp = () => {
                 </form>
               </div>
             </div>
+          </div>
+        )}
+
+        {adminSecretPromptOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10000]">
+            <form
+              className="bg-white rounded-2xl max-w-md w-full p-6"
+              onSubmit={(event) => {
+                event.preventDefault();
+                closeAdminSecretPrompt(adminSecretDraft);
+              }}
+            >
+              <h3 className="text-xl font-bold mb-2" style={{color: '#236383'}}>Admin secret</h3>
+              <p className="text-sm mb-4" style={{color: '#666'}}>This stays in memory for this visit and is not shown as you type.</p>
+              <input
+                type="password"
+                autoFocus
+                value={adminSecretDraft}
+                onChange={(event) => setAdminSecretDraft(event.target.value)}
+                className="w-full px-4 py-3 rounded-xl border-2 mb-4"
+                style={{borderColor: '#007E8C'}}
+                autoComplete="off"
+              />
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => closeAdminSecretPrompt('')} className="px-4 py-2 rounded-lg font-medium" style={{backgroundColor: '#f0f0f0'}}>Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded-lg font-medium text-white" style={{backgroundColor: '#007E8C'}}>Continue</button>
+              </div>
+            </form>
           </div>
         )}
 
