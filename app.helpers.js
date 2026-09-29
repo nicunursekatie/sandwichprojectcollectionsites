@@ -257,37 +257,70 @@
   };
 
   const ATLANTA_AREA_TO_REGION = {
-    'buckhead': 'North Atlanta',
-    'chastain park': 'North Atlanta',
-    'dunwoody': 'North Atlanta',
-    'sandy springs': 'North Atlanta',
-    'westminster/milmar neighborhood': 'North Atlanta',
-    'chamblee/brookhaven': 'Northeast Atlanta',
-    'johns creek': 'Northeast Atlanta',
-    'milton': 'Northeast Atlanta',
-    'peachtree corners': 'Northeast Atlanta',
-    'roswell': 'Northeast Atlanta',
-    'suwanee/johns creek': 'Northeast Atlanta',
-    'decatur': 'East Atlanta',
-    'east atlanta': 'East Atlanta',
-    'east cobb': 'East Atlanta',
-    'intown': 'East Atlanta',
-    'intown (candler park)': 'East Atlanta',
-    'oak grove/druid hills': 'East Atlanta',
-    'virginia highland': 'East Atlanta',
-    'college park': 'South Atlanta',
-    'southwest atlanta': 'South Atlanta',
-    'dacula': 'Outside Metro Atlanta',
-    'flowery branch': 'Outside Metro Atlanta'
+    'buckhead': 'Buckhead / Brookhaven',
+    'westminster/milmar neighborhood': 'Buckhead / Brookhaven',
+    'chastain park': 'Buckhead / Brookhaven',
+    'chamblee/brookhaven': 'Buckhead / Brookhaven',
+    'oak grove/druid hills': 'Intown East / Decatur',
+    'decatur': 'Intown East / Decatur',
+    'virginia highland': 'Intown East / Decatur',
+    'intown': 'Intown East / Decatur',
+    'intown (candler park)': 'Intown East / Decatur',
+    'east atlanta': 'Intown East / Decatur',
+    'college park': 'College Park',
+    'southwest atlanta': 'College Park',
+    'dunwoody': 'Dunwoody / Peachtree Corners',
+    'peachtree corners': 'Dunwoody / Peachtree Corners',
+    'duluth': 'Dunwoody / Peachtree Corners',
+    'sandy springs': 'Dunwoody / Peachtree Corners',
+    'east cobb': 'East Cobb',
+    'suwanee/johns creek': 'Milton / Alpharetta / Cumming',
+    'johns creek': 'Milton / Alpharetta / Cumming',
+    'milton': 'Milton / Alpharetta / Cumming',
+    'roswell': 'Milton / Alpharetta / Cumming',
+    'alpharetta': 'Milton / Alpharetta / Cumming',
+    'cumming': 'Milton / Alpharetta / Cumming',
+    'flowery branch': 'Milton / Alpharetta / Cumming',
+    'dacula': 'Milton / Alpharetta / Cumming'
   };
 
   const ATLANTA_REGION_ORDER = [
-    'North Atlanta',
-    'Northeast Atlanta',
-    'East Atlanta',
-    'South Atlanta',
-    'Outside Metro Atlanta',
+    'Buckhead / Brookhaven',
+    'Intown East / Decatur',
+    'College Park',
+    'Dunwoody / Peachtree Corners',
+    'East Cobb',
+    'Milton / Alpharetta / Cumming',
     'Other Metro Atlanta'
+  ];
+
+  /** Neighborhoods in the order they should appear inside each region. */
+  const ATLANTA_AREA_ORDER = [
+    'buckhead',
+    'chastain park',
+    'chamblee/brookhaven',
+    'westminster/milmar neighborhood',
+    'oak grove/druid hills',
+    'decatur',
+    'virginia highland',
+    'intown',
+    'intown (candler park)',
+    'east atlanta',
+    'college park',
+    'southwest atlanta',
+    'dunwoody',
+    'peachtree corners',
+    'duluth',
+    'sandy springs',
+    'east cobb',
+    'suwanee/johns creek',
+    'johns creek',
+    'milton',
+    'cumming',
+    'flowery branch',
+    'roswell',
+    'alpharetta',
+    'dacula'
   ];
 
   const getAtlantaRegionLabel = (host = {}) => {
@@ -299,10 +332,10 @@
     const lat = toFiniteCoordinate(host.lat);
     const lng = toFiniteCoordinate(host.lng);
     if (lat !== null && lng !== null) {
-      if (lat < 33.74) return 'South Atlanta';
-      if (lat > 34.08) return 'Outside Metro Atlanta';
-      if (lng > -84.29) return 'East Atlanta';
-      if (lng < -84.43) return 'North Atlanta';
+      if (lat < 33.74) return 'College Park';
+      if (lat > 34.08) return 'Milton / Alpharetta / Cumming';
+      if (lng > -84.29) return 'Intown East / Decatur';
+      if (lng < -84.43) return 'East Cobb';
     }
 
     return 'Other Metro Atlanta';
@@ -320,6 +353,7 @@
     });
 
     const sortHosts = (left, right) =>
+      areaSortIndex(left.area) - areaSortIndex(right.area) ||
       String(left.area || '').localeCompare(String(right.area || '')) ||
       String(left.name || '').localeCompare(String(right.name || ''));
 
@@ -339,7 +373,12 @@
     return index === -1 ? ATLANTA_REGION_ORDER.length : index;
   };
 
-  /** Area names ordered north-to-south by Atlanta region, then alphabetically within a region. */
+  const areaSortIndex = (area) => {
+    const index = ATLANTA_AREA_ORDER.indexOf(String(area || '').trim().toLowerCase());
+    return index === -1 ? ATLANTA_AREA_ORDER.length : index;
+  };
+
+  /** Area names in the simple-list region order, then the neighborhood order within a region. */
   const groupAreasByAtlantaRegion = (areaNames = [], hosts = []) => {
     const sampleForArea = new Map();
     hosts.forEach((host) => {
@@ -351,6 +390,8 @@
       const rightHost = sampleForArea.get(right) || { area: right };
       const byRegion = regionSortIndex(getAtlantaRegionLabel(leftHost)) - regionSortIndex(getAtlantaRegionLabel(rightHost));
       if (byRegion !== 0) return byRegion;
+      const byArea = areaSortIndex(left) - areaSortIndex(right);
+      if (byArea !== 0) return byArea;
       return String(left || '').localeCompare(String(right || ''));
     });
 

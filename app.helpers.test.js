@@ -158,19 +158,19 @@ describe('App helpers', () => {
 
   describe('Atlanta region grouping', () => {
     it('normalizes mapped area names', () => {
-      expect(getAtlantaRegionLabel({ area: '  Dunwoody  ' })).toBe('North Atlanta');
-      expect(getAtlantaRegionLabel({ area: 'CHAMBLEE/BROOKHAVEN' })).toBe('Northeast Atlanta');
-      expect(getAtlantaRegionLabel({ area: 'College Park' })).toBe('South Atlanta');
-      expect(getAtlantaRegionLabel({ area: 'Intown' })).toBe('East Atlanta');
+      expect(getAtlantaRegionLabel({ area: '  Dunwoody  ' })).toBe('Dunwoody / Peachtree Corners');
+      expect(getAtlantaRegionLabel({ area: 'CHAMBLEE/BROOKHAVEN' })).toBe('Buckhead / Brookhaven');
+      expect(getAtlantaRegionLabel({ area: 'College Park' })).toBe('College Park');
+      expect(getAtlantaRegionLabel({ area: 'Intown' })).toBe('Intown East / Decatur');
     });
 
     it('classifies unmapped hosts at coordinate thresholds', () => {
-      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.739, lng: -84.39 })).toBe('South Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.739, lng: -84.39 })).toBe('College Park');
       expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.74, lng: -84.39 })).toBe('Other Metro Atlanta');
-      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 34.081, lng: -84.39 })).toBe('Outside Metro Atlanta');
-      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 34.08, lng: -84.289 })).toBe('East Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 34.081, lng: -84.39 })).toBe('Milton / Alpharetta / Cumming');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 34.08, lng: -84.289 })).toBe('Intown East / Decatur');
       expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 34.08, lng: -84.29 })).toBe('Other Metro Atlanta');
-      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.9, lng: -84.431 })).toBe('North Atlanta');
+      expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.9, lng: -84.431 })).toBe('East Cobb');
       expect(getAtlantaRegionLabel({ area: 'Unknown', lat: 33.9, lng: -84.43 })).toBe('Other Metro Atlanta');
     });
 
@@ -192,19 +192,19 @@ describe('App helpers', () => {
 
       expect(groupHostsByAtlantaRegion(hosts)).toEqual([
         {
-          region: 'North Atlanta',
-          hosts: [{ name: 'Beta', area: 'Dunwoody' }]
-        },
-        {
-          region: 'East Atlanta',
+          region: 'Intown East / Decatur',
           hosts: [
             { name: 'Gamma', area: 'Decatur' },
             { name: 'Zeta', area: 'Decatur' }
           ]
         },
         {
-          region: 'South Atlanta',
+          region: 'College Park',
           hosts: [{ name: 'Alpha', area: 'College Park' }]
+        },
+        {
+          region: 'Dunwoody / Peachtree Corners',
+          hosts: [{ name: 'Beta', area: 'Dunwoody' }]
         },
         {
           region: 'Other Metro Atlanta',
@@ -227,10 +227,42 @@ describe('App helpers', () => {
         ['College Park', 'Chamblee/Brookhaven', 'Decatur', 'Buckhead'],
         hosts
       )).toEqual([
-        { region: 'North Atlanta', areas: ['Buckhead'] },
-        { region: 'Northeast Atlanta', areas: ['Chamblee/Brookhaven'] },
-        { region: 'East Atlanta', areas: ['Decatur'] },
-        { region: 'South Atlanta', areas: ['College Park'] }
+        { region: 'Buckhead / Brookhaven', areas: ['Buckhead', 'Chamblee/Brookhaven'] },
+        { region: 'Intown East / Decatur', areas: ['Decatur'] },
+        { region: 'College Park', areas: ['College Park'] }
+      ]);
+    });
+
+    it('orders simple-list regions and neighborhoods in the volunteer-facing sequence', () => {
+      const areas = [
+        'Flowery Branch',
+        'East Cobb',
+        'College Park',
+        'Peachtree Corners',
+        'Roswell',
+        'Dunwoody',
+        'Sandy Springs',
+        'Duluth',
+        'East Atlanta',
+        'Intown (Candler Park)',
+        'Virginia Highland',
+        'Decatur',
+        'Oak Grove/Druid Hills',
+        'Chamblee/Brookhaven',
+        'Chastain Park',
+        'Buckhead',
+        'Cumming',
+        'Milton',
+        'Johns Creek',
+        'Suwanee/Johns Creek'
+      ];
+      expect(groupAreasByAtlantaRegion(areas, areas.map((area) => ({ area })))).toEqual([
+        { region: 'Buckhead / Brookhaven', areas: ['Buckhead', 'Chastain Park', 'Chamblee/Brookhaven'] },
+        { region: 'Intown East / Decatur', areas: ['Oak Grove/Druid Hills', 'Decatur', 'Virginia Highland', 'Intown (Candler Park)', 'East Atlanta'] },
+        { region: 'College Park', areas: ['College Park'] },
+        { region: 'Dunwoody / Peachtree Corners', areas: ['Dunwoody', 'Peachtree Corners', 'Duluth', 'Sandy Springs'] },
+        { region: 'East Cobb', areas: ['East Cobb'] },
+        { region: 'Milton / Alpharetta / Cumming', areas: ['Suwanee/Johns Creek', 'Johns Creek', 'Milton', 'Cumming', 'Flowery Branch', 'Roswell'] }
       ]);
     });
   });
