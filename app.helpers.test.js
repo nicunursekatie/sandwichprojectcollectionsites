@@ -239,7 +239,10 @@ describe('App helpers', () => {
         'East Cobb',
         'College Park',
         'Peachtree Corners',
+        'Roswell',
         'Dunwoody',
+        'Sandy Springs',
+        'Duluth',
         'East Atlanta',
         'Intown (Candler Park)',
         'Virginia Highland',
@@ -257,9 +260,9 @@ describe('App helpers', () => {
         { region: 'Buckhead / Brookhaven', areas: ['Buckhead', 'Chastain Park', 'Chamblee/Brookhaven'] },
         { region: 'Intown East / Decatur', areas: ['Oak Grove/Druid Hills', 'Decatur', 'Virginia Highland', 'Intown (Candler Park)', 'East Atlanta'] },
         { region: 'College Park', areas: ['College Park'] },
-        { region: 'Dunwoody / Peachtree Corners', areas: ['Dunwoody', 'Peachtree Corners'] },
+        { region: 'Dunwoody / Peachtree Corners', areas: ['Dunwoody', 'Peachtree Corners', 'Duluth', 'Sandy Springs'] },
         { region: 'East Cobb', areas: ['East Cobb'] },
-        { region: 'Milton / Alpharetta / Cumming', areas: ['Suwanee/Johns Creek', 'Johns Creek', 'Milton', 'Cumming', 'Flowery Branch'] }
+        { region: 'Milton / Alpharetta / Cumming', areas: ['Suwanee/Johns Creek', 'Johns Creek', 'Milton', 'Cumming', 'Flowery Branch', 'Roswell'] }
       ]);
     });
   });
