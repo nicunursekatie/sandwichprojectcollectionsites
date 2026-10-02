@@ -2,14 +2,15 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Feedback collection - anyone can create feedback, but not read or modify
+    // Feedback collection - anyone can create feedback (rating 0 = text-only, no stars), but not modify
     match /feedback/{feedbackId} {
       // Allow anyone to submit feedback
       allow create: if request.resource.data.keys().hasAll(['rating', 'feedback', 'timestamp'])
                     && request.resource.data.rating is int
-                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating >= 0
                     && request.resource.data.rating <= 5
                     && request.resource.data.feedback is string
+                    && (request.resource.data.rating > 0 || request.resource.data.feedback.size() > 0)
                     && request.resource.data.timestamp == request.time;
 
       // Allow anyone to read feedback

@@ -80,6 +80,7 @@
                             <option value="3">3 Stars</option>
                             <option value="2">2 Stars</option>
                             <option value="1">1 Star</option>
+                            <option value="0">No Rating (text only)</option>
                         </select>
                     </div>
                     <div>
@@ -204,8 +205,10 @@
         // Update statistics
         function updateStats() {
             const total = allFeedback.length;
-            const avgRating = total > 0 
-                ? (allFeedback.reduce((sum, f) => sum + (f.rating || 0), 0) / total).toFixed(1)
+            // Text-only feedback is stored with rating 0; leave it out of the average
+            const rated = allFeedback.filter(f => f.rating > 0);
+            const avgRating = rated.length > 0
+                ? (rated.reduce((sum, f) => sum + f.rating, 0) / rated.length).toFixed(1)
                 : '0.0';
             const withEmailCount = allFeedback.filter(f => f.email && f.email.trim()).length;
             
@@ -287,8 +290,9 @@
                     minute: '2-digit'
                 });
 
-                const stars = '⭐'.repeat(feedback.rating || 0) + '☆'.repeat(5 - (feedback.rating || 0));
-                const ratingColor = feedback.rating >= 4 ? 'text-green-600' : feedback.rating >= 3 ? 'text-yellow-600' : 'text-red-600';
+                const hasRating = feedback.rating > 0;
+                const stars = hasRating ? '⭐'.repeat(feedback.rating) + '☆'.repeat(5 - feedback.rating) : '';
+                const ratingColor = !hasRating ? 'text-gray-500' : feedback.rating >= 4 ? 'text-green-600' : feedback.rating >= 3 ? 'text-yellow-600' : 'text-red-600';
 
                 return `
                     <div class="feedback-card bg-white rounded-xl shadow-sm p-6 border border-gray-200">
@@ -296,7 +300,7 @@
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 mb-2">
                                     <span class="star-rating text-xl">${stars}</span>
-                                    <span class="font-semibold ${ratingColor}">${feedback.rating || 0}/5</span>
+                                    <span class="font-semibold ${ratingColor}">${hasRating ? `${feedback.rating}/5` : 'No rating'}</span>
                                 </div>
                                 <div class="text-sm text-gray-600">
                                     ${dateStr}
